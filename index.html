@@ -469,30 +469,30 @@
         <p class="text-xs text-slate-400 max-w-xs mt-1">Drag a quest node from the left palette or open another quest file.</p>
       </div>
 
-      <!-- Floating Bottom-Left Toolbar: Select Tool, Pan Tool, Zoom Controls & Fit View -->
-      <div class="absolute bottom-4 left-4 z-30 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1 shadow-xl">
-        <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition" title="Select / Move Tool (V)">
+      <!-- Floating Center-Top Toolbar (Height and vertical alignment matched to sidebar buttons via p-2 & items-center) -->
+      <div class="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
+        <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition flex items-center justify-center" title="Select / Move Tool (V)">
           <i data-lucide="mouse-pointer" class="w-4 h-4"></i>
         </button>
-        <button id="tool-pan-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition" title="Pan Tool / Hand (H or Middle/Space Drag)">
+        <button id="tool-pan-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center" title="Pan Tool / Hand (H or Middle/Space Drag)">
           <i data-lucide="hand" class="w-4 h-4"></i>
         </button>
         <div class="w-px h-5 bg-surface-700 mx-0.5"></div>
-        <button id="zoom-out-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-300 transition" title="Zoom Out (-)">
-          <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+        <button id="zoom-out-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center" title="Zoom Out (-)">
+          <i data-lucide="minus" class="w-4 h-4"></i>
         </button>
-        <span id="zoom-level-label" class="px-2 text-xs font-mono text-slate-300 min-w-[48px] text-center">100%</span>
-        <button id="zoom-in-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-300 transition" title="Zoom In (+)">
-          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+        <span id="zoom-level-label" class="px-2 text-xs font-mono text-slate-300 min-w-[52px] text-center">100%</span>
+        <button id="zoom-in-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center" title="Zoom In (+)">
+          <i data-lucide="plus" class="w-4 h-4"></i>
         </button>
-        <div class="w-px h-4 bg-surface-700 mx-0.5"></div>
-        <button id="fit-view-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-300 transition" title="Fit Quest Graph in View">
-          <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+        <div class="w-px h-5 bg-surface-700 mx-0.5"></div>
+        <button id="fit-view-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center" title="Fit Quest Graph in View">
+          <i data-lucide="maximize-2" class="w-4 h-4"></i>
         </button>
       </div>
 
       <!-- Floating Status Toast -->
-      <div id="status-toast" class="pointer-events-none opacity-0 transition-opacity duration-200 absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-surface-900/95 border border-surface-700 px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 text-xs text-slate-200">
+      <div id="status-toast" class="pointer-events-none opacity-0 transition-opacity duration-200 absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-surface-900/95 border border-surface-700 px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 text-xs text-slate-200">
         <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
         <span id="status-text">Ready</span>
       </div>
@@ -922,13 +922,13 @@
       state.currentTool = tool;
       if (tool === 'select') {
         canvasContainer.className = 'flex-1 relative overflow-hidden tool-select';
-        toolSelectBtn.className = 'p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition';
-        toolPanBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition';
+        toolSelectBtn.className = 'p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition flex items-center justify-center';
+        toolPanBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center';
         showToast('Select & Move Tool', 'sky');
       } else {
         canvasContainer.className = 'flex-1 relative overflow-hidden tool-pan';
-        toolPanBtn.className = 'p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 transition';
-        toolSelectBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition';
+        toolPanBtn.className = 'p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 transition flex items-center justify-center';
+        toolSelectBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center';
         showToast('Pan Tool (Drag canvas to navigate)', 'amber');
       }
     }
@@ -1032,7 +1032,8 @@
       canvasWorld.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
       canvasContainer.style.backgroundPosition = `${x}px ${y}px`;
       canvasContainer.style.backgroundSize = `${GRID_SIZE * zoom}px ${GRID_SIZE * zoom}px`;
-      zoomLevelLabel.textContent = `${Math.round(zoom * 100)}%`;
+      const formattedZoom = `${Math.round(zoom * 100)}%`;
+      zoomLevelLabel.textContent = formattedZoom;
     }
 
     function switchRightTab(tabName) {
@@ -3082,16 +3083,19 @@
       }
     });
 
-    document.getElementById('zoom-in-btn').addEventListener('click', () => {
+    // Standard Zoom Button Event Handlers
+    const handleZoomIn = () => {
       state.viewport.zoom = Math.min(2.2, state.viewport.zoom + 0.15);
       applyViewportTransform();
-    });
+    };
 
-    document.getElementById('zoom-out-btn').addEventListener('click', () => {
+    const handleZoomOut = () => {
       state.viewport.zoom = Math.max(0.35, state.viewport.zoom - 0.15);
       applyViewportTransform();
-    });
+    };
 
+    document.getElementById('zoom-in-btn').addEventListener('click', handleZoomIn);
+    document.getElementById('zoom-out-btn').addEventListener('click', handleZoomOut);
     document.getElementById('fit-view-btn').addEventListener('click', fitCanvasView);
 
     window.addEventListener('resize', () => {
