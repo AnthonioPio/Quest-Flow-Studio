@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Quest Flow Studio</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -41,10 +41,12 @@
     * {
       box-sizing: border-box;
       user-select: none;
+      -webkit-user-select: none;
     }
 
     input, textarea, select {
       user-select: text;
+      -webkit-user-select: text;
     }
 
     body {
@@ -54,6 +56,7 @@
       background-color: #0b0f19;
       color: #e2e8f0;
       font-family: 'Inter', sans-serif;
+      touch-action: none;
     }
 
     /* Infinite-style Dot Grid Background */
@@ -62,11 +65,18 @@
       background-image: radial-gradient(#243047 1.3px, transparent 1.3px);
       background-size: 24px 24px;
       background-position: 0px 0px;
-      cursor: grab;
       touch-action: none;
     }
 
-    #canvas-container.is-panning {
+    #canvas-container.tool-select {
+      cursor: default;
+    }
+
+    #canvas-container.tool-pan {
+      cursor: grab;
+    }
+
+    #canvas-container.tool-pan.is-panning {
       cursor: grabbing;
     }
 
@@ -213,8 +223,8 @@
 
     /* Ports / Sockets */
     .port-socket {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       border-radius: 9999px;
       background-color: #131a2a;
       border: 2.5px solid #64748b;
@@ -227,7 +237,7 @@
     .port-socket::after {
       content: '';
       position: absolute;
-      inset: -8px;
+      inset: -10px;
       border-radius: 9999px;
     }
 
@@ -244,7 +254,7 @@
       border-color: #e2e8f0;
     }
 
-    /* Custom subtle scrollbar */
+    /* Custom scrollbars */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -396,8 +406,8 @@
       <!-- Quick Tips Footer -->
       <div class="p-3 border-t border-surface-800 bg-surface-950/70 text-[11px] text-slate-400 space-y-1">
         <div class="flex items-center justify-between">
-          <span>Box Select / Pan</span>
-          <kbd class="px-1.5 py-0.5 bg-surface-800 rounded text-[10px] font-mono text-slate-300">Drag BG</kbd>
+          <span>Pan Tool / Select Tool</span>
+          <kbd class="px-1.5 py-0.5 bg-surface-800 rounded text-[10px] font-mono text-slate-300">Toolbar Buttons</kbd>
         </div>
         <div class="flex items-center justify-between">
           <span>Multi-Select</span>
@@ -411,7 +421,7 @@
     </aside>
 
     <!-- Center: Interactive Dot-Grid Canvas -->
-    <main id="canvas-container" class="flex-1 relative overflow-hidden">
+    <main id="canvas-container" class="flex-1 relative overflow-hidden tool-select">
       <!-- Floating Edge Expand Tab: Left Quest Nodes Palette -->
       <button id="expand-palette-tab" class="absolute top-3.5 left-0 z-30 flex items-center gap-1.5 pl-2.5 pr-3 py-2 rounded-r-xl bg-surface-900/95 hover:bg-surface-800 backdrop-blur-md border border-l-0 border-surface-700 hover:border-amber-500/50 text-slate-200 hover:text-amber-300 shadow-xl transition group" title="Expand Quest Nodes Palette ([)">
         <i data-lucide="panel-left-open" class="w-4 h-4 text-amber-400"></i>
@@ -459,13 +469,20 @@
         <p class="text-xs text-slate-400 max-w-xs mt-1">Drag a quest node from the left palette or open another quest file.</p>
       </div>
 
-      <!-- Floating Bottom-Left Zoom & Viewport Controls -->
+      <!-- Floating Bottom-Left Toolbar: Select Tool, Pan Tool, Zoom Controls & Fit View -->
       <div class="absolute bottom-4 left-4 z-30 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1 shadow-xl">
-        <button id="zoom-out-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-300 transition" title="Zoom Out">
+        <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition" title="Select / Move Tool (V)">
+          <i data-lucide="mouse-pointer" class="w-4 h-4"></i>
+        </button>
+        <button id="tool-pan-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition" title="Pan Tool / Hand (H or Middle/Space Drag)">
+          <i data-lucide="hand" class="w-4 h-4"></i>
+        </button>
+        <div class="w-px h-5 bg-surface-700 mx-0.5"></div>
+        <button id="zoom-out-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-300 transition" title="Zoom Out (-)">
           <i data-lucide="minus" class="w-3.5 h-3.5"></i>
         </button>
         <span id="zoom-level-label" class="px-2 text-xs font-mono text-slate-300 min-w-[48px] text-center">100%</span>
-        <button id="zoom-in-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-300 transition" title="Zoom In">
+        <button id="zoom-in-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-300 transition" title="Zoom In (+)">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
         </button>
         <div class="w-px h-4 bg-surface-700 mx-0.5"></div>
@@ -561,7 +578,7 @@
 
       <!-- Modal Footer -->
       <div class="pt-3 mt-4 border-t border-surface-800 flex items-center justify-between text-xs text-slate-500">
-        <span>QuestForge v1.3 — Quest Graph Studio</span>
+        <span>QuestForge v1.4 — Mobile & Touch Supported</span>
         <span id="explorer-quest-count">3 Quests Available</span>
       </div>
     </div>
@@ -618,7 +635,7 @@
   <script>
     /**
      * QuestForge — Game Quest Flow & Narrative Node Editor
-     * Single-file interactive RPG quest graph designer & playtest simulator.
+     * Single-file interactive RPG quest graph designer with Pan/Zoom tools and mobile touch support.
      */
 
     // =========================================================================
@@ -816,6 +833,7 @@
       selectedNodeIds: new Set(),
       selectedEdgeId: null,
       snapToGrid: true,
+      currentTool: 'select', // 'select' or 'pan'
       rightTab: 'inspector',
       sidebars: {
         leftOpen: false,
@@ -837,7 +855,11 @@
         boxCurrentY: 0,
         draggingNodeId: null,
         dragOffsets: new Map(),
-        connecting: null
+        connecting: null,
+        // Touch gesture tracking for pinch-to-zoom & touch panning
+        touchPinching: false,
+        touchInitialDist: 0,
+        touchInitialZoom: 1
       },
       playtest: {
         active: false,
@@ -871,6 +893,10 @@
     const statsEdges = document.getElementById('stats-edges');
     const topQuestTitle = document.getElementById('top-quest-title');
 
+    // Tool buttons
+    const toolSelectBtn = document.getElementById('tool-select-btn');
+    const toolPanBtn = document.getElementById('tool-pan-btn');
+
     // Sidebar elements
     const paletteSidebar = document.getElementById('palette-sidebar');
     const inspectorSidebar = document.getElementById('inspector-sidebar');
@@ -890,7 +916,28 @@
     const hiddenFileInput = document.getElementById('hidden-file-input');
 
     // =========================================================================
-    // 5. SIDEBAR COLLAPSE / EXPAND ENGINE
+    // 5. TOOL SWITCHING (SELECT VS PAN)
+    // =========================================================================
+    function setCanvasTool(tool) {
+      state.currentTool = tool;
+      if (tool === 'select') {
+        canvasContainer.className = 'flex-1 relative overflow-hidden tool-select';
+        toolSelectBtn.className = 'p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition';
+        toolPanBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition';
+        showToast('Select & Move Tool', 'sky');
+      } else {
+        canvasContainer.className = 'flex-1 relative overflow-hidden tool-pan';
+        toolPanBtn.className = 'p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 transition';
+        toolSelectBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition';
+        showToast('Pan Tool (Drag canvas to navigate)', 'amber');
+      }
+    }
+
+    toolSelectBtn.addEventListener('click', () => setCanvasTool('select'));
+    toolPanBtn.addEventListener('click', () => setCanvasTool('pan'));
+
+    // =========================================================================
+    // 6. SIDEBAR COLLAPSE / EXPAND ENGINE
     // =========================================================================
     function setLeftSidebarOpen(isOpen) {
       state.sidebars.leftOpen = isOpen;
@@ -929,7 +976,7 @@
     expandInspectorTab.addEventListener('click', () => setRightSidebarOpen(true));
 
     // =========================================================================
-    // 6. UTILITY FUNCTIONS
+    // 7. UTILITY FUNCTIONS
     // =========================================================================
     function generateId(prefix = 'id') {
       return `${prefix}_${Math.random().toString(36).substring(2, 8)}`;
@@ -997,16 +1044,12 @@
       playtestPanel.classList.toggle('flex', !isInspector);
 
       if (isInspector) {
-        tabInspectorBtn.className =
-          'flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold bg-surface-800 text-white transition';
-        tabPlaytestBtn.className =
-          'flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 transition';
+        tabInspectorBtn.className = 'flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold bg-surface-800 text-white transition';
+        tabPlaytestBtn.className = 'flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 transition';
         renderInspector();
       } else {
-        tabPlaytestBtn.className =
-          'flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold bg-surface-800 text-amber-300 transition';
-        tabInspectorBtn.className =
-          'flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 transition';
+        tabPlaytestBtn.className = 'flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold bg-surface-800 text-amber-300 transition';
+        tabInspectorBtn.className = 'flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 transition';
         renderPlaytestPanel();
       }
 
@@ -1023,7 +1066,7 @@
     }
 
     // =========================================================================
-    // 7. QUEST EXPLORER RENDERING & LOADERS
+    // 8. QUEST EXPLORER RENDERING & LOADERS
     // =========================================================================
     function renderQuestExplorer(filterQuery = '') {
       explorerQuestList.innerHTML = '';
@@ -1052,8 +1095,7 @@
 
       filtered.forEach((q) => {
         const item = document.createElement('div');
-        item.className =
-          'p-3.5 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700/80 hover:border-amber-500/50 transition flex items-center justify-between gap-3 group cursor-pointer';
+        item.className = 'p-3.5 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700/80 hover:border-amber-500/50 transition flex items-center justify-between gap-3 group cursor-pointer';
 
         item.innerHTML = `
           <div class="flex items-start gap-3 min-w-0">
@@ -1353,7 +1395,7 @@
     }
 
     // =========================================================================
-    // 8. QUEST PALETTE RENDERING & DRAG-AND-DROP
+    // 9. QUEST PALETTE RENDERING & DRAG-AND-DROP
     // =========================================================================
     function renderPalette(filterText = '') {
       paletteList.innerHTML = '';
@@ -1370,8 +1412,7 @@
         }
 
         const item = document.createElement('div');
-        item.className =
-          'group p-3 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700/80 hover:border-surface-600 cursor-grab active:cursor-grabbing transition flex items-start gap-3 shadow-sm';
+        item.className = 'group p-3 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700/80 hover:border-surface-600 cursor-grab active:cursor-grabbing transition flex items-start gap-3 shadow-sm';
         item.draggable = true;
 
         item.innerHTML = `
@@ -1423,7 +1464,7 @@
     });
 
     // =========================================================================
-    // 9. NODE MANAGEMENT & CARD RENDERING
+    // 10. NODE MANAGEMENT & CARD RENDERING
     // =========================================================================
     function addNode(type, x, y, customData = null) {
       const template = NODE_TYPES[type];
@@ -1644,7 +1685,7 @@
             return `
               <div class="flex items-center gap-2 relative">
                 <div
-                  class="port-socket input-port -ml-[21px] ${isConnected ? 'connected' : ''}"
+                  class="port-socket input-port -ml-[25px] ${isConnected ? 'connected' : ''}"
                   data-node-id="${node.id}"
                   data-port-id="${port.id}"
                   data-port-type="input"
@@ -1665,7 +1706,7 @@
               <div class="flex items-center justify-end gap-2 relative">
                 <span class="text-[11px] font-medium text-slate-300">${port.label}</span>
                 <div
-                  class="port-socket output-port -mr-[21px] ${isConnected ? 'connected' : ''}"
+                  class="port-socket output-port -mr-[25px] ${isConnected ? 'connected' : ''}"
                   data-node-id="${node.id}"
                   data-port-id="${port.id}"
                   data-port-type="output"
@@ -1701,13 +1742,15 @@
 
             <!-- Ports Row -->
             <div class="flex items-start justify-between gap-2 pt-1 border-t border-surface-800/70">
-              <div class="space-y-2 flex-1">${inputsHtml}</div>
-              <div class="space-y-2 flex-1">${outputsHtml}</div>
+              <div class="space-y-2.5 flex-1">${inputsHtml}</div>
+              <div class="space-y-2.5 flex-1">${outputsHtml}</div>
             </div>
           </div>
         `;
 
+        // Handle pointerdown for mouse/touch node dragging (only if select tool is active)
         el.addEventListener('pointerdown', (e) => {
+          if (state.currentTool === 'pan') return; // let canvas pan take over
           e.stopPropagation();
           const isAdditive = e.shiftKey || e.metaKey || e.ctrlKey;
           if (!state.selectedNodeIds.has(node.id)) {
@@ -1765,7 +1808,7 @@
     }
 
     // =========================================================================
-    // 10. CUBIC BEZIER WIRES, ARROWHEADS & BRANCH LABELS
+    // 11. CUBIC BEZIER WIRES, ARROWHEADS & BRANCH LABELS
     // =========================================================================
     function getPortWorldPosition(nodeId, portId, portType) {
       const selector = `.port-socket[data-node-id="${nodeId}"][data-port-id="${portId}"][data-port-type="${portType}"]`;
@@ -1891,40 +1934,95 @@
     }
 
     // =========================================================================
-    // 11. CANVAS PAN, ZOOM & GROUP SELECTION (MARQUEE)
+    // 12. CANVAS PAN, ZOOM, TOUCH GESTURES & GROUP SELECTION
     // =========================================================================
     canvasContainer.addEventListener('pointerdown', (e) => {
-      if (
-        e.target === canvasContainer ||
-        e.target === canvasWorld ||
-        e.target.id === 'connections-svg'
-      ) {
-        const isShift = e.shiftKey || e.metaKey || e.ctrlKey;
-        if (!isShift) {
-          clearSelection();
-        }
+      // If pan tool is active OR middle-click / spacebar drag OR background click in select mode
+      const isBackground = e.target === canvasContainer || e.target === canvasWorld || e.target.id === 'connections-svg';
+      const isPanMode = state.currentTool === 'pan' || e.button === 1 || e.altKey;
 
-        state.interaction.isBoxSelecting = true;
-        const rect = canvasContainer.getBoundingClientRect();
-        state.interaction.boxStartX = e.clientX - rect.left;
-        state.interaction.boxStartY = e.clientY - rect.top;
-        state.interaction.boxCurrentX = state.interaction.boxStartX;
-        state.interaction.boxCurrentY = state.interaction.boxStartY;
-
-        selectionBoxEl.style.left = `${state.interaction.boxStartX}px`;
-        selectionBoxEl.style.top = `${state.interaction.boxStartY}px`;
-        selectionBoxEl.style.width = '0px';
-        selectionBoxEl.style.height = '0px';
-        selectionBoxEl.style.display = 'block';
-
-        if (e.button === 1 || e.altKey) {
-          state.interaction.isBoxSelecting = false;
-          selectionBoxEl.style.display = 'none';
+      if (isPanMode || isBackground) {
+        if (isPanMode || state.currentTool === 'pan') {
           state.interaction.isPanning = true;
           state.interaction.panStartX = e.clientX - state.viewport.x;
           state.interaction.panStartY = e.clientY - state.viewport.y;
           canvasContainer.classList.add('is-panning');
+          return;
         }
+
+        // Otherwise in select tool on background -> start marquee box select
+        if (isBackground && state.currentTool === 'select') {
+          const isShift = e.shiftKey || e.metaKey || e.ctrlKey;
+          if (!isShift) {
+            clearSelection();
+          }
+
+          state.interaction.isBoxSelecting = true;
+          const rect = canvasContainer.getBoundingClientRect();
+          state.interaction.boxStartX = e.clientX - rect.left;
+          state.interaction.boxStartY = e.clientY - rect.top;
+          state.interaction.boxCurrentX = state.interaction.boxStartX;
+          state.interaction.boxCurrentY = state.interaction.boxStartY;
+
+          selectionBoxEl.style.left = `${state.interaction.boxStartX}px`;
+          selectionBoxEl.style.top = `${state.interaction.boxStartY}px`;
+          selectionBoxEl.style.width = '0px';
+          selectionBoxEl.style.height = '0px';
+          selectionBoxEl.style.display = 'block';
+        }
+      }
+    });
+
+    // Mobile touch pinch-to-zoom and touch pan handling
+    canvasContainer.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        state.interaction.touchPinching = true;
+        state.interaction.touchInitialDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        state.interaction.touchInitialZoom = state.viewport.zoom;
+      } else if (e.touches.length === 1 && (state.currentTool === 'pan' || e.target === canvasContainer || e.target === canvasWorld)) {
+        state.interaction.isPanning = true;
+        state.interaction.panStartX = e.touches[0].clientX - state.viewport.x;
+        state.interaction.panStartY = e.touches[0].clientY - state.viewport.y;
+      }
+    }, { passive: true });
+
+    canvasContainer.addEventListener('touchmove', (e) => {
+      if (state.interaction.touchPinching && e.touches.length === 2) {
+        const currentDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const factor = currentDist / state.interaction.touchInitialDist;
+        const newZoom = Math.min(2.2, Math.max(0.35, state.interaction.touchInitialZoom * factor));
+
+        const rect = canvasContainer.getBoundingClientRect();
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+        state.viewport.x = midX - ((midX - state.viewport.x) / state.viewport.zoom) * newZoom;
+        state.viewport.y = midY - ((midY - state.viewport.y) / state.viewport.zoom) * newZoom;
+        state.viewport.zoom = newZoom;
+        applyViewportTransform();
+        return;
+      }
+
+      if (state.interaction.isPanning && e.touches.length === 1) {
+        state.viewport.x = e.touches[0].clientX - state.interaction.panStartX;
+        state.viewport.y = e.touches[0].clientY - state.interaction.panStartY;
+        applyViewportTransform();
+      }
+    }, { passive: true });
+
+    canvasContainer.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        state.interaction.touchPinching = false;
+      }
+      if (e.touches.length === 0) {
+        state.interaction.isPanning = false;
+        canvasContainer.classList.remove('is-panning');
       }
     });
 
@@ -2098,6 +2196,10 @@
         }
       } else if (e.key === 'Escape') {
         clearSelection();
+      } else if (e.key === 'v' || e.key === 'V') {
+        setCanvasTool('select');
+      } else if (e.key === 'h' || e.key === 'H') {
+        setCanvasTool('pan');
       } else if (e.key === '[') {
         setLeftSidebarOpen(!state.sidebars.leftOpen);
       } else if (e.key === ']') {
@@ -2106,7 +2208,7 @@
     });
 
     // =========================================================================
-    // 12. INSPECTOR PANEL RENDERER
+    // 13. INSPECTOR PANEL RENDERER
     // =========================================================================
     function renderInspector() {
       if (state.selectedNodeIds.size === 1) {
@@ -2405,7 +2507,7 @@
     }
 
     // =========================================================================
-    // 13. INTERACTIVE RPG QUEST PLAYTEST SIMULATOR
+    // 14. INTERACTIVE RPG QUEST PLAYTEST SIMULATOR
     // =========================================================================
     function startPlaytest() {
       if (state.nodes.length === 0) {
@@ -2777,7 +2879,7 @@
     }
 
     // =========================================================================
-    // 14. EXPORT / IMPORT JSON ENGINE
+    // 15. EXPORT / IMPORT JSON ENGINE
     // =========================================================================
     const jsonModal = document.getElementById('json-modal');
     const jsonTextarea = document.getElementById('json-textarea');
@@ -2904,7 +3006,7 @@
     }
 
     // =========================================================================
-    // 15. TOOLBAR & UI EVENT BINDINGS
+    // 16. TOOLBAR & UI EVENT BINDINGS
     // =========================================================================
     paletteSearch.addEventListener('input', (e) => {
       renderPalette(e.target.value);
@@ -2955,12 +3057,10 @@
     snapToggleBtn.addEventListener('click', () => {
       state.snapToGrid = !state.snapToGrid;
       if (state.snapToGrid) {
-        snapToggleBtn.className =
-          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/40 text-xs font-medium transition shrink-0';
+        snapToggleBtn.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/40 text-xs font-medium transition shrink-0';
         snapToggleBtn.querySelector('span').textContent = 'Snap: ON';
       } else {
-        snapToggleBtn.className =
-          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 text-slate-400 border border-surface-700 text-xs font-medium transition shrink-0';
+        snapToggleBtn.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 text-slate-400 border border-surface-700 text-xs font-medium transition shrink-0';
         snapToggleBtn.querySelector('span').textContent = 'Snap: OFF';
       }
       showToast(`Grid snapping ${state.snapToGrid ? 'enabled' : 'disabled'}`, 'sky');
@@ -2999,7 +3099,7 @@
     });
 
     // =========================================================================
-    // 16. INITIALIZE APPLICATION
+    // 17. INITIALIZE APPLICATION
     // =========================================================================
     window.addEventListener('DOMContentLoaded', () => {
       renderPalette();
