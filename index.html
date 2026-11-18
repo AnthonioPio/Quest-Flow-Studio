@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Quest Flow Studio</title>
+  <title>Quest Flow Studio — Project & Media Manager</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Inter & JetBrains Mono Fonts -->
@@ -12,6 +12,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- JSZip for ZIP Archive Export & Import -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -185,7 +187,7 @@
     /* Node Styling */
     .flow-node {
       position: absolute;
-      width: 268px;
+      width: 290px;
       border-radius: 12px;
       background: rgba(19, 26, 42, 0.95);
       backdrop-filter: blur(12px);
@@ -221,29 +223,32 @@
       }
     }
 
-    /* Ports / Sockets */
+    /* Ports / Sockets - Perfectly Aligned */
     .port-socket {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       border-radius: 9999px;
       background-color: #131a2a;
       border: 2.5px solid #64748b;
       cursor: crosshair;
       transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease;
-      position: relative;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
       z-index: 40;
     }
 
-    .port-socket::after {
-      content: '';
-      position: absolute;
-      inset: -10px;
-      border-radius: 9999px;
+    .port-socket.input-port {
+      left: -8px;
+    }
+
+    .port-socket.output-port {
+      right: -8px;
     }
 
     .port-socket:hover,
     .port-socket.port-highlight {
-      transform: scale(1.32);
+      transform: translateY(-50%) scale(1.35);
       background-color: #38bdf8;
       border-color: #e0f2fe;
       box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
@@ -319,29 +324,29 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white">QuestForge</h1>
-            <span class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-800 text-amber-400 border border-surface-700">RPG Narrative</span>
+            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition" title="Click to Rename Quest">QuestForge</h1>
+            <span id="top-project-badge" class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-800 text-amber-400 border border-surface-700">No Project</span>
           </div>
-          <p class="text-[11px] text-slate-400 hidden xl:block">Quest Graph & Branching Dialogue Designer</p>
+          <p id="top-project-subtitle" class="text-[11px] text-slate-400 hidden xl:block">Media & Project Manager Active</p>
         </div>
       </div>
     </div>
 
-    <!-- Center: Playtest, Save, Close, Snap & JSON Actions -->
+    <!-- Center: Playtest, Save ZIP, Project Manager, Snap & JSON Actions -->
     <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1">
       <button id="playtest-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition shadow-sm shrink-0">
         <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
         <span>Playtest</span>
       </button>
 
-      <button id="save-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition shrink-0" title="Save Quest JSON">
-        <i data-lucide="save" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">Save Quest</span>
+      <button id="save-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition shrink-0" title="Save Quest & Media as ZIP Archive">
+        <i data-lucide="file-archive" class="w-3.5 h-3.5"></i>
+        <span class="hidden sm:inline">Save ZIP</span>
       </button>
 
-      <button id="close-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-surface-700 hover:border-rose-500/40 text-xs font-medium transition shrink-0" title="Open Quest Explorer">
-        <i data-lucide="compass" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">Quest Explorer</span>
+      <button id="close-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-surface-700 hover:border-amber-500/40 text-xs font-medium transition shrink-0" title="Open Project Manager">
+        <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span class="hidden sm:inline">Project Manager</span>
       </button>
 
       <button id="snap-toggle-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/40 text-xs font-medium transition shrink-0" title="Toggle 24px Grid Snapping">
@@ -351,12 +356,12 @@
 
       <div class="h-4 w-px bg-surface-700 mx-0.5 hidden sm:block"></div>
 
-      <button id="export-json-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition shrink-0" title="Export Quest Graph JSON">
+      <button id="export-json-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition shrink-0" title="Export Quest JSON">
         <i data-lucide="download" class="w-3.5 h-3.5 text-cyan-400"></i>
-        <span class="hidden lg:inline">Export</span>
+        <span class="hidden lg:inline">Export JSON</span>
       </button>
 
-      <button id="import-json-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition shrink-0" title="Import Quest Graph JSON">
+      <button id="import-json-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition shrink-0" title="Import Quest ZIP or JSON File">
         <i data-lucide="upload" class="w-3.5 h-3.5 text-indigo-400"></i>
         <span class="hidden lg:inline">Open File</span>
       </button>
@@ -406,16 +411,12 @@
       <!-- Quick Tips Footer -->
       <div class="p-3 border-t border-surface-800 bg-surface-950/70 text-[11px] text-slate-400 space-y-1">
         <div class="flex items-center justify-between">
-          <span>Pan Tool / Select Tool</span>
-          <kbd class="px-1.5 py-0.5 bg-surface-800 rounded text-[10px] font-mono text-slate-300">Toolbar Buttons</kbd>
+          <span>Multiple Choices</span>
+          <span class="text-amber-400">Min 2, Unlimited</span>
         </div>
         <div class="flex items-center justify-between">
-          <span>Multi-Select</span>
-          <kbd class="px-1.5 py-0.5 bg-surface-800 rounded text-[10px] font-mono text-slate-300">Shift + Click</kbd>
-        </div>
-        <div class="flex items-center justify-between">
-          <span>Toggle Sidebars</span>
-          <kbd class="px-1.5 py-0.5 bg-surface-800 rounded text-[10px] font-mono text-slate-300">[  /  ]</kbd>
+          <span>Custom Types</span>
+          <span class="text-emerald-400">Fully Supported</span>
         </div>
       </div>
     </aside>
@@ -465,11 +466,11 @@
         <div class="w-12 h-12 rounded-2xl bg-surface-800/90 border border-surface-700 flex items-center justify-center mb-3 text-amber-400">
           <i data-lucide="map" class="w-6 h-6"></i>
         </div>
-        <p class="text-sm font-medium text-slate-200">Quest Graph is Empty</p>
-        <p class="text-xs text-slate-400 max-w-xs mt-1">Drag a quest node from the left palette or open another quest file.</p>
+        <p class="text-sm font-medium text-slate-200">Active Quest is Empty</p>
+        <p class="text-xs text-slate-400 max-w-xs mt-1">Drag a quest node from the left palette or switch to another quest in the Project Manager.</p>
       </div>
 
-      <!-- Floating Center-Top Toolbar (Height and vertical alignment matched to sidebar buttons via p-2 & items-center) -->
+      <!-- Floating Center-Top Toolbar -->
       <div class="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
         <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition flex items-center justify-center" title="Select / Move Tool (V)">
           <i data-lucide="mouse-pointer" class="w-4 h-4"></i>
@@ -536,75 +537,134 @@
 
   </div>
 
-  <!-- Quest Explorer Modal -->
-  <div id="startup-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col max-h-[85vh]">
+  <!-- Project Manager & Quest Selector Modal -->
+  <div id="startup-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl flex flex-col max-h-[88vh]">
       <!-- Modal Header -->
       <div class="flex items-center justify-between mb-4 pb-3 border-b border-surface-800">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-lg shadow-amber-500/30 text-white shrink-0">
-            <i data-lucide="compass" class="w-5 h-5"></i>
+            <i data-lucide="folder-kanban" class="w-5 h-5"></i>
           </div>
           <div>
-            <h2 class="text-base font-bold text-white tracking-tight">Quest Explorer</h2>
-            <p class="text-xs text-slate-400">Browse sample quests, create new graphs, or import from file</p>
+            <h2 class="text-base font-bold text-white tracking-tight">Project Manager</h2>
+            <p class="text-xs text-slate-400">Select a project to open, or manage campaigns, quests, and media assets</p>
           </div>
         </div>
-        <button id="close-explorer-modal-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition">
+        <button id="close-explorer-modal-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition" title="Close Project Manager">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <!-- Search & Action Bar -->
-      <div class="flex items-center gap-2 mb-4">
-        <div class="relative flex-1">
+      <!-- Project & Quest Actions Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div class="relative flex-1 min-w-[200px]">
           <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
-          <input id="explorer-search" type="text" placeholder="Search quests by title, ID, or type..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition" />
+          <input id="explorer-search" type="text" placeholder="Search projects and quests..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition" />
         </div>
-        <button id="explorer-new-btn" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shrink-0 shadow-lg shadow-amber-500/20">
-          <i data-lucide="plus" class="w-4 h-4"></i>
-          <span>New Quest</span>
-        </button>
-        <button id="explorer-import-btn" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
-          <i data-lucide="folder-open" class="w-4 h-4 text-indigo-400"></i>
-          <span>Import</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0" title="Load Blank Project">
+            <i data-lucide="file-plus" class="w-4 h-4"></i>
+            <span>Blank Project</span>
+          </button>
+          <button id="new-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
+            <i data-lucide="folder-plus" class="w-4 h-4 text-amber-400"></i>
+            <span>New Project</span>
+          </button>
+          <button id="explorer-import-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
+            <i data-lucide="folder-open" class="w-4 h-4 text-indigo-400"></i>
+            <span>Import</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Quests Grid / List -->
-      <div id="explorer-quest-list" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+      <!-- Projects & Quests List Container -->
+      <div id="project-manager-list" class="flex-1 overflow-y-auto space-y-4 pr-1">
         <!-- Populated dynamically via JS -->
       </div>
 
       <!-- Modal Footer -->
-      <div class="pt-3 mt-4 border-t border-surface-800 flex items-center justify-between text-xs text-slate-500">
-        <span>QuestForge v1.4 — Mobile & Touch Supported</span>
-        <span id="explorer-quest-count">3 Quests Available</span>
+      <div class="pt-3 mt-4 border-t border-surface-800 flex items-center justify-between text-xs">
+        <button id="clear-persistence-btn" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 font-medium transition" title="Clear localStorage saved data and reset to defaults">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>Clear Persistent Data</span>
+        </button>
+        <span id="project-count-summary" class="text-slate-500">Projects Available</span>
       </div>
     </div>
   </div>
 
-  <!-- Close / Discard Confirmation Modal -->
-  <div id="close-confirm-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl">
-      <div class="flex items-center gap-3 mb-3">
-        <div class="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
-          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+  <!-- New Project Modal -->
+  <div id="new-project-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-md w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-3 pb-2 border-b border-surface-800">
+        <h3 class="text-sm font-semibold text-white">Create New Project</h3>
+        <button id="close-new-project-modal" class="p-1 text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Project Name</label>
+          <input id="new-proj-name" type="text" placeholder="e.g., Expansion: Bloodmoon Isles" class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-3 py-2 text-xs text-white focus:outline-none" />
         </div>
         <div>
-          <h3 class="text-sm font-semibold text-white">Open Quest Explorer?</h3>
-          <p class="text-xs text-slate-400">Any unsaved changes to your active quest will be discarded.</p>
+          <label class="block text-[11px] font-semibold text-slate-300 mb-1">Description</label>
+          <textarea id="new-proj-desc" rows="2" placeholder="Campaign scope or setting notes..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none resize-none"></textarea>
         </div>
       </div>
       <div class="flex justify-end gap-2 mt-5">
-        <button id="cancel-close-btn" class="px-3.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-300 transition">Cancel</button>
-        <button id="confirm-discard-btn" class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white transition">Discard & Open Explorer</button>
+        <button id="cancel-new-proj-btn" class="px-3.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-300 transition">Cancel</button>
+        <button id="confirm-new-proj-btn" class="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-xs font-semibold text-slate-950 transition">Create Project</button>
       </div>
     </div>
   </div>
 
-  <!-- Hidden File Input for Importing JSON -->
-  <input type="file" id="hidden-file-input" accept=".json" class="hidden" />
+  <!-- Delete Confirmation Modal -->
+  <div id="delete-confirm-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 id="delete-modal-title" class="text-sm font-semibold text-white">Delete Quest</h3>
+          <p id="delete-modal-desc" class="text-xs text-slate-400 mt-0.5">Are you sure you want to delete this item? This action cannot be undone.</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button id="cancel-delete-btn" class="px-3.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-300 transition">Cancel</button>
+        <button id="confirm-delete-btn" class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white transition">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resource Viewer / Player Modal -->
+  <div id="resource-viewer-modal" class="hidden fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-2xl w-full p-5 shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between mb-3 pb-2 border-b border-surface-800">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div id="viewer-icon-container" class="w-8 h-8 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+          </div>
+          <div class="min-w-0">
+            <h3 id="viewer-file-title" class="text-sm font-bold text-white truncate">Media Resource</h3>
+            <p id="viewer-file-type" class="text-[11px] font-mono text-slate-400 uppercase">Type</p>
+          </div>
+        </div>
+        <button id="close-viewer-modal-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div id="viewer-content-container" class="flex-1 overflow-auto flex items-center justify-center bg-surface-950 rounded-xl p-4 min-h-[260px] max-h-[55vh]">
+        <!-- Populated dynamically -->
+      </div>
+      <div class="pt-3 mt-3 border-t border-surface-800 flex justify-end">
+        <button id="close-viewer-btn" class="px-4 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-semibold text-slate-200 transition">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden File Input for Importing ZIP / JSON -->
+  <input type="file" id="hidden-file-input" accept=".zip,.json" class="hidden" />
 
   <!-- Export / Import JSON Modal -->
   <div id="json-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
@@ -627,19 +687,18 @@
       <textarea id="json-textarea" rows="12" spellcheck="false" class="w-full flex-1 bg-surface-950 border border-surface-700 focus:border-cyan-500 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none resize-none leading-relaxed"></textarea>
 
       <div id="json-modal-actions" class="flex flex-wrap items-center justify-end gap-2 mt-4">
-        <!-- Populated dynamically depending on Export vs Import mode -->
+        <!-- Populated dynamically -->
       </div>
     </div>
   </div>
 
   <script>
     /**
-     * QuestForge — Game Quest Flow & Narrative Node Editor
-     * Single-file interactive RPG quest graph designer with Pan/Zoom tools and mobile touch support.
+     * QuestForge — Game Quest Flow & Narrative Node Editor with Custom Types & Header Cleanups
      */
 
     // =========================================================================
-    // 1. GAME QUEST NODE TEMPLATES CONFIGURATION
+    // 1. NODE TEMPLATES CONFIGURATION (WITH CUSTOM OPTIONS)
     // =========================================================================
     const NODE_TYPES = {
       questStart: {
@@ -648,7 +707,7 @@
         title: 'Quest Start',
         description: 'Entry point defining quest ID, type, and level requirement',
         icon: 'flag',
-        accent: '#10b981', // Emerald
+        accent: '#10b981',
         badgeBg: 'bg-emerald-500/15',
         badgeText: 'text-emerald-400',
         borderAccent: 'border-emerald-500/40',
@@ -656,12 +715,13 @@
         outputs: [{ id: 'out_start', label: 'Start' }],
         fieldSchema: [
           { key: 'questId', label: 'Quest ID', type: 'text' },
-          { key: 'questType', label: 'Quest Type', type: 'select', options: ['Main Story', 'Side Quest', 'Bounty', 'Companion'] },
+          { key: 'questType', label: 'Quest Type', type: 'select', options: ['Main Story', 'Side Quest', 'Bounty', 'Companion', 'Custom...'] },
           { key: 'minLevel', label: 'Min Level', type: 'number' }
         ],
         defaultConfig: {
           questId: 'qst_01_new_quest',
           questType: 'Main Story',
+          customQuestType: '',
           minLevel: '1'
         }
       },
@@ -669,9 +729,9 @@
         type: 'dialogue',
         category: 'Narrative',
         title: 'Dialogue / NPC',
-        description: 'NPC spoken line, character name, and emotional tone',
+        description: 'NPC spoken line, character name, and reaction tone',
         icon: 'message-square-quote',
-        accent: '#6366f1', // Indigo
+        accent: '#6366f1',
         badgeBg: 'bg-indigo-500/15',
         badgeText: 'text-indigo-400',
         borderAccent: 'border-indigo-500/40',
@@ -679,12 +739,13 @@
         outputs: [{ id: 'out_next', label: 'Next' }],
         fieldSchema: [
           { key: 'npcName', label: 'NPC Name', type: 'text' },
-          { key: 'emotion', label: 'Emotion', type: 'select', options: ['Neutral', 'Urgent', 'Hostile', 'Friendly'] },
+          { key: 'reaction', label: 'Reaction', type: 'select', options: ['Neutral', 'Urgent', 'Hostile', 'Friendly', 'Surprised', 'Skeptical', 'Custom...'] },
           { key: 'dialogueText', label: 'Dialogue Text', type: 'textarea' }
         ],
         defaultConfig: {
           npcName: 'Guard Captain',
-          emotion: 'Neutral',
+          reaction: 'Neutral',
+          customReaction: '',
           dialogueText: 'Halt, adventurer! State your business before entering.'
         }
       },
@@ -692,47 +753,42 @@
         type: 'playerChoice',
         category: 'Branching',
         title: 'Player Choice',
-        description: 'Interactive dialogue fork with optional skill check',
+        description: 'Interactive dialogue fork supporting multiple choices (minimum 2)',
         icon: 'git-fork',
-        accent: '#f59e0b', // Amber/Gold
+        accent: '#f59e0b',
         badgeBg: 'bg-amber-500/15',
         badgeText: 'text-amber-400',
         borderAccent: 'border-amber-500/40',
         inputs: [{ id: 'in_prev', label: 'In' }],
-        outputs: [
-          { id: 'out_choice_a', label: 'Choice A' },
-          { id: 'out_choice_b', label: 'Choice B' }
-        ],
-        fieldSchema: [
-          { key: 'choiceALabel', label: 'Choice A Label', type: 'text' },
-          { key: 'choiceBLabel', label: 'Choice B Label', type: 'text' },
-          { key: 'skillCheck', label: 'Skill Check', type: 'select', options: ['None', 'Persuasion 12', 'Intimidation 15', 'Arcana 14', 'Stealth 10'] }
-        ],
+        // Dynamic outputs handled by choices array in config
+        fieldSchema: [], // Skill check removed per request
         defaultConfig: {
-          choiceALabel: 'Accept the quest',
-          choiceBLabel: 'Decline and walk away',
-          skillCheck: 'None'
+          choices: [
+            { id: 'choice_0', label: 'Accept the quest' },
+            { id: 'choice_1', label: 'Decline and walk away' }
+          ]
         }
       },
       objective: {
         type: 'objective',
         category: 'Gameplay',
         title: 'Objective / Task',
-        description: 'Trackable gameplay goal: kill, collect, escort, or puzzle',
+        description: 'Trackable gameplay goal with custom objective types',
         icon: 'target',
-        accent: '#06b6d4', // Cyan/Teal
+        accent: '#06b6d4',
         badgeBg: 'bg-cyan-500/15',
         badgeText: 'text-cyan-400',
         borderAccent: 'border-cyan-500/40',
         inputs: [{ id: 'in_prev', label: 'In' }],
         outputs: [{ id: 'out_complete', label: 'Complete' }],
         fieldSchema: [
-          { key: 'objectiveType', label: 'Objective Type', type: 'select', options: ['Kill Target', 'Collect Item', 'Escort NPC', 'Reach Location', 'Solve Puzzle'] },
+          { key: 'objectiveType', label: 'Objective Type', type: 'select', options: ['Kill Target', 'Collect Item', 'Escort NPC', 'Reach Location', 'Solve Puzzle', 'Custom...'] },
           { key: 'targetName', label: 'Target Name', type: 'text' },
           { key: 'requiredCount', label: 'Required Count', type: 'number' }
         ],
         defaultConfig: {
           objectiveType: 'Kill Target',
+          customObjectiveType: '',
           targetName: 'Bandit Scout',
           requiredCount: '5'
         }
@@ -741,9 +797,9 @@
         type: 'condition',
         category: 'Logic',
         title: 'Condition / Check',
-        description: 'Evaluates world state, inventory item, or reputation',
+        description: 'Evaluates world state with custom condition types',
         icon: 'shield-question',
-        accent: '#a855f7', // Purple
+        accent: '#a855f7',
         badgeBg: 'bg-purple-500/15',
         badgeText: 'text-purple-400',
         borderAccent: 'border-purple-500/40',
@@ -753,11 +809,12 @@
           { id: 'out_false', label: 'False' }
         ],
         fieldSchema: [
-          { key: 'conditionType', label: 'Condition Type', type: 'select', options: ['Has Item', 'Flag Set', 'Reputation >=', 'Time of Day'] },
+          { key: 'conditionType', label: 'Condition Type', type: 'select', options: ['Has Item', 'Flag Set', 'Reputation >=', 'Time of Day', 'Custom...'] },
           { key: 'conditionValue', label: 'Condition Value', type: 'text' }
         ],
         defaultConfig: {
           conditionType: 'Has Item',
+          customConditionType: '',
           conditionValue: 'item_rusty_key'
         }
       },
@@ -765,22 +822,23 @@
         type: 'questReward',
         category: 'Outcome',
         title: 'Quest Reward / End',
-        description: 'Concludes quest branch and grants XP, Gold, and loot',
+        description: 'Concludes quest branch with custom outcomes',
         icon: 'trophy',
-        accent: '#f43f5e', // Rose/Red
+        accent: '#f43f5e',
         badgeBg: 'bg-rose-500/15',
         badgeText: 'text-rose-400',
         borderAccent: 'border-rose-500/40',
         inputs: [{ id: 'in_prev', label: 'In' }],
         outputs: [],
         fieldSchema: [
-          { key: 'outcome', label: 'Outcome', type: 'select', options: ['Quest Complete', 'Quest Failed', 'Branch End'] },
+          { key: 'outcome', label: 'Outcome Type', type: 'select', options: ['Quest Complete', 'Quest Failed', 'Branch End', 'Custom...'] },
           { key: 'xpReward', label: 'XP Reward', type: 'number' },
           { key: 'goldReward', label: 'Gold Reward', type: 'number' },
           { key: 'itemReward', label: 'Item Reward', type: 'text' }
         ],
         defaultConfig: {
           outcome: 'Quest Complete',
+          customOutcome: '',
           xpReward: '300',
           goldReward: '150',
           itemReward: 'Steel Shield'
@@ -789,52 +847,101 @@
     };
 
     // =========================================================================
-    // 2. SAMPLE QUEST REPOSITORIES FOR QUEST EXPLORER
+    // 2. DEFAULT SAMPLE PROJECTS REPOSITORY
     // =========================================================================
-    const SAMPLE_QUESTS = [
+    const DEFAULT_PROJECTS = [
       {
-        id: 'qst_04_sunken_shrine',
-        title: 'The Sunken Shrine',
-        type: 'Main Story',
-        minLevel: 5,
-        description: 'The sea barrier weakens! Enter the Sunken Shrine and recover the Abyssal Pearl before the tide seals the vault.',
-        nodesCount: 7,
-        loader: loadSunkenShrineQuest
-      },
-      {
-        id: 'qst_02_whispering_woods',
-        title: 'Whispering Woods Investigation',
-        type: 'Side Quest',
-        minLevel: 3,
-        description: 'Strange phantom sounds echo from the mist-shrouded woods. Find the lost scout and investigate the glowing ruins.',
-        nodesCount: 6,
-        loader: loadWhisperingWoodsQuest
-      },
-      {
-        id: 'qst_03_goblin_raid',
-        title: 'Defense of Miller’s Hollow',
-        type: 'Bounty',
-        minLevel: 2,
-        description: 'Goblin raiding parties threaten the southern grain silos. Repel the vanguard and secure the supply wagon.',
-        nodesCount: 5,
-        loader: loadGoblinRaidQuest
+        id: 'proj_sample_campaign',
+        title: 'Chronicles of Aethelgard [Sample Project]',
+        description: 'Sample campaign project showcasing primary storylines, custom objective types, and custom outcomes.',
+        isSample: true,
+        quests: [
+          {
+            id: 'qst_04_sunken_shrine',
+            title: 'The Sunken Shrine',
+            type: 'Main Story',
+            minLevel: 5,
+            description: 'The sea barrier weakens! Enter the Sunken Shrine and recover the Abyssal Pearl.',
+            nodes: [
+              { id: 'node_start_shrine', type: 'questStart', title: 'The Sunken Shrine', x: 48, y: 216, notes: '', resources: [], config: { questId: 'qst_04_sunken_shrine', questType: 'Main Story', customQuestType: '', minLevel: '5' } },
+              { id: 'node_npc_elder', type: 'dialogue', title: 'High Priestess Lyra', x: 380, y: 216, notes: '', resources: [], config: { npcName: 'High Priestess Lyra', reaction: 'Urgent', customReaction: '', dialogueText: 'The sea barrier weakens! Enter the Sunken Shrine and recover the Abyssal Pearl.' } },
+              { id: 'node_choice_approach', type: 'playerChoice', title: 'Choose Approach', x: 710, y: 216, notes: '', resources: [], config: { choices: [{ id: 'choice_0', label: 'Dive straight into the flooded crypt' }, { id: 'choice_1', label: 'Persuade Harbor Guard for diving bell' }] } },
+              { id: 'node_reward_hero', type: 'questReward', title: 'Shrine Restored', x: 1060, y: 144, notes: '', resources: [], config: { outcome: 'Quest Complete', customOutcome: '', xpReward: '650', goldReward: '300', itemReward: 'Tidecaller Trident' } }
+            ],
+            edges: [
+              { id: 'qedge_1', sourceNodeId: 'node_start_shrine', sourcePortId: 'out_start', targetNodeId: 'node_npc_elder', targetPortId: 'in_prev' },
+              { id: 'qedge_2', sourceNodeId: 'node_npc_elder', sourcePortId: 'out_next', targetNodeId: 'node_choice_approach', targetPortId: 'in_prev' },
+              { id: 'qedge_3', sourceNodeId: 'node_choice_approach', sourcePortId: 'choice_0', targetNodeId: 'node_reward_hero', targetPortId: 'in_prev' }
+            ]
+          }
+        ]
       }
     ];
 
     // =========================================================================
-    // 3. APPLICATION STATE
+    // 3. PERSISTENT STORAGE ENGINE (LOCALSTORAGE)
+    // =========================================================================
+    let PROJECTS = [];
+    const LOCAL_STORAGE_KEY = 'questforge_projects_v4';
+
+    function loadProjectsFromStorage() {
+      try {
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (stored) {
+          PROJECTS = JSON.parse(stored);
+        } else {
+          PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
+          saveProjectsToStorage();
+        }
+      } catch (err) {
+        console.error('Failed to load storage:', err);
+        PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
+      }
+    }
+
+    function saveProjectsToStorage() {
+      try {
+        if (state.activeProjectId && state.activeQuestId) {
+          const project = PROJECTS.find(p => p.id === state.activeProjectId);
+          const quest = project?.quests.find(q => q.id === state.activeQuestId);
+          if (quest) {
+            quest.nodes = JSON.parse(JSON.stringify(state.nodes));
+            quest.edges = JSON.parse(JSON.stringify(state.edges));
+          }
+        }
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(PROJECTS));
+      } catch (err) {
+        console.error('Failed to save to localStorage:', err);
+      }
+    }
+
+    function clearPersistentStorage() {
+      if (confirm('Are you sure you want to clear all saved projects and reset to default sample data?')) {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
+        const firstProj = PROJECTS[0];
+        loadQuestIntoWorkspace(firstProj.id, firstProj.quests[0].id);
+        renderProjectManager();
+        showToast('Cleared persistent data and reset to sample project', 'amber');
+      }
+    }
+
+    // =========================================================================
+    // 4. APPLICATION STATE
     // =========================================================================
     const GRID_SIZE = 24;
 
     const state = {
-      questActive: false,
+      activeProjectId: null,
+      activeQuestId: null,
       nodes: [],
       edges: [],
       selectedNodeIds: new Set(),
       selectedEdgeId: null,
       snapToGrid: true,
-      currentTool: 'select', // 'select' or 'pan'
+      currentTool: 'select',
       rightTab: 'inspector',
+      inspectorMode: 'edit',
       sidebars: {
         leftOpen: false,
         rightOpen: false
@@ -855,11 +962,7 @@
         boxCurrentY: 0,
         draggingNodeId: null,
         dragOffsets: new Map(),
-        connecting: null,
-        // Touch gesture tracking for pinch-to-zoom & touch panning
-        touchPinching: false,
-        touchInitialDist: 0,
-        touchInitialZoom: 1
+        connecting: null
       },
       playtest: {
         active: false,
@@ -868,11 +971,12 @@
         history: [],
         rewards: { xp: 0, gold: 0, items: [] },
         finished: false
-      }
+      },
+      pendingDelete: null
     };
 
     // =========================================================================
-    // 4. DOM REFERENCES
+    // 5. DOM REFERENCES
     // =========================================================================
     const canvasContainer = document.getElementById('canvas-container');
     const canvasWorld = document.getElementById('canvas-world');
@@ -892,12 +996,12 @@
     const statsNodes = document.getElementById('stats-nodes');
     const statsEdges = document.getElementById('stats-edges');
     const topQuestTitle = document.getElementById('top-quest-title');
+    const topProjectBadge = document.getElementById('top-project-badge');
+    const topProjectSubtitle = document.getElementById('top-project-subtitle');
 
-    // Tool buttons
     const toolSelectBtn = document.getElementById('tool-select-btn');
     const toolPanBtn = document.getElementById('tool-pan-btn');
 
-    // Sidebar elements
     const paletteSidebar = document.getElementById('palette-sidebar');
     const inspectorSidebar = document.getElementById('inspector-sidebar');
     const togglePaletteBtn = document.getElementById('toggle-palette-btn');
@@ -907,16 +1011,27 @@
     const closeInspectorBtn = document.getElementById('close-inspector-btn');
     const expandInspectorTab = document.getElementById('expand-inspector-tab');
 
-    // Modals & Explorer
     const startupModal = document.getElementById('startup-modal');
-    const closeConfirmModal = document.getElementById('close-confirm-modal');
     const explorerSearch = document.getElementById('explorer-search');
-    const explorerQuestList = document.getElementById('explorer-quest-list');
-    const explorerQuestCount = document.getElementById('explorer-quest-count');
+    const projectManagerList = document.getElementById('project-manager-list');
+    const projectCountSummary = document.getElementById('project-count-summary');
     const hiddenFileInput = document.getElementById('hidden-file-input');
 
+    const newProjectModal = document.getElementById('new-project-modal');
+    const newProjName = document.getElementById('new-proj-name');
+    const newProjDesc = document.getElementById('new-proj-desc');
+
+    const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+    const deleteModalTitle = document.getElementById('delete-modal-title');
+    const deleteModalDesc = document.getElementById('delete-modal-desc');
+
+    const resourceViewerModal = document.getElementById('resource-viewer-modal');
+    const viewerFileTitle = document.getElementById('viewer-file-title');
+    const viewerFileType = document.getElementById('viewer-file-type');
+    const viewerContentContainer = document.getElementById('viewer-content-container');
+
     // =========================================================================
-    // 5. TOOL SWITCHING (SELECT VS PAN)
+    // 6. TOOL SWITCHING
     // =========================================================================
     function setCanvasTool(tool) {
       state.currentTool = tool;
@@ -937,7 +1052,7 @@
     toolPanBtn.addEventListener('click', () => setCanvasTool('pan'));
 
     // =========================================================================
-    // 6. SIDEBAR COLLAPSE / EXPAND ENGINE
+    // 7. SIDEBAR COLLAPSE / EXPAND ENGINE
     // =========================================================================
     function setLeftSidebarOpen(isOpen) {
       state.sidebars.leftOpen = isOpen;
@@ -976,7 +1091,7 @@
     expandInspectorTab.addEventListener('click', () => setRightSidebarOpen(true));
 
     // =========================================================================
-    // 7. UTILITY FUNCTIONS
+    // 8. UTILITY FUNCTIONS
     // =========================================================================
     function generateId(prefix = 'id') {
       return `${prefix}_${Math.random().toString(36).substring(2, 8)}`;
@@ -1032,8 +1147,7 @@
       canvasWorld.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
       canvasContainer.style.backgroundPosition = `${x}px ${y}px`;
       canvasContainer.style.backgroundSize = `${GRID_SIZE * zoom}px ${GRID_SIZE * zoom}px`;
-      const formattedZoom = `${Math.round(zoom * 100)}%`;
-      zoomLevelLabel.textContent = formattedZoom;
+      zoomLevelLabel.textContent = `${Math.round(zoom * 100)}%`;
     }
 
     function switchRightTab(tabName) {
@@ -1057,346 +1171,667 @@
       setRightSidebarOpen(true);
     }
 
-    function updateQuestTitleHeader() {
-      const startNode = state.nodes.find((n) => n.type === 'questStart');
-      if (startNode && startNode.config.questId) {
-        topQuestTitle.textContent = startNode.config.questId;
-      } else {
+    function updateHeaderProjectInfo() {
+      const project = PROJECTS.find((p) => p.id === state.activeProjectId);
+      if (!project) {
+        topProjectBadge.textContent = 'No Project';
+        topProjectSubtitle.textContent = 'Select a project in Project Manager';
         topQuestTitle.textContent = 'QuestForge';
-      }
-    }
-
-    // =========================================================================
-    // 8. QUEST EXPLORER RENDERING & LOADERS
-    // =========================================================================
-    function renderQuestExplorer(filterQuery = '') {
-      explorerQuestList.innerHTML = '';
-      const query = filterQuery.trim().toLowerCase();
-
-      const filtered = SAMPLE_QUESTS.filter((q) => {
-        return (
-          !query ||
-          q.title.toLowerCase().includes(query) ||
-          q.id.toLowerCase().includes(query) ||
-          q.type.toLowerCase().includes(query) ||
-          q.description.toLowerCase().includes(query)
-        );
-      });
-
-      explorerQuestCount.textContent = `${filtered.length} Quest${filtered.length === 1 ? '' : 's'} Available`;
-
-      if (filtered.length === 0) {
-        explorerQuestList.innerHTML = `
-          <div class="py-12 text-center">
-            <p class="text-xs text-slate-400">No matching quests found in explorer.</p>
-          </div>
-        `;
         return;
       }
 
-      filtered.forEach((q) => {
-        const item = document.createElement('div');
-        item.className = 'p-3.5 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700/80 hover:border-amber-500/50 transition flex items-center justify-between gap-3 group cursor-pointer';
+      topProjectBadge.textContent = project.isSample ? 'Sample Project' : project.title;
+      topProjectSubtitle.textContent = project.description;
 
-        item.innerHTML = `
-          <div class="flex items-start gap-3 min-w-0">
-            <div class="w-9 h-9 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
-              <i data-lucide="scroll" class="w-4 h-4"></i>
-            </div>
-            <div class="min-w-0">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-white group-hover:text-amber-300 transition truncate">${escapeHtml(q.title)}</span>
-                <span class="px-1.5 py-0.5 rounded bg-surface-950 text-[10px] font-mono text-amber-400 border border-surface-800 shrink-0">${escapeHtml(q.type)}</span>
-              </div>
-              <p class="text-[11px] text-slate-400 mt-1 line-clamp-1 leading-relaxed">${escapeHtml(q.description)}</p>
-              <div class="flex items-center gap-3 mt-2 text-[10px] font-mono text-slate-500">
-                <span>ID: ${escapeHtml(q.id)}</span>
-                <span>•</span>
-                <span>Level ${q.minLevel}+</span>
-                <span>•</span>
-                <span>${q.nodesCount} Nodes</span>
-              </div>
-            </div>
-          </div>
-          <button class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition shrink-0 flex items-center gap-1.5">
-            <span>Open</span>
-            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-          </button>
-        `;
+      const quest = project.quests.find((q) => q.id === state.activeQuestId);
+      if (quest) {
+        topQuestTitle.textContent = quest.title;
+      } else {
+        topQuestTitle.textContent = project.title;
+      }
+    }
 
-        item.addEventListener('click', () => {
-          q.loader();
-          startupModal.classList.add('hidden');
+    topQuestTitle.addEventListener('click', () => {
+      if (!state.activeProjectId || !state.activeQuestId) return;
+      const project = PROJECTS.find(p => p.id === state.activeProjectId);
+      const quest = project?.quests.find(q => q.id === state.activeQuestId);
+      if (!quest) return;
+
+      const newTitle = prompt('Rename Active Quest:', quest.title);
+      if (newTitle && newTitle.trim()) {
+        quest.title = newTitle.trim();
+        updateHeaderProjectInfo();
+        renderProjectManager(explorerSearch.value);
+        saveProjectsToStorage();
+        showToast(`Renamed quest to "${quest.title}"`, 'emerald');
+      }
+    });
+
+    // =========================================================================
+    // 9. PROJECT MANAGER & QUEST/PROJECT DELETION ENGINE
+    // =========================================================================
+    function renderProjectManager(filterQuery = '') {
+      projectManagerList.innerHTML = '';
+      const query = filterQuery.trim().toLowerCase();
+
+      let totalProjects = PROJECTS.length;
+      let totalQuestsCount = PROJECTS.reduce((acc, p) => acc + p.quests.length, 0);
+
+      projectCountSummary.textContent = `${totalProjects} Projects • ${totalQuestsCount} Total Quests`;
+
+      const sortedProjects = [...PROJECTS].sort((a, b) => {
+        if (a.isSample && !b.isSample) return 1;
+        if (!a.isSample && b.isSample) return -1;
+        return 0;
+      });
+
+      sortedProjects.forEach((proj) => {
+        const filteredQuests = proj.quests.filter((q) => {
+          return (
+            !query ||
+            q.title.toLowerCase().includes(query) ||
+            q.id.toLowerCase().includes(query) ||
+            q.type.toLowerCase().includes(query) ||
+            proj.title.toLowerCase().includes(query) ||
+            q.description.toLowerCase().includes(query)
+          );
         });
 
-        explorerQuestList.appendChild(item);
+        if (query && filteredQuests.length === 0 && !proj.title.toLowerCase().includes(query)) {
+          return;
+        }
+
+        const questsToShow = query ? filteredQuests : proj.quests;
+
+        const projCard = document.createElement('div');
+        projCard.className = 'rounded-xl bg-surface-850/80 border border-surface-700/80 overflow-hidden shadow-md';
+
+        const questsHtml = questsToShow.map((q) => {
+          const mediaCount = (q.nodes || []).reduce((acc, n) => acc + (n.resources?.length || 0), 0);
+          return `
+            <div class="p-3 bg-surface-900/90 hover:bg-surface-800 border-t border-surface-800/80 flex items-center justify-between gap-3 group cursor-pointer transition" data-action="open-quest" data-project-id="${proj.id}" data-quest-id="${q.id}">
+              <div class="flex items-start gap-2.5 min-w-0">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                  <i data-lucide="scroll" class="w-4 h-4"></i>
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-white group-hover:text-amber-300 transition truncate">${escapeHtml(q.title)}</span>
+                    <span class="px-1.5 py-0.5 rounded bg-surface-950 text-[10px] font-mono text-amber-400 border border-surface-800 shrink-0">${escapeHtml(q.type)}</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-1 leading-relaxed">${escapeHtml(q.description)}</p>
+                  <div class="flex items-center gap-3 mt-1.5 text-[10px] font-mono text-slate-500">
+                    <span>ID: ${escapeHtml(q.id)}</span>
+                    <span>•</span>
+                    <span>Level ${q.minLevel}+</span>
+                    <span>•</span>
+                    <span>${q.nodes.length} Nodes</span>
+                    ${mediaCount > 0 ? `<span>•</span><span class="text-sky-400">${mediaCount} Media Assets</span>` : ''}
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
+                <button data-action="rename-quest" data-project-id="${proj.id}" data-quest-id="${q.id}" class="p-1.5 rounded-lg bg-surface-850 hover:bg-sky-500/20 text-slate-400 hover:text-sky-400 border border-surface-700 transition" title="Rename Quest">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                </button>
+                <button data-action="open-quest-btn" data-project-id="${proj.id}" data-quest-id="${q.id}" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition flex items-center gap-1">
+                  <span>Open</span>
+                  <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </button>
+                <button data-action="delete-quest" data-project-id="${proj.id}" data-quest-id="${q.id}" class="p-1.5 rounded-lg bg-surface-850 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-surface-700 transition" title="Delete Quest">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        projCard.innerHTML = `
+          <div class="p-4 bg-surface-850 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <i data-lucide="folder-kanban" class="w-4 h-4 text-amber-400 shrink-0"></i>
+                <h3 class="text-sm font-bold text-white truncate">${escapeHtml(proj.title)}</h3>
+                ${proj.isSample ? `<span class="px-2 py-0.5 rounded bg-amber-500/20 text-[10px] font-mono text-amber-300 border border-amber-500/40 shrink-0">Sample Project</span>` : ''}
+                <span class="px-2 py-0.5 rounded bg-surface-950 text-[10px] font-mono text-sky-400 border border-surface-800 shrink-0">${proj.quests.length} Quests</span>
+              </div>
+              <p class="text-xs text-slate-400 mt-1 leading-relaxed">${escapeHtml(proj.description)}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button data-action="add-quest" data-project-id="${proj.id}" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold transition" title="Add New Quest">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Add Quest</span>
+              </button>
+              <button data-action="delete-project" data-project-id="${proj.id}" class="p-1.5 rounded-lg bg-surface-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-surface-700 transition" title="Delete Entire Project">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+          <div class="divide-y divide-surface-800">
+            ${questsHtml || `<div class="p-4 text-center text-xs text-slate-500">No quests in this project. Add one or delete the project.</div>`}
+          </div>
+        `;
+
+        projectManagerList.appendChild(projCard);
+      });
+
+      projectManagerList.querySelectorAll('[data-action="open-quest"]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const pId = el.dataset.projectId;
+          const qId = el.dataset.questId;
+          loadQuestIntoWorkspace(pId, qId);
+          startupModal.classList.add('hidden');
+        });
+      });
+
+      projectManagerList.querySelectorAll('[data-action="open-quest-btn"]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const pId = el.dataset.projectId;
+          const qId = el.dataset.questId;
+          loadQuestIntoWorkspace(pId, qId);
+          startupModal.classList.add('hidden');
+        });
+      });
+
+      projectManagerList.querySelectorAll('[data-action="rename-quest"]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const pId = el.dataset.projectId;
+          const qId = el.dataset.questId;
+          const proj = PROJECTS.find(p => p.id === pId);
+          const quest = proj?.quests.find(q => q.id === qId);
+          if (!quest) return;
+
+          const newName = prompt('Enter new quest title:', quest.title);
+          if (newName && newName.trim()) {
+            quest.title = newName.trim();
+            renderProjectManager(explorerSearch.value);
+            updateHeaderProjectInfo();
+            saveProjectsToStorage();
+            showToast(`Renamed quest to "${quest.title}"`, 'emerald');
+          }
+        });
+      });
+
+      projectManagerList.querySelectorAll('[data-action="add-quest"]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const pId = el.dataset.projectId;
+          createNewQuestInProject(pId);
+        });
+      });
+
+      projectManagerList.querySelectorAll('[data-action="delete-quest"]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const pId = el.dataset.projectId;
+          const qId = el.dataset.questId;
+          promptDeleteQuest(pId, qId);
+        });
+      });
+
+      projectManagerList.querySelectorAll('[data-action="delete-project"]').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const pId = el.dataset.projectId;
+          promptDeleteProject(pId);
+        });
       });
 
       lucide.createIcons();
     }
 
-    function createNewQuest() {
-      stopPlaytest();
-      state.nodes = [];
-      state.edges = [];
-      clearSelection();
-      state.questActive = true;
-      startupModal.classList.add('hidden');
-
-      const rect = canvasContainer.getBoundingClientRect();
-      const centerWorld = screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      addNode('questStart', centerWorld.x - 134, centerWorld.y - 60, {
-        title: 'New Quest Start',
-        config: { questId: 'qst_my_new_quest', questType: 'Main Story', minLevel: '1' }
-      });
-
-      fitCanvasView();
-      updateStats();
-      updateQuestTitleHeader();
-      showToast('Created new quest', 'emerald');
-    }
-
-    function loadSunkenShrineQuest() {
-      stopPlaytest();
-      state.nodes = [];
-      state.edges = [];
-      clearSelection();
-      state.questActive = true;
-
-      const nStart = addNode('questStart', 48, 216, {
-        id: 'node_start_shrine',
-        title: 'The Sunken Shrine',
-        notes: 'Triggered upon entering Harbor District.',
-        config: { questId: 'qst_04_sunken_shrine', questType: 'Main Story', minLevel: '5' }
-      });
-
-      const nDialogue = addNode('dialogue', 360, 216, {
-        id: 'node_npc_elder',
-        title: 'High Priestess Lyra',
-        notes: 'Play coastal wind ambience.',
-        config: {
-          npcName: 'High Priestess Lyra',
-          emotion: 'Urgent',
-          dialogueText: 'The sea barrier weakens! Enter the Sunken Shrine and recover the Abyssal Pearl before the tide seals the vault.'
-        }
-      });
-
-      const nChoice = addNode('playerChoice', 672, 216, {
-        id: 'node_choice_approach',
-        title: 'Choose Approach',
-        notes: 'Branch between stealth dive or persuading the Harbor Captain.',
-        config: {
-          choiceALabel: 'Dive straight into the flooded crypt',
-          choiceBLabel: 'Persuade Harbor Guard for diving bell',
-          skillCheck: 'Persuasion 12'
-        }
-      });
-
-      const nObjA = addNode('objective', 1008, 72, {
-        id: 'node_obj_relic',
-        title: 'Recover Abyssal Pearl',
-        notes: 'Spawns 3 Abyssal Lurkers around the altar.',
-        config: { objectiveType: 'Collect Item', targetName: 'Abyssal Pearl', requiredCount: '1' }
-      });
-
-      const nCondB = addNode('condition', 1008, 360, {
-        id: 'node_cond_guard',
-        title: 'Check Harbor Favor',
-        notes: 'Checks if player holds the Harbor Seal.',
-        config: { conditionType: 'Has Item', conditionValue: 'item_harbor_seal' }
-      });
-
-      const nRewardGreat = addNode('questReward', 1344, 144, {
-        id: 'node_reward_hero',
-        title: 'Shrine Restored',
-        notes: 'Unlocks Fast Travel to Sunken Shrine.',
-        config: { outcome: 'Quest Complete', xpReward: '650', goldReward: '300', itemReward: 'Tidecaller Trident' }
-      });
-
-      const nRewardFallback = addNode('questReward', 1344, 432, {
-        id: 'node_reward_late',
-        title: 'Vault Sealed by Tide',
-        notes: 'Can retry at next low tide.',
-        config: { outcome: 'Branch End', xpReward: '150', goldReward: '50', itemReward: 'Damp Sea Chart' }
-      });
-
-      state.edges = [
-        { id: 'qedge_1', sourceNodeId: nStart.id, sourcePortId: 'out_start', targetNodeId: nDialogue.id, targetPortId: 'in_prev' },
-        { id: 'qedge_2', sourceNodeId: nDialogue.id, sourcePortId: 'out_next', targetNodeId: nChoice.id, targetPortId: 'in_prev' },
-        { id: 'qedge_3', sourceNodeId: nChoice.id, sourcePortId: 'out_choice_a', targetNodeId: nObjA.id, targetPortId: 'in_prev' },
-        { id: 'qedge_4', sourceNodeId: nChoice.id, sourcePortId: 'out_choice_b', targetNodeId: nCondB.id, targetPortId: 'in_prev' },
-        { id: 'qedge_5', sourceNodeId: nObjA.id, sourcePortId: 'out_complete', targetNodeId: nRewardGreat.id, targetPortId: 'in_prev' },
-        { id: 'qedge_6', sourceNodeId: nCondB.id, sourcePortId: 'out_true', targetNodeId: nRewardGreat.id, targetPortId: 'in_prev' },
-        { id: 'qedge_7', sourceNodeId: nCondB.id, sourcePortId: 'out_false', targetNodeId: nRewardFallback.id, targetPortId: 'in_prev' }
-      ];
-
-      clearSelection();
-      renderNodes();
-      requestAnimationFrame(() => {
-        fitCanvasView();
-        renderEdges();
-        updateStats();
-        updateQuestTitleHeader();
-      });
-      showToast('Loaded "The Sunken Shrine"', 'emerald');
-    }
-
-    function loadWhisperingWoodsQuest() {
-      stopPlaytest();
-      state.nodes = [];
-      state.edges = [];
-      clearSelection();
-      state.questActive = true;
-
-      const nStart = addNode('questStart', 48, 200, {
-        id: 'node_start_woods',
-        title: 'Whispering Woods',
-        notes: 'Accepted from Town Notice Board.',
-        config: { questId: 'qst_02_whispering_woods', questType: 'Side Quest', minLevel: '3' }
-      });
-
-      const nDialogue = addNode('dialogue', 360, 200, {
-        id: 'node_npc_hermit',
-        title: 'Blind Hermit Caleb',
-        notes: 'Flickering torchlight atmosphere.',
-        config: {
-          npcName: 'Blind Hermit Caleb',
-          emotion: 'Friendly',
-          dialogueText: 'Beware the phantom lights in the canopy! If you seek my lost pendant, look beneath the weeping willow.'
-        }
-      });
-
-      const nObj = addNode('objective', 672, 200, {
-        id: 'node_obj_pendant',
-        title: 'Find Hermit Pendant',
-        notes: 'Guarded by a Will-o-Wisp.',
-        config: { objectiveType: 'Collect Item', targetName: 'Silver Pendant', requiredCount: '1' }
-      });
-
-      const nChoice = addNode('playerChoice', 984, 200, {
-        id: 'node_choice_return',
-        title: 'Return Pendant or Keep It',
-        notes: 'Moral choice affecting alignment.',
-        config: { choiceALabel: 'Return pendant to Caleb for blessing', choiceBLabel: 'Keep pendant for arcane bonus', skillCheck: 'None' }
-      });
-
-      const nRewardA = addNode('questReward', 1300, 100, {
-        id: 'node_reward_good',
-        title: 'Caleb’s Gratitude',
-        notes: 'Grants Hermit Staff.',
-        config: { outcome: 'Quest Complete', xpReward: '400', goldReward: '120', itemReward: 'Hermit Walking Staff' }
-      });
-
-      const nRewardB = addNode('questReward', 1300, 320, {
-        id: 'node_reward_greedy',
-        title: 'Arcane Secrets',
-        notes: 'Grants dark spellbook.',
-        config: { outcome: 'Quest Complete', xpReward: '450', goldReward: '250', itemReward: 'Tome of Whispers' }
-      });
-
-      state.edges = [
-        { id: 'qedge_w1', sourceNodeId: nStart.id, sourcePortId: 'out_start', targetNodeId: nDialogue.id, targetPortId: 'in_prev' },
-        { id: 'qedge_w2', sourceNodeId: nDialogue.id, sourcePortId: 'out_next', targetNodeId: nObj.id, targetPortId: 'in_prev' },
-        { id: 'qedge_w3', sourceNodeId: nObj.id, sourcePortId: 'out_complete', targetNodeId: nChoice.id, targetPortId: 'in_prev' },
-        { id: 'qedge_w4', sourceNodeId: nChoice.id, sourcePortId: 'out_choice_a', targetNodeId: nRewardA.id, targetPortId: 'in_prev' },
-        { id: 'qedge_w5', sourceNodeId: nChoice.id, sourcePortId: 'out_choice_b', targetNodeId: nRewardB.id, targetPortId: 'in_prev' }
-      ];
-
-      clearSelection();
-      renderNodes();
-      requestAnimationFrame(() => {
-        fitCanvasView();
-        renderEdges();
-        updateStats();
-        updateQuestTitleHeader();
-      });
-      showToast('Loaded "Whispering Woods Investigation"', 'emerald');
-    }
-
-    function loadGoblinRaidQuest() {
-      stopPlaytest();
-      state.nodes = [];
-      state.edges = [];
-      clearSelection();
-      state.questActive = true;
-
-      const nStart = addNode('questStart', 48, 200, {
-        id: 'node_start_raid',
-        title: 'Defense of Miller’s Hollow',
-        notes: 'Triggered automatically upon entering farm zone.',
-        config: { questId: 'qst_03_goblin_raid', questType: 'Bounty', minLevel: '2' }
-      });
-
-      const nDialogue = addNode('dialogue', 360, 200, {
-        id: 'node_npc_miller',
-        title: 'Elder Miller',
-        notes: 'Panic music playing.',
-        config: {
-          npcName: 'Elder Miller',
-          emotion: 'Urgent',
-          dialogueText: 'Goblins are burning the grain silos! Drive them back into the hills before everything is lost!'
-        }
-      });
-
-      const nObj = addNode('objective', 672, 200, {
-        id: 'node_obj_goblins',
-        title: 'Defeat Goblin Raiders',
-        notes: 'Defeat 8 raiders.',
-        config: { objectiveType: 'Kill Target', targetName: 'Goblin Raider', requiredCount: '8' }
-      });
-
-      const nReward = addNode('questReward', 984, 200, {
-        id: 'node_reward_raid',
-        title: 'Granary Secured',
-        notes: 'Town reputation increased.',
-        config: { outcome: 'Quest Complete', xpReward: '300', goldReward: '180', itemReward: 'Hunter Crossbow' }
-      });
-
-      state.edges = [
-        { id: 'qedge_g1', sourceNodeId: nStart.id, sourcePortId: 'out_start', targetNodeId: nDialogue.id, targetPortId: 'in_prev' },
-        { id: 'qedge_g2', sourceNodeId: nDialogue.id, sourcePortId: 'out_next', targetNodeId: nObj.id, targetPortId: 'in_prev' },
-        { id: 'qedge_g3', sourceNodeId: nObj.id, sourcePortId: 'out_complete', targetNodeId: nReward.id, targetPortId: 'in_prev' }
-      ];
-
-      clearSelection();
-      renderNodes();
-      requestAnimationFrame(() => {
-        fitCanvasView();
-        renderEdges();
-        updateStats();
-        updateQuestTitleHeader();
-      });
-      showToast('Loaded "Defense of Miller’s Hollow"', 'emerald');
-    }
-
-    function saveActiveQuest() {
-      const payload = buildQuestExportPayload();
-      const fileName = `${payload.questMetadata.questId || 'quest_graph'}.json`;
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast(`Saved quest as ${fileName}`, 'emerald');
-    }
-
-    function openExplorerModal() {
-      renderQuestExplorer(explorerSearch.value);
+    function openProjectManagerModal() {
+      renderProjectManager(explorerSearch.value);
       startupModal.classList.remove('hidden');
     }
 
-    function closeActiveQuestPrompt() {
-      if (!state.questActive && state.nodes.length === 0) {
-        openExplorerModal();
+    function promptDeleteQuest(projectId, questId) {
+      const proj = PROJECTS.find(p => p.id === projectId);
+      const quest = proj?.quests.find(q => q.id === questId);
+      if (!proj || !quest) return;
+
+      if (proj.quests.length <= 1) {
+        showToast('Cannot delete the last quest in a project. Delete the project instead.', 'rose');
         return;
       }
-      closeConfirmModal.classList.remove('hidden');
+
+      state.pendingDelete = { type: 'quest', projectId, questId };
+      deleteModalTitle.textContent = `Delete Quest "${quest.title}"?`;
+      deleteModalDesc.textContent = `This will permanently delete this quest graph and its nodes.`;
+      deleteConfirmModal.classList.remove('hidden');
     }
 
+    function promptDeleteProject(projectId) {
+      const proj = PROJECTS.find(p => p.id === projectId);
+      if (!proj) return;
+
+      if (PROJECTS.length <= 1) {
+        showToast('Cannot delete the final remaining project.', 'rose');
+        return;
+      }
+
+      state.pendingDelete = { type: 'project', projectId };
+      deleteModalTitle.textContent = `Delete Project "${proj.title}"?`;
+      deleteModalDesc.textContent = `This will permanently delete the project and all ${proj.quests.length} contained quests.`;
+      deleteConfirmModal.classList.remove('hidden');
+    }
+
+    document.getElementById('cancel-delete-btn').addEventListener('click', () => {
+      deleteConfirmModal.classList.add('hidden');
+      state.pendingDelete = null;
+    });
+
+    document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+      const pd = state.pendingDelete;
+      if (!pd) return;
+
+      if (pd.type === 'quest') {
+        const proj = PROJECTS.find(p => p.id === pd.projectId);
+        if (proj) {
+          proj.quests = proj.quests.filter(q => q.id !== pd.questId);
+          if (state.activeQuestId === pd.questId) {
+            if (proj.quests.length > 0) {
+              loadQuestIntoWorkspace(proj.id, proj.quests[0].id);
+            } else {
+              state.activeQuestId = null;
+              state.nodes = [];
+              state.edges = [];
+              renderNodes();
+              renderEdges();
+            }
+          }
+          showToast('Quest deleted successfully', 'rose');
+        }
+      } else if (pd.type === 'project') {
+        const idx = PROJECTS.findIndex(p => p.id === pd.projectId);
+        if (idx !== -1) {
+          PROJECTS.splice(idx, 1);
+          if (state.activeProjectId === pd.projectId) {
+            const nextProj = PROJECTS[0];
+            state.activeProjectId = nextProj.id;
+            if (nextProj.quests.length > 0) {
+              loadQuestIntoWorkspace(nextProj.id, nextProj.quests[0].id);
+            }
+          }
+          showToast('Project deleted successfully', 'rose');
+        }
+      }
+
+      deleteConfirmModal.classList.add('hidden');
+      state.pendingDelete = null;
+      saveProjectsToStorage();
+      renderProjectManager(explorerSearch.value);
+    });
+
+    function loadQuestIntoWorkspace(projectId, questId) {
+      stopPlaytest();
+      const project = PROJECTS.find((p) => p.id === projectId);
+      if (!project) return;
+      const quest = project.quests.find((q) => q.id === questId);
+      if (!quest) return;
+
+      state.activeProjectId = project.id;
+      state.activeQuestId = quest.id;
+
+      state.nodes = JSON.parse(JSON.stringify(quest.nodes || []));
+      state.edges = JSON.parse(JSON.stringify(quest.edges || []));
+      clearSelection();
+
+      renderNodes();
+      requestAnimationFrame(() => {
+        fitCanvasView();
+        renderEdges();
+        updateStats();
+        updateHeaderProjectInfo();
+      });
+
+      saveProjectsToStorage();
+      showToast(`Opened "${quest.title}"`, 'emerald');
+    }
+
+    function createNewQuestInProject(projectId) {
+      const project = PROJECTS.find((p) => p.id === projectId);
+      if (!project) return;
+
+      const defaultName = prompt('Enter title for the new quest:', `Chapter ${project.quests.length + 1}: The Journey Begins`);
+      if (!defaultName || !defaultName.trim()) return;
+
+      const newQId = generateId('qst');
+      const newQuest = {
+        id: newQId,
+        title: defaultName.trim(),
+        type: 'Main Story',
+        minLevel: 1,
+        description: 'New narrative quest graph in project.',
+        nodes: [
+          {
+            id: generateId('node'),
+            type: 'questStart',
+            title: defaultName.trim(),
+            x: 64,
+            y: 200,
+            notes: '',
+            resources: [],
+            config: { questId: newQId, questType: 'Main Story', customQuestType: '', minLevel: '1' }
+          }
+        ],
+        edges: []
+      };
+
+      project.quests.push(newQuest);
+      loadQuestIntoWorkspace(projectId, newQId);
+      startupModal.classList.add('hidden');
+      saveProjectsToStorage();
+      showToast(`Created quest "${newQuest.title}"`, 'emerald');
+    }
+
+    document.getElementById('new-blank-project-btn').addEventListener('click', () => {
+      const projName = prompt('Enter Blank Project Name:', 'My Blank Campaign');
+      if (!projName || !projName.trim()) return;
+
+      const blankProjId = generateId('proj');
+      const blankQuestId = generateId('qst');
+
+      const blankProject = {
+        id: blankProjId,
+        title: projName.trim(),
+        description: 'Fresh blank game project.',
+        isSample: false,
+        quests: [
+          {
+            id: blankQuestId,
+            title: 'Starting Quest',
+            type: 'Main Story',
+            minLevel: 1,
+            description: 'Beginning of a new journey.',
+            nodes: [
+              {
+                id: generateId('node'),
+                type: 'questStart',
+                title: 'Starting Quest',
+                x: 64,
+                y: 200,
+                notes: '',
+                resources: [],
+                config: { questId: blankQuestId, questType: 'Main Story', customQuestType: '', minLevel: '1' }
+              }
+            ],
+            edges: []
+          }
+        ]
+      };
+
+      PROJECTS.push(blankProject);
+      saveProjectsToStorage();
+      loadQuestIntoWorkspace(blankProjId, blankQuestId);
+      startupModal.classList.add('hidden');
+      showToast(`Created blank project "${projName.trim()}"`, 'emerald');
+    });
+
+    document.getElementById('new-project-btn').addEventListener('click', () => {
+      newProjName.value = '';
+      newProjDesc.value = '';
+      newProjectModal.classList.remove('hidden');
+    });
+
+    document.getElementById('close-new-project-modal').addEventListener('click', () => {
+      newProjectModal.classList.add('hidden');
+    });
+
+    document.getElementById('cancel-new-proj-btn').addEventListener('click', () => {
+      newProjectModal.classList.add('hidden');
+    });
+
+    document.getElementById('confirm-new-proj-btn').addEventListener('click', () => {
+      const name = newProjName.value.trim();
+      const desc = newProjDesc.value.trim();
+      if (!name) {
+        showToast('Please enter a project name', 'amber');
+        return;
+      }
+
+      const newProj = {
+        id: generateId('proj'),
+        title: name,
+        description: desc || 'Custom game project.',
+        isSample: false,
+        quests: []
+      };
+
+      PROJECTS.push(newProj);
+      newProjectModal.classList.add('hidden');
+      saveProjectsToStorage();
+      renderProjectManager(explorerSearch.value);
+      showToast(`Created project "${name}"`, 'emerald');
+      createNewQuestInProject(newProj.id);
+    });
+
+    document.getElementById('clear-persistence-btn').addEventListener('click', clearPersistentStorage);
+
     // =========================================================================
-    // 9. QUEST PALETTE RENDERING & DRAG-AND-DROP
+    // 10. ZIP ARCHIVE EXPORT & IMPORT (JSZip)
+    // =========================================================================
+    async function saveQuestAsZip() {
+      const project = PROJECTS.find((p) => p.id === state.activeProjectId);
+      if (!project) {
+        showToast('No active project selected', 'rose');
+        return;
+      }
+      let quest = project.quests.find((q) => q.id === state.activeQuestId);
+      if (!quest) {
+        quest = { id: state.activeQuestId || generateId('qst'), title: topQuestTitle.textContent, type: 'Main Story', minLevel: 1, description: '', nodes: state.nodes, edges: state.edges };
+        project.quests.push(quest);
+      } else {
+        quest.nodes = JSON.parse(JSON.stringify(state.nodes));
+        quest.edges = JSON.parse(JSON.stringify(state.edges));
+      }
+
+      const zip = new JSZip();
+      const mediaFolder = zip.folder("resources");
+
+      const exportNodes = quest.nodes.map((n) => {
+        const cleanResources = (n.resources || []).map((res) => {
+          const ext = res.name.substring(res.name.lastIndexOf('.')) || '.bin';
+          const fileName = `${n.id}_${res.id}${ext}`;
+          
+          if (res.data && res.data.startsWith('data:')) {
+            const base64Data = res.data.split(',')[1];
+            mediaFolder.file(fileName, base64Data, { base64: true });
+          }
+
+          return {
+            id: res.id,
+            name: res.name,
+            type: res.type,
+            file: `resources/${fileName}`
+          };
+        });
+
+        return {
+          id: n.id,
+          type: n.type,
+          title: n.title,
+          position: { x: n.x, y: n.y },
+          notes: n.notes || '',
+          properties: { ...n.config },
+          resources: cleanResources
+        };
+      });
+
+      const questPayload = {
+        schemaVersion: '2.1.0',
+        engine: 'QuestForge',
+        projectId: project.id,
+        projectTitle: project.title,
+        questMetadata: {
+          questId: quest.id,
+          title: quest.title,
+          questType: quest.type,
+          minLevel: quest.minLevel,
+          description: quest.description
+        },
+        nodes: exportNodes,
+        connections: quest.edges.map((e) => ({
+          id: e.id,
+          fromNode: e.sourceNodeId,
+          fromPort: e.sourcePortId,
+          toNode: e.targetNodeId,
+          toPort: e.targetPortId
+        })),
+        exportedAt: new Date().toISOString()
+      };
+
+      zip.file("quest.json", JSON.stringify(questPayload, null, 2));
+
+      try {
+        showToast('Packaging ZIP archive with media assets...', 'amber');
+        const content = await zip.generateAsync({ type: "blob" });
+        const fileName = `${quest.id}.zip`;
+        const url = URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast(`Successfully saved ZIP archive "${fileName}"`, 'emerald');
+      } catch (err) {
+        showToast(`Failed to create ZIP: ${err.message}`, 'rose');
+      }
+    }
+
+    document.getElementById('save-quest-btn').addEventListener('click', saveQuestAsZip);
+
+    async function handleFileImport(file) {
+      if (!file) return;
+      const fileName = file.name.toLowerCase();
+
+      if (fileName.endsWith('.zip')) {
+        try {
+          showToast('Extracting ZIP archive...', 'amber');
+          const zip = new JSZip();
+          const zipContent = await zip.loadAsync(file);
+
+          if (!zipContent.files['quest.json']) {
+            throw new Error('Missing quest.json in ZIP archive.');
+          }
+
+          const jsonString = await zipContent.files['quest.json'].async('text');
+          const parsed = JSON.parse(jsonString);
+
+          for (let node of parsed.nodes) {
+            if (node.resources && Array.isArray(node.resources)) {
+              for (let res of node.resources) {
+                if (res.file && zipContent.files[res.file]) {
+                  const blob = await zipContent.files[res.file].async('blob');
+                  const reader = new FileReader();
+                  res.data = await new Promise((resolve) => {
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(blob);
+                  });
+                }
+              }
+            }
+          }
+
+          loadQuestDataIntoApp(parsed);
+          startupModal.classList.add('hidden');
+          showToast(`Successfully imported ZIP: ${file.name}`, 'emerald');
+        } catch (err) {
+          showToast(`ZIP Import Error: ${err.message}`, 'rose');
+        }
+      } else if (fileName.endsWith('.json')) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const parsed = JSON.parse(evt.target.result);
+            loadQuestDataIntoApp(parsed);
+            startupModal.classList.add('hidden');
+            showToast(`Successfully imported JSON: ${file.name}`, 'emerald');
+          } catch (err) {
+            showToast(`Invalid JSON: ${err.message}`, 'rose');
+          }
+        };
+        reader.readAsText(file);
+      } else {
+        showToast('Please select a valid .zip or .json quest file', 'rose');
+      }
+    }
+
+    function loadQuestDataIntoApp(parsed) {
+      let nodesArr = parsed.nodes || [];
+      let edgesArr = parsed.connections || parsed.edges || [];
+      let qTitle = parsed.questMetadata?.title || parsed.title || 'Imported Quest';
+      let qId = parsed.questMetadata?.questId || parsed.id || generateId('qst');
+      let pTitle = parsed.projectTitle || 'Imported Projects';
+
+      let targetProj = PROJECTS.find((p) => p.title.toLowerCase() === pTitle.toLowerCase());
+      if (!targetProj) {
+        targetProj = {
+          id: generateId('proj'),
+          title: pTitle,
+          description: 'Imported campaign project.',
+          isSample: false,
+          quests: []
+        };
+        PROJECTS.push(targetProj);
+      }
+
+      const mappedNodes = nodesArr.map((n) => {
+        let config = { ...(NODE_TYPES[n.type]?.defaultConfig || {}), ...(n.properties || n.config || {}) };
+        if (n.type === 'playerChoice' && !config.choices) {
+          config.choices = [
+            { id: 'choice_0', label: n.properties?.choiceALabel || 'Choice A' },
+            { id: 'choice_1', label: n.properties?.choiceBLabel || 'Choice B' }
+          ];
+        }
+        return {
+          id: n.id || generateId('qnode'),
+          type: n.type,
+          title: n.title || NODE_TYPES[n.type]?.title || 'Node',
+          x: Number(n.position?.x ?? n.x ?? 100),
+          y: Number(n.position?.y ?? n.y ?? 100),
+          notes: n.notes || '',
+          resources: n.resources || [],
+          config
+        };
+      });
+
+      const mappedEdges = edgesArr.map((e) => ({
+        id: e.id || generateId('qedge'),
+        sourceNodeId: e.fromNode || e.sourceNodeId,
+        sourcePortId: e.fromPort || e.sourcePortId,
+        targetNodeId: e.toNode || e.targetNodeId,
+        targetPortId: e.toPort || e.targetPortId
+      }));
+
+      const newQuestObj = {
+        id: qId,
+        title: qTitle,
+        type: parsed.questMetadata?.questType || 'Main Story',
+        minLevel: parsed.questMetadata?.minLevel || 1,
+        description: parsed.questMetadata?.description || 'Imported quest graph.',
+        nodes: mappedNodes,
+        edges: mappedEdges
+      };
+
+      targetProj.quests.push(newQuestObj);
+      saveProjectsToStorage();
+      loadQuestIntoWorkspace(targetProj.id, qId);
+    }
+
+    document.getElementById('explorer-import-btn').addEventListener('click', () => hiddenFileInput.click());
+    document.getElementById('import-json-btn').addEventListener('click', () => hiddenFileInput.click());
+    hiddenFileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) {
+        handleFileImport(e.target.files[0]);
+        hiddenFileInput.value = '';
+      }
+    });
+
+    // =========================================================================
+    // 11. QUEST PALETTE & DRAG-AND-DROP
     // =========================================================================
     function renderPalette(filterText = '') {
       paletteList.innerHTML = '';
@@ -1441,7 +1876,7 @@
             rect.left + rect.width / 2 + (Math.random() * 48 - 24),
             rect.top + rect.height / 2 + (Math.random() * 48 - 24)
           );
-          addNode(tpl.type, centerWorld.x - 134, centerWorld.y - 60);
+          addNode(tpl.type, centerWorld.x - 140, centerWorld.y - 60);
         });
 
         paletteList.appendChild(item);
@@ -1460,12 +1895,12 @@
       const nodeType = e.dataTransfer.getData('application/quest-node-type');
       if (nodeType && NODE_TYPES[nodeType]) {
         const pos = screenToWorld(e.clientX, e.clientY);
-        addNode(nodeType, pos.x - 134, pos.y - 30);
+        addNode(nodeType, pos.x - 140, pos.y - 30);
       }
     });
 
     // =========================================================================
-    // 10. NODE MANAGEMENT & CARD RENDERING
+    // 12. NODE MANAGEMENT & CARD RENDERING (HEADER CLOSE BUTTON REMOVED)
     // =========================================================================
     function addNode(type, x, y, customData = null) {
       const template = NODE_TYPES[type];
@@ -1478,9 +1913,10 @@
         x: snapCoord(x),
         y: snapCoord(y),
         notes: customData?.notes || '',
+        resources: customData?.resources || [],
         config: customData?.config
-          ? { ...template.defaultConfig, ...customData.config }
-          : { ...template.defaultConfig }
+          ? JSON.parse(JSON.stringify({ ...template.defaultConfig, ...customData.config }))
+          : JSON.parse(JSON.stringify(template.defaultConfig))
       };
 
       state.nodes.push(node);
@@ -1488,7 +1924,8 @@
       renderNodes();
       renderEdges();
       updateStats();
-      updateQuestTitleHeader();
+      updateHeaderProjectInfo();
+      saveProjectsToStorage();
       return node;
     }
 
@@ -1498,14 +1935,13 @@
         (e) => e.sourceNodeId !== nodeId && e.targetNodeId !== nodeId
       );
       state.selectedNodeIds.delete(nodeId);
-      if (state.playtest.currentNodeId === nodeId) {
-        stopPlaytest();
-      }
+      if (state.playtest.currentNodeId === nodeId) stopPlaytest();
       renderNodes();
       renderEdges();
       renderInspector();
       updateStats();
-      updateQuestTitleHeader();
+      updateHeaderProjectInfo();
+      saveProjectsToStorage();
       showToast('Quest node deleted', 'rose');
     }
 
@@ -1521,50 +1957,42 @@
       renderEdges();
       renderInspector();
       updateStats();
-      updateQuestTitleHeader();
+      updateHeaderProjectInfo();
+      saveProjectsToStorage();
       showToast(`Deleted ${idsToDelete.length} quest nodes`, 'rose');
     }
 
     function deleteEdge(edgeId) {
       state.edges = state.edges.filter((e) => e.id !== edgeId);
-      if (state.selectedEdgeId === edgeId) {
-        state.selectedEdgeId = null;
-      }
+      if (state.selectedEdgeId === edgeId) state.selectedEdgeId = null;
       renderNodes();
       renderEdges();
       renderInspector();
       updateStats();
+      saveProjectsToStorage();
       showToast('Connection removed', 'rose');
     }
 
     function selectNode(nodeId, isAdditive = false) {
-      if (!isAdditive) {
-        state.selectedNodeIds.clear();
-      }
+      if (!isAdditive) state.selectedNodeIds.clear();
       state.selectedNodeIds.add(nodeId);
       state.selectedEdgeId = null;
       updateSelectionVisuals();
-      if (state.rightTab === 'inspector') {
-        renderInspector();
-      }
+      if (state.rightTab === 'inspector') renderInspector();
     }
 
     function selectEdge(edgeId) {
       state.selectedEdgeId = edgeId;
       state.selectedNodeIds.clear();
       updateSelectionVisuals();
-      if (state.rightTab === 'inspector') {
-        renderInspector();
-      }
+      if (state.rightTab === 'inspector') renderInspector();
     }
 
     function clearSelection() {
       state.selectedNodeIds.clear();
       state.selectedEdgeId = null;
       updateSelectionVisuals();
-      if (state.rightTab === 'inspector') {
-        renderInspector();
-      }
+      if (state.rightTab === 'inspector') renderInspector();
     }
 
     function updateSelectionVisuals() {
@@ -1587,80 +2015,117 @@
       deleteSelectedBtn.disabled = state.selectedNodeIds.size === 0 && !state.selectedEdgeId;
     }
 
+    function getNodeOutputs(node) {
+      if (node.type === 'playerChoice') {
+        const choices = node.config.choices || [{ id: 'choice_0', label: 'Choice 1' }, { id: 'choice_1', label: 'Choice 2' }];
+        return choices.map((ch, idx) => ({
+          id: ch.id,
+          label: `Opt ${idx + 1}`
+        }));
+      }
+      return NODE_TYPES[node.type].outputs;
+    }
+
     function getNodeSummaryHtml(node) {
       const c = node.config;
+      let summary = '';
       switch (node.type) {
         case 'questStart':
-          return `
+          const qType = c.questType === 'Custom...' ? (c.customQuestType || 'Custom') : c.questType;
+          summary = `
             <div class="space-y-1.5">
               <div class="flex items-center justify-between gap-1">
-                <span class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono">${escapeHtml(c.questType)}</span>
+                <span class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono truncate">${escapeHtml(qType)}</span>
                 <span class="text-[10px] font-mono text-slate-400">Lvl ${escapeHtml(c.minLevel)}+</span>
               </div>
               <div class="text-[11px] font-mono text-slate-300 bg-surface-950/90 border border-surface-800 rounded px-2 py-1 truncate">${escapeHtml(c.questId)}</div>
             </div>
           `;
+          break;
         case 'dialogue':
-          return `
+          const reaction = c.reaction === 'Custom...' ? (c.customReaction || 'Custom') : c.reaction;
+          summary = `
             <div class="space-y-1.5">
               <div class="flex items-center justify-between gap-1">
                 <span class="text-[11px] font-semibold text-indigo-300 truncate">${escapeHtml(c.npcName)}</span>
-                <span class="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 text-[10px] font-mono">${escapeHtml(c.emotion)}</span>
+                <span class="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 text-[10px] font-mono truncate">${escapeHtml(reaction)}</span>
               </div>
               <p class="text-[11px] text-slate-300 bg-surface-950/90 border border-surface-800 rounded p-2 line-clamp-2 italic leading-snug">"${escapeHtml(c.dialogueText)}"</p>
             </div>
           `;
+          break;
         case 'playerChoice':
-          return `
+          const choices = c.choices || [];
+          const choicesHtml = choices.map((ch, idx) => `
+            <div class="text-[11px] bg-surface-950/90 border border-surface-800 rounded px-2 py-1 text-slate-300 truncate">
+              <span class="text-amber-400 font-mono font-bold mr-1">${idx + 1}:</span>${escapeHtml(ch.label)}
+            </div>
+          `).join('');
+
+          summary = `
             <div class="space-y-1.5">
-              ${
-                c.skillCheck && c.skillCheck !== 'None'
-                  ? `<span class="inline-block px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-mono">Check: ${escapeHtml(c.skillCheck)}</span>`
-                  : ''
-              }
-              <div class="text-[11px] bg-surface-950/90 border border-surface-800 rounded px-2 py-1 text-slate-300 truncate">
-                <span class="text-amber-400 font-mono font-bold mr-1">A:</span>${escapeHtml(c.choiceALabel)}
-              </div>
-              <div class="text-[11px] bg-surface-950/90 border border-surface-800 rounded px-2 py-1 text-slate-300 truncate">
-                <span class="text-amber-400 font-mono font-bold mr-1">B:</span>${escapeHtml(c.choiceBLabel)}
+              <div class="space-y-1 max-h-28 overflow-y-auto">
+                ${choicesHtml}
               </div>
             </div>
           `;
+          break;
         case 'objective':
-          return `
+          const objType = c.objectiveType === 'Custom...' ? (c.customObjectiveType || 'Custom') : c.objectiveType;
+          summary = `
             <div class="space-y-1.5">
-              <span class="inline-block px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono">${escapeHtml(c.objectiveType)}</span>
+              <span class="inline-block px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono truncate max-w-full">${escapeHtml(objType)}</span>
               <div class="flex items-center justify-between text-[11px] bg-surface-950/90 border border-surface-800 rounded px-2 py-1">
                 <span class="text-slate-200 font-medium truncate">${escapeHtml(c.targetName)}</span>
                 <span class="text-cyan-400 font-mono font-semibold shrink-0 ml-2">0 / ${escapeHtml(c.requiredCount)}</span>
               </div>
             </div>
           `;
+          break;
         case 'condition':
-          return `
+          const condType = c.conditionType === 'Custom...' ? (c.customConditionType || 'Custom') : c.conditionType;
+          summary = `
             <div class="space-y-1.5">
-              <span class="inline-block px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[10px] font-mono">${escapeHtml(c.conditionType)}</span>
+              <span class="inline-block px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[10px] font-mono truncate max-w-full">${escapeHtml(condType)}</span>
               <div class="text-[11px] font-mono text-slate-200 bg-surface-950/90 border border-surface-800 rounded px-2 py-1 truncate">${escapeHtml(c.conditionValue)}</div>
             </div>
           `;
+          break;
         case 'questReward':
-          return `
+          const outcomeType = c.outcome === 'Custom...' ? (c.customOutcome || 'Custom') : c.outcome;
+          summary = `
             <div class="space-y-1.5">
-              <span class="inline-block px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[10px] font-mono">${escapeHtml(c.outcome)}</span>
+              <span class="inline-block px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[10px] font-mono truncate max-w-full">${escapeHtml(outcomeType)}</span>
               <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
                 <div class="bg-surface-950/90 border border-surface-800 rounded px-2 py-1 text-emerald-400">+${escapeHtml(c.xpReward)} XP</div>
                 <div class="bg-surface-950/90 border border-surface-800 rounded px-2 py-1 text-amber-400">+${escapeHtml(c.goldReward)} G</div>
               </div>
-              ${
-                c.itemReward
-                  ? `<div class="text-[11px] font-mono text-slate-300 bg-surface-950/90 border border-surface-800 rounded px-2 py-1 truncate">Loot: ${escapeHtml(c.itemReward)}</div>`
-                  : ''
-              }
             </div>
           `;
-        default:
-          return '';
+          break;
       }
+
+      const resources = node.resources || [];
+      if (resources.length > 0) {
+        const mediaBadges = resources.map(res => {
+          let icon = 'file';
+          if (res.type === 'image') icon = 'image';
+          if (res.type === 'video') icon = 'video';
+          if (res.type === 'audio') icon = 'music';
+          return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-900 text-sky-300 border border-sky-500/30 text-[10px] font-mono truncate max-w-[120px]" title="${escapeHtml(res.name)}">
+            <i data-lucide="${icon}" class="w-3 h-3 text-sky-400 shrink-0"></i>
+            <span class="truncate">${escapeHtml(res.name)}</span>
+          </span>`;
+        }).join('');
+
+        summary += `
+          <div class="mt-2 pt-2 border-t border-surface-800 flex flex-wrap gap-1">
+            ${mediaBadges}
+          </div>
+        `;
+      }
+
+      return summary;
     }
 
     function renderNodes() {
@@ -1684,30 +2149,31 @@
               (e) => e.targetNodeId === node.id && e.targetPortId === port.id
             );
             return `
-              <div class="flex items-center gap-2 relative">
+              <div class="flex items-center gap-2 relative h-6">
                 <div
-                  class="port-socket input-port -ml-[25px] ${isConnected ? 'connected' : ''}"
+                  class="port-socket input-port ${isConnected ? 'connected' : ''}"
                   data-node-id="${node.id}"
                   data-port-id="${port.id}"
                   data-port-type="input"
                   title="Input: ${port.label}"
                 ></div>
-                <span class="text-[11px] font-medium text-slate-300">${port.label}</span>
+                <span class="text-[11px] font-medium text-slate-300 pl-3">${port.label}</span>
               </div>
             `;
           })
           .join('');
 
-        const outputsHtml = tpl.outputs
+        const outputs = getNodeOutputs(node);
+        const outputsHtml = outputs
           .map((port) => {
             const isConnected = state.edges.some(
               (e) => e.sourceNodeId === node.id && e.sourcePortId === port.id
             );
             return `
-              <div class="flex items-center justify-end gap-2 relative">
-                <span class="text-[11px] font-medium text-slate-300">${port.label}</span>
+              <div class="flex items-center justify-end gap-2 relative h-6">
+                <span class="text-[11px] font-medium text-slate-300 pr-3 truncate max-w-[150px]" title="${escapeHtml(port.label)}">${escapeHtml(port.label)}</span>
                 <div
-                  class="port-socket output-port -mr-[25px] ${isConnected ? 'connected' : ''}"
+                  class="port-socket output-port ${isConnected ? 'connected' : ''}"
                   data-node-id="${node.id}"
                   data-port-id="${port.id}"
                   data-port-type="output"
@@ -1722,8 +2188,8 @@
           <!-- Color-Coded Top Accent Bar -->
           <div class="h-1.5 w-full rounded-t-[10px]" style="background-color: ${tpl.accent}"></div>
 
-          <!-- Node Header (Drag Handle) -->
-          <div class="node-header px-3 py-2 border-b border-surface-800 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing">
+          <!-- Node Header (Close X button removed per request) -->
+          <div class="node-header px-3 py-2.5 border-b border-surface-800 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing">
             <div class="flex items-center gap-2 min-w-0">
               <div class="w-6 h-6 rounded-md ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center shrink-0">
                 <i data-lucide="${tpl.icon}" class="w-3.5 h-3.5"></i>
@@ -1732,26 +2198,22 @@
                 <span class="node-title-text block text-xs font-semibold text-white truncate">${escapeHtml(node.title)}</span>
               </div>
             </div>
-            <button class="node-delete-btn p-1 rounded hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition" title="Delete Node">
-              <i data-lucide="x" class="w-3.5 h-3.5"></i>
-            </button>
           </div>
 
-          <!-- Node Body: Domain Summary + Ports -->
+          <!-- Node Body -->
           <div class="p-3 space-y-3">
             <div class="node-summary-box">${getNodeSummaryHtml(node)}</div>
 
             <!-- Ports Row -->
             <div class="flex items-start justify-between gap-2 pt-1 border-t border-surface-800/70">
-              <div class="space-y-2.5 flex-1">${inputsHtml}</div>
-              <div class="space-y-2.5 flex-1">${outputsHtml}</div>
+              <div class="space-y-1 flex-1">${inputsHtml}</div>
+              <div class="space-y-1 flex-1 text-right">${outputsHtml}</div>
             </div>
           </div>
         `;
 
-        // Handle pointerdown for mouse/touch node dragging (only if select tool is active)
         el.addEventListener('pointerdown', (e) => {
-          if (state.currentTool === 'pan') return; // let canvas pan take over
+          if (state.currentTool === 'pan') return;
           e.stopPropagation();
           const isAdditive = e.shiftKey || e.metaKey || e.ctrlKey;
           if (!state.selectedNodeIds.has(node.id)) {
@@ -1776,11 +2238,6 @@
             }
           });
           el.setPointerCapture(e.pointerId);
-        });
-
-        el.querySelector('.node-delete-btn').addEventListener('click', (e) => {
-          e.stopPropagation();
-          deleteNode(node.id);
         });
 
         el.querySelectorAll('.output-port').forEach((portEl) => {
@@ -1809,14 +2266,14 @@
     }
 
     // =========================================================================
-    // 11. CUBIC BEZIER WIRES, ARROWHEADS & BRANCH LABELS
+    // 13. CUBIC BEZIER WIRES & CONNECTOR POINT ALIGNMENT
     // =========================================================================
     function getPortWorldPosition(nodeId, portId, portType) {
       const selector = `.port-socket[data-node-id="${nodeId}"][data-port-id="${portId}"][data-port-type="${portType}"]`;
       const portEl = document.querySelector(selector);
       if (!portEl) {
         const node = state.nodes.find((n) => n.id === nodeId);
-        return node ? { x: node.x + 134, y: node.y + 60 } : { x: 0, y: 0 };
+        return node ? { x: node.x + (portType === 'input' ? 0 : 290), y: node.y + 90 } : { x: 0, y: 0 };
       }
 
       const rect = portEl.getBoundingClientRect();
@@ -1837,15 +2294,16 @@
 
     function getEdgeBranchLabel(edge, sourceNode) {
       if (!sourceNode) return null;
-      const tpl = NODE_TYPES[sourceNode.type];
-      if (!tpl || tpl.outputs.length <= 1) return null;
-
       if (sourceNode.type === 'playerChoice') {
-        return edge.sourcePortId === 'out_choice_a' ? 'Choice A' : 'Choice B';
+        const choices = sourceNode.config.choices || [];
+        const found = choices.find((c) => c.id === edge.sourcePortId);
+        return found ? found.label : null;
       }
       if (sourceNode.type === 'condition') {
         return edge.sourcePortId === 'out_true' ? 'True' : 'False';
       }
+      const tpl = NODE_TYPES[sourceNode.type];
+      if (!tpl || tpl.outputs.length <= 1) return null;
       const port = tpl.outputs.find((p) => p.id === edge.sourcePortId);
       return port ? port.label : null;
     }
@@ -1856,8 +2314,7 @@
       state.edges.forEach((edge) => {
         const start = getPortWorldPosition(edge.sourceNodeId, edge.sourcePortId, 'output');
         const end = getPortWorldPosition(edge.targetNodeId, edge.targetPortId, 'input');
-        const endOffsetX = end.x - 8;
-        const d = computeBezierPath(start.x, start.y, endOffsetX, end.y);
+        const d = computeBezierPath(start.x, start.y, end.x, end.y);
 
         const isSelected = state.selectedEdgeId === edge.id;
         const isActive = state.playtest.active && state.playtest.lastEdgeId === edge.id;
@@ -1899,9 +2356,10 @@
 
         const branchLabel = getEdgeBranchLabel(edge, sourceNode);
         if (branchLabel) {
-          const midX = (start.x + endOffsetX) / 2;
+          const midX = (start.x + end.x) / 2;
           const midY = (start.y + end.y) / 2;
-          const badgeWidth = branchLabel.length * 6.5 + 14;
+          const truncatedLabel = branchLabel.length > 18 ? branchLabel.substring(0, 16) + '...' : branchLabel;
+          const badgeWidth = truncatedLabel.length * 6.5 + 14;
 
           const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           rect.setAttribute('class', 'edge-label-bg');
@@ -1914,13 +2372,13 @@
           text.setAttribute('class', 'edge-label-text');
           text.setAttribute('x', midX);
           text.setAttribute('y', midY);
-          text.textContent = branchLabel;
+          text.textContent = truncatedLabel;
 
-          if (branchLabel === 'True' || branchLabel === 'Choice A') {
+          if (branchLabel === 'True') {
             text.style.fill = '#34d399';
           } else if (branchLabel === 'False') {
             text.style.fill = '#fb7185';
-          } else if (branchLabel === 'Choice B') {
+          } else {
             text.style.fill = '#fbbf24';
           }
 
@@ -1935,10 +2393,9 @@
     }
 
     // =========================================================================
-    // 12. CANVAS PAN, ZOOM, TOUCH GESTURES & GROUP SELECTION
+    // 14. CANVAS PAN, ZOOM & SELECTION
     // =========================================================================
     canvasContainer.addEventListener('pointerdown', (e) => {
-      // If pan tool is active OR middle-click / spacebar drag OR background click in select mode
       const isBackground = e.target === canvasContainer || e.target === canvasWorld || e.target.id === 'connections-svg';
       const isPanMode = state.currentTool === 'pan' || e.button === 1 || e.altKey;
 
@@ -1951,12 +2408,9 @@
           return;
         }
 
-        // Otherwise in select tool on background -> start marquee box select
         if (isBackground && state.currentTool === 'select') {
           const isShift = e.shiftKey || e.metaKey || e.ctrlKey;
-          if (!isShift) {
-            clearSelection();
-          }
+          if (!isShift) clearSelection();
 
           state.interaction.isBoxSelecting = true;
           const rect = canvasContainer.getBoundingClientRect();
@@ -1971,59 +2425,6 @@
           selectionBoxEl.style.height = '0px';
           selectionBoxEl.style.display = 'block';
         }
-      }
-    });
-
-    // Mobile touch pinch-to-zoom and touch pan handling
-    canvasContainer.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 2) {
-        state.interaction.touchPinching = true;
-        state.interaction.touchInitialDist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        state.interaction.touchInitialZoom = state.viewport.zoom;
-      } else if (e.touches.length === 1 && (state.currentTool === 'pan' || e.target === canvasContainer || e.target === canvasWorld)) {
-        state.interaction.isPanning = true;
-        state.interaction.panStartX = e.touches[0].clientX - state.viewport.x;
-        state.interaction.panStartY = e.touches[0].clientY - state.viewport.y;
-      }
-    }, { passive: true });
-
-    canvasContainer.addEventListener('touchmove', (e) => {
-      if (state.interaction.touchPinching && e.touches.length === 2) {
-        const currentDist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        const factor = currentDist / state.interaction.touchInitialDist;
-        const newZoom = Math.min(2.2, Math.max(0.35, state.interaction.touchInitialZoom * factor));
-
-        const rect = canvasContainer.getBoundingClientRect();
-        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-
-        state.viewport.x = midX - ((midX - state.viewport.x) / state.viewport.zoom) * newZoom;
-        state.viewport.y = midY - ((midY - state.viewport.y) / state.viewport.zoom) * newZoom;
-        state.viewport.zoom = newZoom;
-        applyViewportTransform();
-        return;
-      }
-
-      if (state.interaction.isPanning && e.touches.length === 1) {
-        state.viewport.x = e.touches[0].clientX - state.interaction.panStartX;
-        state.viewport.y = e.touches[0].clientY - state.interaction.panStartY;
-        applyViewportTransform();
-      }
-    }, { passive: true });
-
-    canvasContainer.addEventListener('touchend', (e) => {
-      if (e.touches.length < 2) {
-        state.interaction.touchPinching = false;
-      }
-      if (e.touches.length === 0) {
-        state.interaction.isPanning = false;
-        canvasContainer.classList.remove('is-panning');
       }
     });
 
@@ -2054,17 +2455,15 @@
         const worldEnd = screenToWorld(rect.left + left + width, rect.top + top + height);
 
         state.nodes.forEach((node) => {
-          const nodeRight = node.x + 268;
-          const nodeBottom = node.y + 180;
+          const nodeRight = node.x + 290;
+          const nodeBottom = node.y + 190;
           const intersects =
             node.x < worldEnd.x &&
             nodeRight > worldStart.x &&
             node.y < worldEnd.y &&
             nodeBottom > worldStart.y;
 
-          if (intersects) {
-            state.selectedNodeIds.add(node.id);
-          }
+          if (intersects) state.selectedNodeIds.add(node.id);
         });
         updateSelectionVisuals();
         return;
@@ -2094,9 +2493,7 @@
         const { startX, startY } = state.interaction.connecting;
         draftEdge.setAttribute('d', computeBezierPath(startX, startY, worldPos.x, worldPos.y));
 
-        document
-          .querySelectorAll('.input-port')
-          .forEach((p) => p.classList.remove('port-highlight'));
+        document.querySelectorAll('.input-port').forEach((p) => p.classList.remove('port-highlight'));
         const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
         if (hoveredEl && hoveredEl.classList.contains('input-port')) {
           if (hoveredEl.dataset.nodeId !== state.interaction.connecting.sourceNodeId) {
@@ -2115,23 +2512,18 @@
       if (state.interaction.isBoxSelecting) {
         state.interaction.isBoxSelecting = false;
         selectionBoxEl.style.display = 'none';
-        if (state.rightTab === 'inspector') {
-          renderInspector();
-        }
+        if (state.rightTab === 'inspector') renderInspector();
       }
 
       if (state.interaction.draggingNodeId) {
         state.interaction.draggingNodeId = null;
-        if (state.rightTab === 'inspector') {
-          renderInspector();
-        }
+        saveProjectsToStorage();
+        if (state.rightTab === 'inspector') renderInspector();
       }
 
       if (state.interaction.connecting) {
         const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
-        document
-          .querySelectorAll('.input-port')
-          .forEach((p) => p.classList.remove('port-highlight'));
+        document.querySelectorAll('.input-port').forEach((p) => p.classList.remove('port-highlight'));
 
         if (hoveredEl && hoveredEl.classList.contains('input-port')) {
           const targetNodeId = hoveredEl.dataset.nodeId;
@@ -2153,6 +2545,7 @@
             renderNodes();
             renderEdges();
             updateStats();
+            saveProjectsToStorage();
             if (state.rightTab === 'inspector') renderInspector();
             showToast('Quest step linked', 'emerald');
           }
@@ -2183,40 +2576,55 @@
       { passive: false }
     );
 
-    window.addEventListener('keydown', (e) => {
-      const activeTag = document.activeElement?.tagName;
-      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
-        return;
+    // =========================================================================
+    // 15. INSPECTOR PANEL (WITH CUSTOM FIELD LOGIC & CHOICES)
+    // =========================================================================
+    function openResourceViewer(res) {
+      viewerFileTitle.textContent = res.name;
+      viewerFileType.textContent = `${res.type.toUpperCase()} Asset Viewer`;
+
+      let previewContent = '';
+      if (res.type === 'image') {
+        previewContent = `<img src="${res.data}" alt="${escapeHtml(res.name)}" class="max-w-full max-h-[50vh] object-contain rounded-lg shadow-lg" />`;
+      } else if (res.type === 'video') {
+        previewContent = `<video controls autoplay src="${res.data}" class="max-w-full max-h-[50vh] rounded-lg shadow-lg"></video>`;
+      } else if (res.type === 'audio') {
+        previewContent = `
+          <div class="flex flex-col items-center justify-center space-y-4 py-8 px-4">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-lg">
+              <i data-lucide="music" class="w-8 h-8"></i>
+            </div>
+            <p class="text-sm font-semibold text-white">${escapeHtml(res.name)}</p>
+            <audio controls autoplay src="${res.data}" class="w-full max-w-md"></audio>
+          </div>
+        `;
+      } else {
+        previewContent = `<p class="text-xs text-slate-400">Preview not available for this file format.</p>`;
       }
 
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (state.selectedNodeIds.size > 0) {
-          deleteSelectedNodes();
-        } else if (state.selectedEdgeId) {
-          deleteEdge(state.selectedEdgeId);
-        }
-      } else if (e.key === 'Escape') {
-        clearSelection();
-      } else if (e.key === 'v' || e.key === 'V') {
-        setCanvasTool('select');
-      } else if (e.key === 'h' || e.key === 'H') {
-        setCanvasTool('pan');
-      } else if (e.key === '[') {
-        setLeftSidebarOpen(!state.sidebars.leftOpen);
-      } else if (e.key === ']') {
-        setRightSidebarOpen(!state.sidebars.rightOpen);
-      }
+      viewerContentContainer.innerHTML = previewContent;
+      resourceViewerModal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    document.getElementById('close-viewer-modal-btn').addEventListener('click', () => {
+      resourceViewerModal.classList.add('hidden');
+      viewerContentContainer.innerHTML = '';
+    });
+    document.getElementById('close-viewer-btn').addEventListener('click', () => {
+      resourceViewerModal.classList.add('hidden');
+      viewerContentContainer.innerHTML = '';
     });
 
-    // =========================================================================
-    // 13. INSPECTOR PANEL RENDERER
-    // =========================================================================
     function renderInspector() {
       if (state.selectedNodeIds.size === 1) {
         const nodeId = Array.from(state.selectedNodeIds)[0];
         const node = state.nodes.find((n) => n.id === nodeId);
         if (!node) return;
         const tpl = NODE_TYPES[node.type];
+        if (!node.resources) node.resources = [];
+
+        const isEditMode = state.inspectorMode === 'edit';
 
         const schemaFieldsHtml = tpl.fieldSchema
           .map((field) => {
@@ -2228,12 +2636,51 @@
                     `<option value="${escapeHtml(opt)}" ${val === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`
                 )
                 .join('');
+
+              let customInputHtml = '';
+              if (val === 'Custom...') {
+                let customKey = '';
+                let customVal = '';
+                if (node.type === 'questStart' && field.key === 'questType') {
+                  customKey = 'customQuestType';
+                  customVal = node.config.customQuestType || '';
+                } else if (node.type === 'dialogue' && field.key === 'reaction') {
+                  customKey = 'customReaction';
+                  customVal = node.config.customReaction || '';
+                } else if (node.type === 'objective' && field.key === 'objectiveType') {
+                  customKey = 'customObjectiveType';
+                  customVal = node.config.customObjectiveType || '';
+                } else if (node.type === 'condition' && field.key === 'conditionType') {
+                  customKey = 'customConditionType';
+                  customVal = node.config.customConditionType || '';
+                } else if (node.type === 'questReward' && field.key === 'outcome') {
+                  customKey = 'customOutcome';
+                  customVal = node.config.customOutcome || '';
+                }
+
+                if (customKey) {
+                  customInputHtml = `
+                    <div class="mt-2">
+                      <input
+                        type="text"
+                        data-custom-key="${customKey}"
+                        value="${escapeHtml(customVal)}"
+                        placeholder="Enter custom ${field.label.toLowerCase()}..."
+                        ${!isEditMode ? 'readonly' : ''}
+                        class="inspector-custom-field w-full bg-surface-950 border border-amber-500/60 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 focus:outline-none transition readonly:opacity-70"
+                      />
+                    </div>
+                  `;
+                }
+              }
+
               return `
                 <div>
                   <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">${field.label}</label>
-                  <select data-field-key="${field.key}" class="inspector-field w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none transition">
+                  <select data-field-key="${field.key}" ${!isEditMode ? 'disabled' : ''} class="inspector-field w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none transition disabled:opacity-60 disabled:cursor-not-allowed">
                     ${opts}
                   </select>
+                  ${customInputHtml}
                 </div>
               `;
             }
@@ -2242,7 +2689,7 @@
               return `
                 <div>
                   <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">${field.label}</label>
-                  <textarea rows="3" data-field-key="${field.key}" class="inspector-field w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none transition resize-y">${escapeHtml(val)}</textarea>
+                  <textarea rows="3" data-field-key="${field.key}" ${!isEditMode ? 'readonly' : ''} class="inspector-field w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none transition resize-y readonly:opacity-70 readonly:cursor-default">${escapeHtml(val)}</textarea>
                 </div>
               `;
             }
@@ -2254,49 +2701,115 @@
                   type="${field.type}"
                   data-field-key="${field.key}"
                   value="${escapeHtml(val)}"
-                  class="inspector-field w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs font-mono text-slate-200 focus:outline-none transition"
+                  ${!isEditMode ? 'readonly' : ''}
+                  class="inspector-field w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs font-mono text-slate-200 focus:outline-none transition readonly:opacity-70 readonly:cursor-default"
                 />
               </div>
             `;
           })
           .join('');
 
-        const incoming = state.edges.filter((e) => e.targetNodeId === node.id);
-        const outgoing = state.edges.filter((e) => e.sourceNodeId === node.id);
+        let extraSectionHtml = '';
+        if (node.type === 'playerChoice') {
+          if (!node.config.choices) {
+            node.config.choices = [
+              { id: 'choice_0', label: 'Accept the quest' },
+              { id: 'choice_1', label: 'Decline and walk away' }
+            ];
+          }
 
-        const connectionsHtml = `
-          <div class="pt-3 border-t border-surface-800 space-y-2">
-            <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Quest Flow Links</h3>
-            <div class="text-[11px] space-y-1">
-              <div class="text-slate-400">Incoming: <span class="text-slate-200 font-mono">${incoming.length}</span></div>
-              ${incoming
-                .map((e) => {
-                  const src = state.nodes.find((n) => n.id === e.sourceNodeId);
-                  return `<div class="px-2 py-1 rounded bg-surface-950 border border-surface-800 text-slate-300 truncate">← ${escapeHtml(src?.title || e.sourceNodeId)}</div>`;
-                })
-                .join('')}
-              <div class="text-slate-400 pt-1">Outgoing: <span class="text-slate-200 font-mono">${outgoing.length}</span></div>
-              ${outgoing
-                .map((e) => {
-                  const tgt = state.nodes.find((n) => n.id === e.targetNodeId);
-                  const lbl = getEdgeBranchLabel(e, node);
-                  return `<div class="px-2 py-1 rounded bg-surface-950 border border-surface-800 text-slate-300 truncate">→ ${lbl ? `[${lbl}] ` : ''}${escapeHtml(tgt?.title || e.targetNodeId)}</div>`;
-                })
-                .join('')}
+          const choicesListHtml = node.config.choices.map((ch, idx) => {
+            return `
+              <div class="flex items-center gap-2 bg-surface-950 p-2 rounded-lg border border-surface-800">
+                <span class="text-xs font-mono text-amber-400 font-bold shrink-0 w-5">#${idx + 1}</span>
+                <input
+                  type="text"
+                  data-choice-idx="${idx}"
+                  value="${escapeHtml(ch.label)}"
+                  ${!isEditMode ? 'readonly' : ''}
+                  placeholder="Choice option text..."
+                  class="choice-input flex-1 bg-surface-900 border border-surface-700 focus:border-amber-500 rounded px-2.5 py-1 text-xs text-white focus:outline-none readonly:opacity-70"
+                />
+                ${isEditMode && node.config.choices.length > 2 ? `
+                  <button data-remove-choice-idx="${idx}" class="p-1.5 rounded hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition shrink-0" title="Remove Choice">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                ` : ''}
+              </div>
+            `;
+          }).join('');
+
+          extraSectionHtml = `
+            <div class="pt-3 border-t border-surface-800 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Branching Choices</h3>
+                  <p class="text-[10px] text-slate-500">Minimum 2 choices required. Add as many as you need.</p>
+                </div>
+                ${isEditMode ? `
+                  <button id="add-choice-btn" class="flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-semibold transition">
+                    <i data-lucide="plus" class="w-3 h-3"></i>
+                    <span>Add Choice</span>
+                  </button>
+                ` : ''}
+              </div>
+              <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                ${choicesListHtml}
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        }
+
+        const resourcesHtml = node.resources
+          .map((res, idx) => {
+            let badgeColor = 'text-sky-400 bg-sky-500/15 border-sky-500/30';
+            if (res.type === 'video') badgeColor = 'text-purple-400 bg-purple-500/15 border-purple-500/30';
+            if (res.type === 'audio') badgeColor = 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30';
+
+            return `
+              <div class="p-2.5 rounded-lg bg-surface-950 border border-surface-800 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0 cursor-pointer group flex-1" data-action="view-resource" data-res-idx="${idx}">
+                  <div class="w-6 h-6 rounded ${badgeColor} border flex items-center justify-center shrink-0 group-hover:scale-110 transition">
+                    <i data-lucide="${res.type === 'image' ? 'image' : res.type === 'video' ? 'video' : 'music'}" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <span class="text-xs font-medium text-slate-200 block truncate group-hover:text-sky-300 transition">${escapeHtml(res.name)}</span>
+                    <span class="text-[10px] font-mono uppercase text-slate-500">${res.type} (Click to View/Play)</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button data-action="view-resource" data-res-idx="${idx}" class="px-2 py-1 rounded bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 text-[10px] font-semibold transition flex items-center gap-1">
+                    <i data-lucide="eye" class="w-3 h-3"></i>
+                    <span>View</span>
+                  </button>
+                  ${isEditMode ? `
+                    <button data-remove-res-idx="${idx}" class="p-1 rounded hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition" title="Remove Resource">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          })
+          .join('');
 
         inspectorPanel.innerHTML = `
           <div class="space-y-4">
-            <div class="p-3 rounded-xl bg-surface-850 border border-surface-700/80 flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg ${tpl.badgeBg} ${tpl.badgeText} border ${tpl.borderAccent} flex items-center justify-center shrink-0">
-                <i data-lucide="${tpl.icon}" class="w-4 h-4"></i>
+            <!-- Header: Node Info & Edit/View Mode Toggle -->
+            <div class="flex items-center justify-between gap-2 p-3 rounded-xl bg-surface-850 border border-surface-700/80">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-8 h-8 rounded-lg ${tpl.badgeBg} ${tpl.badgeText} border ${tpl.borderAccent} flex items-center justify-center shrink-0">
+                  <i data-lucide="${tpl.icon}" class="w-4 h-4"></i>
+                </div>
+                <div class="min-w-0">
+                  <span class="text-[10px] font-mono uppercase tracking-wider ${tpl.badgeText}">${tpl.category}</span>
+                  <p class="text-xs font-mono text-slate-400 truncate">${node.id}</p>
+                </div>
               </div>
-              <div class="min-w-0">
-                <span class="text-[10px] font-mono uppercase tracking-wider ${tpl.badgeText}">${tpl.category}</span>
-                <p class="text-xs font-mono text-slate-400 truncate">${node.id}</p>
-              </div>
+              <button id="toggle-edit-mode-btn" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg ${isEditMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-sky-500/20 text-sky-300 border border-sky-500/40'} text-xs font-semibold transition shadow-sm shrink-0" title="Toggle Edit / View Mode">
+                <i data-lucide="${isEditMode ? 'edit-3' : 'eye'}" class="w-3.5 h-3.5"></i>
+                <span>${isEditMode ? 'Editing' : 'Viewing'}</span>
+              </button>
             </div>
 
             <div>
@@ -2305,13 +2818,33 @@
                 id="inspector-title-input"
                 type="text"
                 value="${escapeHtml(node.title)}"
-                class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none transition"
+                ${!isEditMode ? 'readonly' : ''}
+                class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none transition readonly:opacity-70 readonly:cursor-default"
               />
             </div>
 
             <div class="pt-3 border-t border-surface-800 space-y-3">
-              <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Quest Properties</h3>
+              <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Node Properties</h3>
               ${schemaFieldsHtml}
+            </div>
+
+            ${extraSectionHtml}
+
+            <!-- Media Resources Manager Section -->
+            <div class="pt-3 border-t border-surface-800 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Attached Media Resources</h3>
+                ${isEditMode ? `
+                  <button id="add-resource-btn" class="flex items-center gap-1 px-2 py-1 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-[11px] font-semibold transition">
+                    <i data-lucide="plus" class="w-3 h-3"></i>
+                    <span>Add File</span>
+                  </button>
+                  <input type="file" id="node-file-input" accept="image/*,video/*,audio/*" class="hidden" />
+                ` : ''}
+              </div>
+              <div class="space-y-2">
+                ${resourcesHtml || `<p class="text-[11px] text-slate-500 italic">No media assets attached. ${isEditMode ? 'Click "Add File" to attach image, video, or music.' : ''}</p>`}
+              </div>
             </div>
 
             <div class="pt-3 border-t border-surface-800">
@@ -2319,165 +2852,185 @@
               <textarea
                 id="inspector-notes-input"
                 rows="2"
-                placeholder="Voice direction, trigger zone, or quest flags..."
-                class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none transition resize-y"
+                placeholder="Voice direction or stage notes..."
+                ${!isEditMode ? 'readonly' : ''}
+                class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none transition resize-y readonly:opacity-70 readonly:cursor-default"
               >${escapeHtml(node.notes)}</textarea>
             </div>
 
-            ${connectionsHtml}
-
-            <div class="pt-3 border-t border-surface-800 flex gap-2">
-              <button id="inspector-duplicate-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-200 transition">
-                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                <span>Duplicate</span>
-              </button>
-              <button id="inspector-delete-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-medium transition">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                <span>Delete</span>
-              </button>
-            </div>
+            ${isEditMode ? `
+              <div class="pt-3 border-t border-surface-800 flex gap-2">
+                <button id="inspector-duplicate-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-200 transition">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                  <span>Duplicate</span>
+                </button>
+                <button id="inspector-delete-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-medium transition">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Delete</span>
+                </button>
+              </div>
+            ` : ''}
           </div>
         `;
 
-        document.getElementById('inspector-title-input').addEventListener('input', (e) => {
-          node.title = e.target.value;
-          const titleEl = document.querySelector(
-            `.flow-node[data-node-id="${node.id}"] .node-title-text`
-          );
-          if (titleEl) titleEl.textContent = node.title;
-        });
-
-        document.querySelectorAll('.inspector-field').forEach((input) => {
-          const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
-          input.addEventListener(eventName, (e) => {
-            const key = e.target.dataset.fieldKey;
-            node.config[key] = e.target.value;
-            if (node.type === 'questStart' && key === 'questId') {
-              updateQuestTitleHeader();
-            }
-            const summaryBox = document.querySelector(
-              `.flow-node[data-node-id="${node.id}"] .node-summary-box`
-            );
-            if (summaryBox) {
-              summaryBox.innerHTML = getNodeSummaryHtml(node);
-            }
-          });
-        });
-
-        document.getElementById('inspector-notes-input').addEventListener('input', (e) => {
-          node.notes = e.target.value;
-        });
-
-        document.getElementById('inspector-duplicate-btn').addEventListener('click', () => {
-          addNode(node.type, node.x + 48, node.y + 48, {
-            title: `${node.title} (Copy)`,
-            notes: node.notes,
-            config: { ...node.config }
-          });
-          showToast('Node duplicated', 'sky');
-        });
-
-        document.getElementById('inspector-delete-btn').addEventListener('click', () => {
-          deleteNode(node.id);
-        });
-
-        lucide.createIcons();
-        return;
-      }
-
-      if (state.selectedNodeIds.size > 1) {
-        inspectorPanel.innerHTML = `
-          <div class="space-y-4">
-            <div class="p-3 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
-                <i data-lucide="layers" class="w-4 h-4"></i>
-              </div>
-              <div>
-                <span class="text-[10px] font-mono uppercase tracking-wider text-sky-400">Group Selection</span>
-                <p class="text-xs font-semibold text-white">${state.selectedNodeIds.size} Quest Nodes Selected</p>
-              </div>
-            </div>
-
-            <p class="text-xs text-slate-400 leading-relaxed">You can drag any of the selected nodes to move them together, or delete the entire group at once.</p>
-
-            <button id="inspector-delete-group-btn" class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-medium transition">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-              <span>Delete Selected Nodes (${state.selectedNodeIds.size})</span>
-            </button>
-          </div>
-        `;
-
-        document.getElementById('inspector-delete-group-btn').addEventListener('click', () => {
-          deleteSelectedNodes();
-        });
-
-        lucide.createIcons();
-        return;
-      }
-
-      if (state.selectedEdgeId) {
-        const edge = state.edges.find((e) => e.id === state.selectedEdgeId);
-        if (!edge) return;
-        const srcNode = state.nodes.find((n) => n.id === edge.sourceNodeId);
-        const tgtNode = state.nodes.find((n) => n.id === edge.targetNodeId);
-        const branchLabel = getEdgeBranchLabel(edge, srcNode);
-
-        inspectorPanel.innerHTML = `
-          <div class="space-y-4">
-            <div class="p-3 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center gap-3">
-              <div class="w-9 h-9 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
-                <i data-lucide="cable" class="w-4 h-4"></i>
-              </div>
-              <div>
-                <span class="text-[10px] font-mono uppercase tracking-wider text-sky-400">Quest Transition</span>
-                <p class="text-xs font-mono text-slate-300">${edge.id}</p>
-              </div>
-            </div>
-
-            <div class="space-y-2 text-xs">
-              <div class="p-2.5 rounded-lg bg-surface-950 border border-surface-800">
-                <span class="text-[10px] font-mono uppercase text-slate-500 block">From Node</span>
-                <span class="font-medium text-slate-200">${escapeHtml(srcNode?.title || 'Unknown')}</span>
-                ${branchLabel ? `<span class="mt-1 inline-block px-1.5 py-0.5 rounded bg-surface-800 text-amber-300 font-mono text-[10px]">Branch: ${branchLabel}</span>` : ''}
-              </div>
-              <div class="flex justify-center text-slate-500">
-                <i data-lucide="arrow-down" class="w-4 h-4"></i>
-              </div>
-              <div class="p-2.5 rounded-lg bg-surface-950 border border-surface-800">
-                <span class="text-[10px] font-mono uppercase text-slate-500 block">To Node</span>
-                <span class="font-medium text-slate-200">${escapeHtml(tgtNode?.title || 'Unknown')}</span>
-              </div>
-            </div>
-
-            <div class="space-y-2">
-              <button id="inspector-reverse-edge-btn" class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 text-xs font-medium transition">
-                <i data-lucide="repeat-2" class="w-3.5 h-3.5"></i>
-                <span>Reverse Direction</span>
-              </button>
-              <button id="inspector-delete-edge-btn" class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-medium transition">
-                <i data-lucide="scissors" class="w-3.5 h-3.5"></i>
-                <span>Remove Connection</span>
-              </button>
-            </div>
-          </div>
-        `;
-
-        document.getElementById('inspector-reverse-edge-btn').addEventListener('click', () => {
-          const oldSourceNode = edge.sourceNodeId;
-          const oldSourcePort = edge.sourcePortId;
-          edge.sourceNodeId = edge.targetNodeId;
-          edge.sourcePortId = edge.targetPortId;
-          edge.targetNodeId = oldSourceNode;
-          edge.targetPortId = oldSourcePort;
-
-          renderNodes();
-          renderEdges();
+        document.getElementById('toggle-edit-mode-btn').addEventListener('click', () => {
+          state.inspectorMode = state.inspectorMode === 'edit' ? 'view' : 'edit';
           renderInspector();
-          showToast('Connection direction reversed', 'sky');
+          showToast(`Switched inspector to ${state.inspectorMode.toUpperCase()} mode`, 'sky');
         });
 
-        document.getElementById('inspector-delete-edge-btn').addEventListener('click', () => {
-          deleteEdge(edge.id);
+        if (isEditMode) {
+          document.getElementById('inspector-title-input').addEventListener('input', (e) => {
+            node.title = e.target.value;
+            const titleEl = document.querySelector(
+              `.flow-node[data-node-id="${node.id}"] .node-title-text`
+            );
+            if (titleEl) titleEl.textContent = node.title;
+            saveProjectsToStorage();
+          });
+
+          document.querySelectorAll('.inspector-field').forEach((input) => {
+            const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
+            input.addEventListener(eventName, (e) => {
+              const key = e.target.dataset.fieldKey;
+              node.config[key] = e.target.value;
+              
+              if (input.tagName === 'SELECT' && e.target.value === 'Custom...') {
+                if (node.type === 'questStart' && key === 'questType') node.config.customQuestType = node.config.customQuestType || 'My Custom Quest';
+                if (node.type === 'dialogue' && key === 'reaction') node.config.customReaction = node.config.customReaction || 'My Custom Reaction';
+                if (node.type === 'objective' && key === 'objectiveType') node.config.customObjectiveType = node.config.customObjectiveType || 'My Custom Objective';
+                if (node.type === 'condition' && key === 'conditionType') node.config.customConditionType = node.config.customConditionType || 'My Custom Condition';
+                if (node.type === 'questReward' && key === 'outcome') node.config.customOutcome = node.config.customOutcome || 'My Custom Outcome';
+                renderInspector();
+              }
+
+              const summaryBox = document.querySelector(
+                `.flow-node[data-node-id="${node.id}"] .node-summary-box`
+              );
+              if (summaryBox) summaryBox.innerHTML = getNodeSummaryHtml(node);
+              saveProjectsToStorage();
+            });
+          });
+
+          document.querySelectorAll('.inspector-custom-field').forEach((input) => {
+            input.addEventListener('input', (e) => {
+              const key = e.target.dataset.customKey;
+              node.config[key] = e.target.value;
+              const summaryBox = document.querySelector(
+                `.flow-node[data-node-id="${node.id}"] .node-summary-box`
+              );
+              if (summaryBox) summaryBox.innerHTML = getNodeSummaryHtml(node);
+              saveProjectsToStorage();
+            });
+          });
+
+          document.querySelectorAll('.choice-input').forEach((input) => {
+            input.addEventListener('input', (e) => {
+              const idx = parseInt(e.target.dataset.choiceIdx, 10);
+              if (node.config.choices && node.config.choices[idx]) {
+                node.config.choices[idx].label = e.target.value;
+                renderNodes();
+                saveProjectsToStorage();
+              }
+            });
+          });
+
+          document.getElementById('add-choice-btn')?.addEventListener('click', () => {
+            if (!node.config.choices) node.config.choices = [];
+            const newChoiceId = `choice_${node.config.choices.length}`;
+            node.config.choices.push({ id: newChoiceId, label: `New Choice ${node.config.choices.length + 1}` });
+            renderNodes();
+            renderInspector();
+            saveProjectsToStorage();
+            showToast('Added choice branch', 'emerald');
+          });
+
+          inspectorPanel.querySelectorAll('[data-remove-choice-idx]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const idx = parseInt(btn.dataset.removeChoiceIdx, 10);
+              if (node.config.choices.length <= 2) {
+                showToast('Player choice node requires a minimum of 2 choices', 'amber');
+                return;
+              }
+              const removedChoice = node.config.choices.splice(idx, 1)[0];
+              state.edges = state.edges.filter(
+                (e) => !(e.sourceNodeId === node.id && e.sourcePortId === removedChoice.id)
+              );
+              renderNodes();
+              renderEdges();
+              renderInspector();
+              saveProjectsToStorage();
+              showToast('Choice branch removed', 'sky');
+            });
+          });
+
+          document.getElementById('inspector-notes-input').addEventListener('input', (e) => {
+            node.notes = e.target.value;
+            saveProjectsToStorage();
+          });
+
+          const nodeFileInput = document.getElementById('node-file-input');
+          document.getElementById('add-resource-btn')?.addEventListener('click', () => {
+            nodeFileInput.click();
+          });
+
+          nodeFileInput?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            let type = 'image';
+            if (file.type.startsWith('video/')) type = 'video';
+            else if (file.type.startsWith('audio/')) type = 'audio';
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              node.resources.push({
+                id: generateId('res'),
+                name: file.name,
+                type: type,
+                data: evt.target.result
+              });
+              renderNodes();
+              renderInspector();
+              saveProjectsToStorage();
+              showToast(`Attached ${type} "${file.name}"`, 'emerald');
+            };
+            reader.readAsDataURL(file);
+            nodeFileInput.value = '';
+          });
+
+          inspectorPanel.querySelectorAll('[data-remove-res-idx]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const idx = parseInt(btn.dataset.removeResIdx, 10);
+              node.resources.splice(idx, 1);
+              renderNodes();
+              renderInspector();
+              saveProjectsToStorage();
+              showToast('Media resource removed', 'sky');
+            });
+          });
+
+          document.getElementById('inspector-duplicate-btn').addEventListener('click', () => {
+            addNode(node.type, node.x + 48, node.y + 48, {
+              title: `${node.title} (Copy)`,
+              notes: node.notes,
+              resources: JSON.parse(JSON.stringify(node.resources)),
+              config: JSON.parse(JSON.stringify(node.config))
+            });
+            showToast('Node duplicated', 'sky');
+          });
+
+          document.getElementById('inspector-delete-btn').addEventListener('click', () => {
+            deleteNode(node.id);
+          });
+        }
+
+        inspectorPanel.querySelectorAll('[data-action="view-resource"]').forEach((el) => {
+          el.addEventListener('click', () => {
+            const idx = parseInt(el.dataset.resIdx, 10);
+            const res = node.resources[idx];
+            if (res) openResourceViewer(res);
+          });
         });
 
         lucide.createIcons();
@@ -2490,15 +3043,9 @@
             <i data-lucide="mouse-pointer" class="w-5 h-5"></i>
           </div>
           <p class="text-xs font-medium text-slate-300">No Node Selected</p>
-          <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Select any quest node or drag a selection box on the canvas to group-select nodes.</p>
-          <button id="quick-playtest-cta" class="mt-5 flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold transition">
-            <i data-lucide="gamepad-2" class="w-3.5 h-3.5"></i>
-            <span>Open Playtest Simulator</span>
-          </button>
+          <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Select any quest node to inspect properties, attach images, videos, or music files.</p>
         </div>
       `;
-
-      document.getElementById('quick-playtest-cta')?.addEventListener('click', startPlaytest);
       lucide.createIcons();
     }
 
@@ -2508,7 +3055,7 @@
     }
 
     // =========================================================================
-    // 14. INTERACTIVE RPG QUEST PLAYTEST SIMULATOR
+    // 16. PLAYTEST SIMULATOR (WITH CUSTOM TYPES SUPPORT)
     // =========================================================================
     function startPlaytest() {
       if (state.nodes.length === 0) {
@@ -2545,9 +3092,7 @@
       state.playtest.lastEdgeId = null;
       updateSelectionVisuals();
       renderEdges();
-      if (state.rightTab === 'playtest') {
-        renderPlaytestPanel();
-      }
+      if (state.rightTab === 'playtest') renderPlaytestPanel();
     }
 
     function recordPlaytestVisit(node, actionTaken = null) {
@@ -2563,11 +3108,6 @@
 
       if (node.type === 'questReward') {
         state.playtest.finished = true;
-        state.playtest.rewards.xp += parseInt(node.config.xpReward || '0', 10) || 0;
-        state.playtest.rewards.gold += parseInt(node.config.goldReward || '0', 10) || 0;
-        if (node.config.itemReward && node.config.itemReward.trim()) {
-          state.playtest.rewards.items.push(node.config.itemReward.trim());
-        }
       }
     }
 
@@ -2601,8 +3141,8 @@
 
     function centerOnNode(node) {
       const rect = canvasContainer.getBoundingClientRect();
-      const targetX = rect.width / 2 - (node.x + 134) * state.viewport.zoom;
-      const targetY = rect.height / 2 - (node.y + 80) * state.viewport.zoom;
+      const targetX = rect.width / 2 - (node.x + 145) * state.viewport.zoom;
+      const targetY = rect.height / 2 - (node.y + 90) * state.viewport.zoom;
       state.viewport.x = targetX;
       state.viewport.y = targetY;
       applyViewportTransform();
@@ -2616,16 +3156,14 @@
               <i data-lucide="gamepad-2" class="w-5 h-5"></i>
             </div>
             <p class="text-xs font-semibold text-slate-200">Quest Playtest Simulator</p>
-            <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">Step through your quest narrative, test dialogue choices, complete objectives, and verify rewards in real time.</p>
+            <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">Step through your quest narrative, test dialogue choices, and experience attached media assets.</p>
             <button id="panel-start-playtest-btn" class="mt-5 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shadow-lg shadow-amber-500/20">
               <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
               <span>Start Playtest</span>
             </button>
           </div>
         `;
-        document
-          .getElementById('panel-start-playtest-btn')
-          ?.addEventListener('click', startPlaytest);
+        document.getElementById('panel-start-playtest-btn')?.addEventListener('click', startPlaytest);
         lucide.createIcons();
         return;
       }
@@ -2638,18 +3176,38 @@
 
       const tpl = NODE_TYPES[currentNode.type];
       const c = currentNode.config;
-      let interactiveStepHtml = '';
 
+      let mediaPreviewHtml = '';
+      if (currentNode.resources && currentNode.resources.length > 0) {
+        const mediaItems = currentNode.resources.map((res) => {
+          if (res.type === 'image') {
+            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><img src="${res.data}" alt="${escapeHtml(res.name)}" class="w-full max-h-40 object-cover" /><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
+          }
+          if (res.type === 'video') {
+            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><video controls src="${res.data}" class="w-full max-h-40 object-cover"></video><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
+          }
+          if (res.type === 'audio') {
+            return `<div class="p-2 rounded-lg border border-surface-700 bg-surface-950 space-y-1"><audio controls src="${res.data}" class="w-full h-8"></audio><span class="block text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
+          }
+          return '';
+        }).join('');
+
+        mediaPreviewHtml = `<div class="space-y-2 pt-2 border-t border-surface-800">${mediaItems}</div>`;
+      }
+
+      let interactiveStepHtml = '';
       if (currentNode.type === 'questStart') {
+        const qType = c.questType === 'Custom...' ? (c.customQuestType || 'Custom') : c.questType;
         interactiveStepHtml = `
           <div class="space-y-3">
             <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5">
               <div class="flex items-center justify-between text-[11px] font-mono">
-                <span class="text-emerald-400 font-semibold">${escapeHtml(c.questType)}</span>
+                <span class="text-emerald-400 font-semibold">${escapeHtml(qType)}</span>
                 <span class="text-slate-300">Req Level ${escapeHtml(c.minLevel)}</span>
               </div>
               <p class="text-xs font-mono text-white">${escapeHtml(c.questId)}</p>
             </div>
+            ${mediaPreviewHtml}
             <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition">
               <span>Begin Quest</span>
               <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
@@ -2657,15 +3215,17 @@
           </div>
         `;
       } else if (currentNode.type === 'dialogue') {
+        const reaction = c.reaction === 'Custom...' ? (c.customReaction || 'Custom') : c.reaction;
         interactiveStepHtml = `
           <div class="space-y-3">
             <div class="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-2">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-indigo-300">${escapeHtml(c.npcName)}</span>
-                <span class="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-200 text-[10px] font-mono">${escapeHtml(c.emotion)}</span>
+                <span class="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-200 text-[10px] font-mono">${escapeHtml(reaction)}</span>
               </div>
               <p class="text-xs text-slate-100 leading-relaxed">"${escapeHtml(c.dialogueText)}"</p>
             </div>
+            ${mediaPreviewHtml}
             <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition">
               <span>Continue Dialogue</span>
               <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
@@ -2673,37 +3233,35 @@
           </div>
         `;
       } else if (currentNode.type === 'playerChoice') {
+        const choices = c.choices || [];
+        const choiceButtonsHtml = choices.map((ch, idx) => `
+          <button data-choice-id="${ch.id}" data-choice-label="${escapeHtml(ch.label)}" class="pt-choice-btn w-full text-left p-2.5 rounded-xl bg-surface-850 hover:bg-amber-500/15 border border-surface-700 hover:border-amber-500/50 transition group">
+            <span class="text-[10px] font-mono uppercase text-amber-400 block">Choice ${idx + 1}</span>
+            <span class="text-xs font-medium text-white group-hover:text-amber-200">${escapeHtml(ch.label)}</span>
+          </button>
+        `).join('');
+
         interactiveStepHtml = `
           <div class="space-y-2.5">
-            ${
-              c.skillCheck && c.skillCheck !== 'None'
-                ? `<div class="px-2.5 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[11px] font-mono text-amber-300 flex items-center gap-1.5">
-                    <i data-lucide="dices" class="w-3.5 h-3.5"></i>
-                    <span>Skill Check: ${escapeHtml(c.skillCheck)}</span>
-                  </div>`
-                : ''
-            }
-            <p class="text-[11px] text-slate-400">Choose player response:</p>
-            <button id="pt-choice-a-btn" class="w-full text-left p-2.5 rounded-xl bg-surface-850 hover:bg-amber-500/15 border border-surface-700 hover:border-amber-500/50 transition group">
-              <span class="text-[10px] font-mono uppercase text-amber-400 block">Choice A</span>
-              <span class="text-xs font-medium text-white group-hover:text-amber-200">${escapeHtml(c.choiceALabel)}</span>
-            </button>
-            <button id="pt-choice-b-btn" class="w-full text-left p-2.5 rounded-xl bg-surface-850 hover:bg-amber-500/15 border border-surface-700 hover:border-amber-500/50 transition group">
-              <span class="text-[10px] font-mono uppercase text-amber-400 block">Choice B</span>
-              <span class="text-xs font-medium text-white group-hover:text-amber-200">${escapeHtml(c.choiceBLabel)}</span>
-            </button>
+            ${mediaPreviewHtml}
+            <p class="text-[11px] text-slate-400">Choose player response (${choices.length} options available):</p>
+            <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+              ${choiceButtonsHtml}
+            </div>
           </div>
         `;
       } else if (currentNode.type === 'objective') {
+        const objType = c.objectiveType === 'Custom...' ? (c.customObjectiveType || 'Custom') : c.objectiveType;
         interactiveStepHtml = `
           <div class="space-y-3">
             <div class="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-1.5">
-              <span class="text-[10px] font-mono uppercase tracking-wider text-cyan-400">${escapeHtml(c.objectiveType)}</span>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-cyan-400">${escapeHtml(objType)}</span>
               <div class="flex items-center justify-between text-xs">
                 <span class="font-semibold text-white">${escapeHtml(c.targetName)}</span>
                 <span class="font-mono text-cyan-300">Required: ${escapeHtml(c.requiredCount)}</span>
               </div>
             </div>
+            ${mediaPreviewHtml}
             <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition">
               <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
               <span>Simulate Objective Complete</span>
@@ -2711,59 +3269,38 @@
           </div>
         `;
       } else if (currentNode.type === 'condition') {
+        const condType = c.conditionType === 'Custom...' ? (c.customConditionType || 'Custom') : c.conditionType;
         interactiveStepHtml = `
           <div class="space-y-2.5">
             <div class="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1">
-              <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400">Evaluate ${escapeHtml(c.conditionType)}</span>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400">Evaluate ${escapeHtml(condType)}</span>
               <p class="text-xs font-mono text-white">${escapeHtml(c.conditionValue)}</p>
             </div>
-            <p class="text-[11px] text-slate-400">Select simulated condition outcome:</p>
-            <div class="grid grid-cols-2 gap-2">
-              <button id="pt-cond-true-btn" class="py-2 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">
-                True ✓
-              </button>
-              <button id="pt-cond-false-btn" class="py-2 px-3 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold transition">
-                False ✕
-              </button>
+            ${mediaPreviewHtml}
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button id="pt-cond-true-btn" class="py-2 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">True ✓</button>
+              <button id="pt-cond-false-btn" class="py-2 px-3 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold transition">False ✕</button>
             </div>
           </div>
         `;
       } else if (currentNode.type === 'questReward') {
-        const isFailed = c.outcome === 'Quest Failed';
+        const outcomeType = c.outcome === 'Custom...' ? (c.customOutcome || 'Custom') : c.outcome;
         interactiveStepHtml = `
           <div class="space-y-3">
-            <div class="p-3.5 rounded-xl ${isFailed ? 'bg-rose-500/15 border-rose-500/40' : 'bg-emerald-500/15 border-emerald-500/40'} border space-y-2">
+            <div class="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 space-y-2">
               <div class="flex items-center gap-2">
-                <i data-lucide="${isFailed ? 'skull' : 'trophy'}" class="w-4 h-4 ${isFailed ? 'text-rose-400' : 'text-amber-400'}"></i>
-                <span class="text-xs font-bold text-white">${escapeHtml(c.outcome)}</span>
+                <i data-lucide="trophy" class="w-4 h-4 text-amber-400"></i>
+                <span class="text-xs font-bold text-white">${escapeHtml(outcomeType)}</span>
               </div>
               <div class="grid grid-cols-2 gap-2 pt-1 text-xs font-mono">
                 <div class="bg-surface-950/90 rounded p-2 text-emerald-400">+${escapeHtml(c.xpReward)} XP</div>
                 <div class="bg-surface-950/90 rounded p-2 text-amber-400">+${escapeHtml(c.goldReward)} Gold</div>
               </div>
-              ${
-                c.itemReward
-                  ? `<div class="bg-surface-950/90 rounded p-2 text-xs font-mono text-sky-300">Item: ${escapeHtml(c.itemReward)}</div>`
-                  : ''
-              }
             </div>
+            ${mediaPreviewHtml}
           </div>
         `;
       }
-
-      const historyHtml = state.playtest.history
-        .map(
-          (step, idx) => `
-          <div class="flex items-start gap-2 text-[11px]">
-            <span class="w-4 h-4 rounded-full bg-surface-800 text-slate-400 font-mono text-[10px] flex items-center justify-center shrink-0 mt-0.5">${idx + 1}</span>
-            <div class="min-w-0 flex-1">
-              <span class="font-medium text-slate-200 block truncate">${escapeHtml(step.title)}</span>
-              ${step.action ? `<span class="text-[10px] font-mono text-amber-400">↳ ${escapeHtml(step.action)}</span>` : ''}
-            </div>
-          </div>
-        `
-        )
-        .join('');
 
       playtestPanel.innerHTML = `
         <div class="space-y-4">
@@ -2773,12 +3310,8 @@
               Active Step
             </span>
             <div class="flex items-center gap-1.5">
-              <button id="pt-restart-btn" class="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[11px] text-slate-300 transition" title="Restart Playtest">
-                Restart
-              </button>
-              <button id="pt-stop-btn" class="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-[11px] text-rose-400 transition">
-                Stop
-              </button>
+              <button id="pt-restart-btn" class="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[11px] text-slate-300 transition">Restart</button>
+              <button id="pt-stop-btn" class="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-[11px] text-rose-400 transition">Stop</button>
             </div>
           </div>
 
@@ -2792,50 +3325,29 @@
                 <span class="text-[10px] font-mono ${tpl.badgeText}">${tpl.category}</span>
               </div>
             </div>
-
             ${interactiveStepHtml}
-          </div>
-
-          ${
-            state.playtest.finished
-              ? `<button id="pt-replay-btn" class="w-full py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition">
-                  Playtest Again
-                </button>`
-              : ''
-          }
-
-          <div class="pt-3 border-t border-surface-800 space-y-2">
-            <h4 class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Playthrough Path (${state.playtest.history.length})</h4>
-            <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
-              ${historyHtml}
-            </div>
           </div>
         </div>
       `;
 
       document.getElementById('pt-restart-btn')?.addEventListener('click', startPlaytest);
-      document.getElementById('pt-replay-btn')?.addEventListener('click', startPlaytest);
       document.getElementById('pt-stop-btn')?.addEventListener('click', stopPlaytest);
-
       document.getElementById('pt-next-btn')?.addEventListener('click', () => {
         const outPort = tpl.outputs[0]?.id;
-        if (outPort) {
-          advancePlaytestPort(currentNode.id, outPort, 'Continued');
-        }
+        if (outPort) advancePlaytestPort(currentNode.id, outPort, 'Continued');
       });
 
-      document.getElementById('pt-choice-a-btn')?.addEventListener('click', () => {
-        advancePlaytestPort(currentNode.id, 'out_choice_a', `Choice A: "${c.choiceALabel}"`);
-      });
-
-      document.getElementById('pt-choice-b-btn')?.addEventListener('click', () => {
-        advancePlaytestPort(currentNode.id, 'out_choice_b', `Choice B: "${c.choiceBLabel}"`);
+      playtestPanel.querySelectorAll('.pt-choice-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const choiceId = btn.dataset.choiceId;
+          const choiceLabel = btn.dataset.choiceLabel;
+          advancePlaytestPort(currentNode.id, choiceId, `Choice: "${choiceLabel}"`);
+        });
       });
 
       document.getElementById('pt-cond-true-btn')?.addEventListener('click', () => {
         advancePlaytestPort(currentNode.id, 'out_true', 'Condition: True');
       });
-
       document.getElementById('pt-cond-false-btn')?.addEventListener('click', () => {
         advancePlaytestPort(currentNode.id, 'out_false', 'Condition: False');
       });
@@ -2851,16 +3363,13 @@
       }
 
       const rect = canvasContainer.getBoundingClientRect();
-      let minX = Infinity,
-        minY = Infinity,
-        maxX = -Infinity,
-        maxY = -Infinity;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
       state.nodes.forEach((n) => {
         minX = Math.min(minX, n.x);
         minY = Math.min(minY, n.y);
-        maxX = Math.max(maxX, n.x + 270);
-        maxY = Math.max(maxY, n.y + 185);
+        maxX = Math.max(maxX, n.x + 290);
+        maxY = Math.max(maxY, n.y + 190);
       });
 
       const graphW = maxX - minX;
@@ -2880,7 +3389,7 @@
     }
 
     // =========================================================================
-    // 15. EXPORT / IMPORT JSON ENGINE
+    // 17. JSON EXPORT & INITIALIZATION
     // =========================================================================
     const jsonModal = document.getElementById('json-modal');
     const jsonTextarea = document.getElementById('json-textarea');
@@ -2888,226 +3397,81 @@
     const jsonModalSubtitle = document.getElementById('json-modal-subtitle');
     const jsonModalActions = document.getElementById('json-modal-actions');
 
-    function buildQuestExportPayload() {
-      const startNode = state.nodes.find((n) => n.type === 'questStart');
-      return {
-        schemaVersion: '1.0.0',
-        engine: 'QuestForge',
-        exportedAt: new Date().toISOString(),
-        questMetadata: startNode
-          ? {
-              questId: startNode.config.questId,
-              title: startNode.title,
-              questType: startNode.config.questType,
-              minLevel: Number(startNode.config.minLevel) || 1
-            }
-          : { questId: 'custom_quest', title: 'Untitled Quest' },
-        nodes: state.nodes.map((n) => ({
-          id: n.id,
-          type: n.type,
-          title: n.title,
-          position: { x: n.x, y: n.y },
-          properties: { ...n.config },
-          notes: n.notes || ''
-        })),
-        connections: state.edges.map((e) => ({
-          id: e.id,
-          fromNode: e.sourceNodeId,
-          fromPort: e.sourcePortId,
-          toNode: e.targetNodeId,
-          toPort: e.targetPortId
-        }))
-      };
-    }
-
     function openExportModal() {
       jsonModalTitle.textContent = 'Export Quest JSON';
-      jsonModalSubtitle.textContent = 'Copy or download clean game-engine ready quest data';
+      jsonModalSubtitle.textContent = 'Clean game-engine ready quest structure';
       jsonTextarea.readOnly = true;
-      jsonTextarea.value = JSON.stringify(buildQuestExportPayload(), null, 2);
 
+      const startNode = state.nodes.find((n) => n.type === 'questStart');
+      const payload = {
+        schemaVersion: '2.1.0',
+        engine: 'QuestForge',
+        questMetadata: startNode ? { questId: startNode.config.questId, title: startNode.title } : {},
+        nodes: state.nodes,
+        connections: state.edges
+      };
+
+      jsonTextarea.value = JSON.stringify(payload, null, 2);
       jsonModalActions.innerHTML = `
-        <button id="json-copy-btn" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-200 border border-surface-700 transition">
-          <i data-lucide="copy" class="w-3.5 h-3.5 text-cyan-400"></i>
-          <span>Copy to Clipboard</span>
-        </button>
-        <button id="json-download-btn" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-xs font-semibold text-white transition">
-          <i data-lucide="download" class="w-3.5 h-3.5"></i>
-          <span>Download .json</span>
-        </button>
+        <button id="json-copy-btn" class="px-3.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-200 border border-surface-700 transition">Copy to Clipboard</button>
       `;
-
       document.getElementById('json-copy-btn').addEventListener('click', () => {
         jsonTextarea.select();
         document.execCommand('copy');
-        showToast('Quest JSON copied to clipboard', 'sky');
-      });
-
-      document.getElementById('json-download-btn').addEventListener('click', () => {
-        const payload = buildQuestExportPayload();
-        const fileName = `${payload.questMetadata.questId || 'quest_graph'}.json`;
-        const blob = new Blob([jsonTextarea.value], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast(`Downloaded ${fileName}`, 'emerald');
+        showToast('JSON copied to clipboard', 'sky');
       });
 
       jsonModal.classList.remove('hidden');
       lucide.createIcons();
     }
 
-    function loadQuestFromJsonString(jsonString) {
-      try {
-        const parsed = JSON.parse(jsonString);
-        if (!Array.isArray(parsed.nodes)) {
-          throw new Error('Missing "nodes" array');
-        }
+    document.getElementById('export-json-btn').addEventListener('click', openExportModal);
+    document.getElementById('close-json-modal-btn').addEventListener('click', () => jsonModal.classList.add('hidden'));
 
-        stopPlaytest();
-        state.nodes = parsed.nodes
-          .filter((n) => NODE_TYPES[n.type])
-          .map((n) => ({
-            id: n.id || generateId('qnode'),
-            type: n.type,
-            title: n.title || NODE_TYPES[n.type].title,
-            x: Number(n.position?.x ?? n.x ?? 100),
-            y: Number(n.position?.y ?? n.y ?? 100),
-            notes: n.notes || '',
-            config: { ...NODE_TYPES[n.type].defaultConfig, ...(n.properties || n.config || {}) }
-          }));
-
-        const rawEdges = parsed.connections || parsed.edges || [];
-        state.edges = rawEdges.map((e) => ({
-          id: e.id || generateId('qedge'),
-          sourceNodeId: e.fromNode || e.sourceNodeId,
-          sourcePortId: e.fromPort || e.sourcePortId,
-          targetNodeId: e.toNode || e.targetNodeId,
-          targetPortId: e.toPort || e.targetPortId
-        }));
-
-        state.questActive = true;
-        startupModal.classList.add('hidden');
-        clearSelection();
-        renderNodes();
-        requestAnimationFrame(() => {
-          fitCanvasView();
-          renderEdges();
-          updateStats();
-          updateQuestTitleHeader();
-        });
-
-        showToast(`Opened quest with ${state.nodes.length} nodes`, 'emerald');
-      } catch (err) {
-        showToast(`Invalid Quest JSON: ${err.message}`, 'rose');
-      }
-    }
-
-    // =========================================================================
-    // 16. TOOLBAR & UI EVENT BINDINGS
-    // =========================================================================
-    paletteSearch.addEventListener('input', (e) => {
-      renderPalette(e.target.value);
-    });
-
-    explorerSearch.addEventListener('input', (e) => {
-      renderQuestExplorer(e.target.value);
-    });
+    paletteSearch.addEventListener('input', (e) => renderPalette(e.target.value));
+    explorerSearch.addEventListener('input', (e) => renderProjectManager(e.target.value));
 
     document.getElementById('playtest-btn').addEventListener('click', startPlaytest);
     tabInspectorBtn.addEventListener('click', () => switchRightTab('inspector'));
     tabPlaytestBtn.addEventListener('click', () => switchRightTab('playtest'));
-
-    document.getElementById('save-quest-btn').addEventListener('click', saveActiveQuest);
-    document.getElementById('close-quest-btn').addEventListener('click', closeActiveQuestPrompt);
+    document.getElementById('close-quest-btn').addEventListener('click', openProjectManagerModal);
     document.getElementById('close-explorer-modal-btn').addEventListener('click', () => {
-      if (state.questActive || state.nodes.length > 0) {
-        startupModal.classList.add('hidden');
-      }
-    });
-
-    document.getElementById('cancel-close-btn').addEventListener('click', () => {
-      closeConfirmModal.classList.add('hidden');
-    });
-    document.getElementById('confirm-discard-btn').addEventListener('click', () => {
-      closeConfirmModal.classList.add('hidden');
-      openExplorerModal();
-    });
-
-    // Explorer modal action bindings
-    document.getElementById('explorer-new-btn').addEventListener('click', createNewQuest);
-    document.getElementById('explorer-import-btn').addEventListener('click', () => {
-      hiddenFileInput.click();
-    });
-
-    hiddenFileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        loadQuestFromJsonString(evt.target.result);
-      };
-      reader.readAsText(file);
-      hiddenFileInput.value = '';
+      if (state.activeProjectId && state.activeQuestId) startupModal.classList.add('hidden');
     });
 
     const snapToggleBtn = document.getElementById('snap-toggle-btn');
     snapToggleBtn.addEventListener('click', () => {
       state.snapToGrid = !state.snapToGrid;
-      if (state.snapToGrid) {
-        snapToggleBtn.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/40 text-xs font-medium transition shrink-0';
-        snapToggleBtn.querySelector('span').textContent = 'Snap: ON';
-      } else {
-        snapToggleBtn.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 text-slate-400 border border-surface-700 text-xs font-medium transition shrink-0';
-        snapToggleBtn.querySelector('span').textContent = 'Snap: OFF';
-      }
+      snapToggleBtn.querySelector('span').textContent = `Snap: ${state.snapToGrid ? 'ON' : 'OFF'}`;
       showToast(`Grid snapping ${state.snapToGrid ? 'enabled' : 'disabled'}`, 'sky');
     });
 
-    document.getElementById('export-json-btn').addEventListener('click', openExportModal);
-    document.getElementById('import-json-btn').addEventListener('click', () => {
-      hiddenFileInput.click();
-    });
-    document.getElementById('close-json-modal-btn').addEventListener('click', () => {
-      jsonModal.classList.add('hidden');
-    });
-
     deleteSelectedBtn.addEventListener('click', () => {
-      if (state.selectedNodeIds.size > 0) {
-        deleteSelectedNodes();
-      } else if (state.selectedEdgeId) {
-        deleteEdge(state.selectedEdgeId);
-      }
+      if (state.selectedNodeIds.size > 0) deleteSelectedNodes();
+      else if (state.selectedEdgeId) deleteEdge(state.selectedEdgeId);
     });
 
-    // Standard Zoom Button Event Handlers
-    const handleZoomIn = () => {
+    document.getElementById('zoom-in-btn').addEventListener('click', () => {
       state.viewport.zoom = Math.min(2.2, state.viewport.zoom + 0.15);
       applyViewportTransform();
-    };
-
-    const handleZoomOut = () => {
+    });
+    document.getElementById('zoom-out-btn').addEventListener('click', () => {
       state.viewport.zoom = Math.max(0.35, state.viewport.zoom - 0.15);
       applyViewportTransform();
-    };
-
-    document.getElementById('zoom-in-btn').addEventListener('click', handleZoomIn);
-    document.getElementById('zoom-out-btn').addEventListener('click', handleZoomOut);
+    });
     document.getElementById('fit-view-btn').addEventListener('click', fitCanvasView);
 
-    window.addEventListener('resize', () => {
-      renderEdges();
-    });
+    window.addEventListener('resize', () => renderEdges());
 
-    // =========================================================================
-    // 17. INITIALIZE APPLICATION
-    // =========================================================================
     window.addEventListener('DOMContentLoaded', () => {
+      loadProjectsFromStorage();
       renderPalette();
-      renderQuestExplorer();
+
+      if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
+        loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+      }
+
+      openProjectManagerModal();
       lucide.createIcons();
     });
   </script>
