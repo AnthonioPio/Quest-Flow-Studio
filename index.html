@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- JSZip for ZIP Archive Export & Import -->
+  <!-- JSZip for ZIP Archive Export & Import (.adpqst) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <script>
@@ -173,25 +173,6 @@
       }
     }
 
-    /* Edge Label Pill */
-    .edge-label-bg {
-      fill: #131a2a;
-      stroke: #29354f;
-      stroke-width: 1.2px;
-      rx: 6px;
-      ry: 6px;
-    }
-
-    .edge-label-text {
-      fill: #cbd5e1;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      font-weight: 600;
-      text-anchor: middle;
-      dominant-baseline: central;
-      pointer-events: none;
-    }
-
     /* Node Styling */
     .flow-node {
       position: absolute;
@@ -340,7 +321,7 @@
       </div>
     </div>
 
-    <!-- Center: Playtest, Save ZIP, Project Manager & Export Actions -->
+    <!-- Center: Playtest, Save ZIP (.adpqst), Project Manager & Export Actions -->
     <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1">
       <button id="playtest-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition shadow-sm shrink-0">
         <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
@@ -349,7 +330,7 @@
 
       <button id="save-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition shrink-0" title="Save Quest & Media as ZIP Archive (.adpqst)">
         <i data-lucide="file-archive" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">Save ZIP</span>
+        <span class="hidden sm:inline">Save .adpqst</span>
       </button>
 
       <button id="close-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-surface-700 hover:border-amber-500/40 text-xs font-medium transition shrink-0" title="Open Project Manager">
@@ -520,9 +501,9 @@
 
   </div>
 
-  <!-- CENTERED PLAYTEST MODAL OVERLAY (BLURS BACKGROUND CANVAS) -->
-  <div id="centered-playtest-modal" class="hidden fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-surface-900 border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl flex flex-col max-h-[85vh] relative animate-in fade-in zoom-in-95 duration-200">
+  <!-- CENTERED PLAYTEST MODAL OVERLAY (BLURS BACKGROUND CANVAS & PLAYS MEDIA) -->
+  <div id="centered-playtest-modal" class="hidden fixed inset-0 z-60 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl flex flex-col max-h-[90vh] relative">
       <!-- Modal Header -->
       <div class="flex items-center justify-between pb-3 border-b border-surface-800 mb-4">
         <div class="flex items-center gap-2.5">
@@ -531,7 +512,7 @@
           </div>
           <div>
             <h3 class="text-sm font-bold text-white">Interactive Quest Playtest</h3>
-            <p class="text-[11px] text-amber-300/80 font-mono">Live Simulation Active</p>
+            <p class="text-[11px] text-amber-300/80 font-mono">Live Simulation & Media Player Active</p>
           </div>
         </div>
         <button id="close-centered-playtest-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition" title="Stop Playtest">
@@ -556,7 +537,7 @@
           </div>
           <div>
             <h2 class="text-base font-bold text-white tracking-tight">Project Manager</h2>
-            <p class="text-xs text-slate-400">Select a project to open, or manage campaigns, quests, and media assets</p>
+            <p class="text-xs text-slate-400">Select a project to open, or manage campaigns, quests, and media assets (.adpqst / .zip)</p>
           </div>
         </div>
         <button id="close-explorer-modal-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition" title="Close Project Manager">
@@ -580,7 +561,7 @@
           </button>
           <button id="explorer-import-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
             <i data-lucide="folder-open" class="w-4 h-4 text-indigo-400"></i>
-            <span>Import</span>
+            <span>Import (.adpqst)</span>
           </button>
         </div>
       </div>
@@ -621,27 +602,8 @@
     </div>
   </div>
 
-  <!-- Delete Confirmation Modal -->
-  <div id="delete-confirm-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl">
-      <div class="flex items-center gap-3 mb-3">
-        <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
-          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <h3 id="delete-modal-title" class="text-sm font-semibold text-white">Delete Quest</h3>
-          <p id="delete-modal-desc" class="text-xs text-slate-400 mt-0.5">Are you sure you want to delete this item?</p>
-        </div>
-      </div>
-      <div class="flex justify-end gap-2 mt-5">
-        <button id="cancel-delete-btn" class="px-3.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-300 transition">Cancel</button>
-        <button id="confirm-delete-btn" class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white transition">Delete</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Resource Viewer Modal -->
-  <div id="resource-viewer-modal" class="hidden fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+  <div id="resource-viewer-modal" class="hidden fixed inset-0 z-70 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-2xl w-full p-5 shadow-2xl flex flex-col max-h-[85vh]">
       <div class="flex items-center justify-between mb-3 pb-2 border-b border-surface-800">
         <div class="flex items-center gap-2.5 min-w-0">
@@ -839,7 +801,7 @@
     ];
 
     let PROJECTS = [];
-    const LOCAL_STORAGE_KEY = 'questforge_projects_v5';
+    const LOCAL_STORAGE_KEY = 'questforge_projects_v6';
 
     function loadProjectsFromStorage() {
       try {
@@ -924,6 +886,11 @@
     const projectManagerList = document.getElementById('project-manager-list');
     const projectCountSummary = document.getElementById('project-count-summary');
     const hiddenFileInput = document.getElementById('hidden-file-input');
+
+    const resourceViewerModal = document.getElementById('resource-viewer-modal');
+    const viewerFileTitle = document.getElementById('viewer-file-title');
+    const viewerFileType = document.getElementById('viewer-file-type');
+    const viewerContentContainer = document.getElementById('viewer-content-container');
 
     function setCanvasTool(tool) {
       state.currentTool = tool;
@@ -1037,6 +1004,33 @@
       }
     });
 
+    function openResourceViewer(res) {
+      viewerFileTitle.textContent = res.name;
+      viewerFileType.textContent = `${res.type.toUpperCase()} Asset Viewer`;
+      let content = '';
+      if (res.type === 'image') {
+        content = `<img src="${res.data}" alt="${escapeHtml(res.name)}" class="max-w-full max-h-[50vh] object-contain rounded-lg shadow-lg" />`;
+      } else if (res.type === 'video') {
+        content = `<video controls autoplay src="${res.data}" class="max-w-full max-h-[50vh] rounded-lg shadow-lg"></video>`;
+      } else if (res.type === 'audio') {
+        content = `
+          <div class="flex flex-col items-center justify-center space-y-4 py-8 px-4">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-lg">
+              <i data-lucide="music" class="w-8 h-8"></i>
+            </div>
+            <p class="text-sm font-semibold text-white">${escapeHtml(res.name)}</p>
+            <audio controls autoplay src="${res.data}" class="w-full max-w-md"></audio>
+          </div>
+        `;
+      }
+      viewerContentContainer.innerHTML = content;
+      resourceViewerModal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    document.getElementById('close-viewer-modal-btn').addEventListener('click', () => { resourceViewerModal.classList.add('hidden'); viewerContentContainer.innerHTML = ''; });
+    document.getElementById('close-viewer-btn').addEventListener('click', () => { resourceViewerModal.classList.add('hidden'); viewerContentContainer.innerHTML = ''; });
+
     function renderProjectManager(filterQuery = '') {
       projectManagerList.innerHTML = '';
       const query = filterQuery.trim().toLowerCase();
@@ -1052,6 +1046,7 @@
         const projCard = document.createElement('div');
         projCard.className = 'rounded-xl bg-surface-850/80 border border-surface-700/80 overflow-hidden shadow-md';
         const questsHtml = questsToShow.map((q) => {
+          const mediaCount = (q.nodes || []).reduce((acc, n) => acc + (n.resources?.length || 0), 0);
           return `
             <div class="p-3 bg-surface-900/90 hover:bg-surface-800 border-t border-surface-800/80 flex items-center justify-between gap-3 group cursor-pointer transition" data-action="open-quest" data-project-id="${proj.id}" data-quest-id="${q.id}">
               <div class="flex items-start gap-2.5 min-w-0">
@@ -1070,6 +1065,7 @@
                     <span>Level ${q.minLevel}+</span>
                     <span>•</span>
                     <span>${q.nodes.length} Nodes</span>
+                    ${mediaCount > 0 ? `<span>•</span><span class="text-sky-400">${mediaCount} Media Assets</span>` : ''}
                   </div>
                 </div>
               </div>
@@ -1478,6 +1474,21 @@
         const outcomeType = c.outcome === 'Custom...' ? (c.customOutcome || 'Custom') : c.outcome;
         summary = `<div class="space-y-1.5"><span class="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 text-[10px] font-mono">${escapeHtml(outcomeType)}</span><div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono"><div class="bg-surface-950/90 rounded px-2 py-1 text-emerald-400">+${escapeHtml(c.xpReward)} XP</div><div class="bg-surface-950/90 rounded px-2 py-1 text-amber-400">+${escapeHtml(c.goldReward)} G</div></div></div>`;
       }
+
+      const resources = node.resources || [];
+      if (resources.length > 0) {
+        const mediaBadges = resources.map(res => {
+          let icon = 'file';
+          if (res.type === 'image') icon = 'image';
+          if (res.type === 'video') icon = 'video';
+          if (res.type === 'audio') icon = 'music';
+          return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-900 text-sky-300 border border-sky-500/30 text-[10px] font-mono truncate max-w-[120px]">
+            <i data-lucide="${icon}" class="w-3 h-3 text-sky-400 shrink-0"></i>
+            <span class="truncate">${escapeHtml(res.name)}</span>
+          </span>`;
+        }).join('');
+        summary += `<div class="mt-2 pt-2 border-t border-surface-800 flex flex-wrap gap-1">${mediaBadges}</div>`;
+      }
       return summary;
     }
 
@@ -1731,8 +1742,11 @@
 
         const resourcesHtml = node.resources.map((res, idx) => `
           <div class="p-2 rounded bg-surface-950 border border-surface-800 flex justify-between items-center text-xs">
-            <span class="text-sky-300 truncate">${escapeHtml(res.name)}</span>
-            <button data-remove-res-idx="${idx}" class="text-slate-500 hover:text-rose-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            <span class="text-sky-300 truncate cursor-pointer hover:underline" data-action="view-res" data-res-idx="${idx}">${escapeHtml(res.name)} (${res.type})</span>
+            <div class="flex items-center gap-2">
+              <button data-action="view-res" data-res-idx="${idx}" class="text-sky-400 hover:text-sky-300 text-[11px]">View</button>
+              <button data-remove-res-idx="${idx}" class="text-slate-500 hover:text-rose-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
           </div>
         `).join('');
 
@@ -1752,7 +1766,7 @@
             </div>
             ${extraHtml}
             <div class="pt-3 border-t border-surface-800 space-y-2">
-              <div class="flex justify-between items-center"><h3 class="text-[11px] font-semibold uppercase text-slate-400">Media Files</h3><button id="add-resource-btn" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-[11px]">Add</button></div>
+              <div class="flex justify-between items-center"><h3 class="text-[11px] font-semibold uppercase text-slate-400">Media Files</h3><button id="add-resource-btn" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-[11px]">Add File</button></div>
               <input type="file" id="node-file-input" accept="image/*,video/*,audio/*" class="hidden" />
               <div class="space-y-1">${resourcesHtml || '<p class="text-[11px] text-slate-500 italic">No media attached.</p>'}</div>
             </div>
@@ -1778,6 +1792,43 @@
           });
         });
 
+        const nodeFileInput = document.getElementById('node-file-input');
+        document.getElementById('add-resource-btn')?.addEventListener('click', () => nodeFileInput.click());
+        nodeFileInput?.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          let type = 'image';
+          if (file.type.startsWith('video/')) type = 'video';
+          else if (file.type.startsWith('audio/')) type = 'audio';
+
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            node.resources.push({ id: generateId('res'), name: file.name, type, data: evt.target.result });
+            renderNodes();
+            renderInspector();
+            saveProjectsToStorage();
+            showToast(`Attached ${type} "${file.name}"`, 'emerald');
+          };
+          reader.readAsDataURL(file);
+          nodeFileInput.value = '';
+        });
+
+        inspectorPanel.querySelectorAll('[data-remove-res-idx]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            node.resources.splice(parseInt(btn.dataset.removeResIdx, 10), 1);
+            renderNodes();
+            renderInspector();
+            saveProjectsToStorage();
+          });
+        });
+
+        inspectorPanel.querySelectorAll('[data-action="view-res"]').forEach((el) => {
+          el.addEventListener('click', () => {
+            const res = node.resources[parseInt(el.dataset.resIdx, 10)];
+            if (res) openResourceViewer(res);
+          });
+        });
+
         document.getElementById('inspector-delete-btn').addEventListener('click', () => deleteNode(node.id));
         lucide.createIcons();
         return;
@@ -1792,7 +1843,7 @@
       statsEdges.textContent = `Connections: ${state.edges.length}`;
     }
 
-    // PLAYTEST SIMULATOR - CENTERED SCREEN OVERLAY WITH BACKGROUND BLUR
+    // PLAYTEST SIMULATOR - CENTERED SCREEN OVERLAY WITH BACKGROUND BLUR & MEDIA PLAYBACK
     function startPlaytest() {
       if (state.nodes.length === 0) {
         showToast('Add quest nodes before playtesting', 'amber');
@@ -1809,7 +1860,6 @@
         finished: false
       };
 
-      // Blur out the background node graph canvas
       canvasContainer.classList.add('playtest-blur');
       centeredPlaytestModal.classList.remove('hidden');
 
@@ -1817,7 +1867,7 @@
       updateSelectionVisuals();
       renderEdges();
       centerOnNode(startNode);
-      showToast('Playtest started in center screen', 'amber');
+      showToast('Playtest started with media playback', 'amber');
     }
 
     function stopPlaytest() {
@@ -1866,12 +1916,41 @@
 
       let mediaHtml = '';
       if (currentNode.resources && currentNode.resources.length > 0) {
-        mediaHtml = currentNode.resources.map((res) => {
-          if (res.type === 'image') return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950 mb-2"><img src="${res.data}" class="w-full max-h-48 object-cover" /></div>`;
-          if (res.type === 'video') return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950 mb-2"><video controls src="${res.data}" class="w-full max-h-48 object-cover"></video></div>`;
-          if (res.type === 'audio') return `<div class="p-2 rounded-lg border border-surface-700 bg-surface-950 mb-2"><audio controls src="${res.data}" class="w-full h-8"></audio></div>`;
+        const mediaElements = currentNode.resources.map((res) => {
+          if (res.type === 'image') {
+            return `
+              <div class="rounded-xl overflow-hidden border border-surface-700 bg-surface-950 mb-2 cursor-pointer group" data-action="playtest-view-res" data-res-id="${res.id}">
+                <img src="${res.data}" alt="${escapeHtml(res.name)}" class="w-full max-h-48 object-cover group-hover:scale-105 transition" />
+                <div class="px-2.5 py-1 text-[10px] font-mono text-slate-400 flex justify-between items-center bg-surface-900">
+                  <span class="truncate">${escapeHtml(res.name)}</span>
+                  <span class="text-sky-400">Click to View</span>
+                </div>
+              </div>
+            `;
+          }
+          if (res.type === 'video') {
+            return `
+              <div class="rounded-xl overflow-hidden border border-surface-700 bg-surface-950 mb-2">
+                <video controls autoplay src="${res.data}" class="w-full max-h-48 object-cover"></video>
+                <div class="px-2.5 py-1 text-[10px] font-mono text-slate-400 bg-surface-900 truncate">${escapeHtml(res.name)}</div>
+              </div>
+            `;
+          }
+          if (res.type === 'audio') {
+            return `
+              <div class="p-3 rounded-xl border border-surface-700 bg-surface-950 mb-2 space-y-1.5">
+                <div class="flex items-center gap-2 text-xs font-semibold text-emerald-400">
+                  <i data-lucide="music" class="w-3.5 h-3.5"></i>
+                  <span class="truncate">${escapeHtml(res.name)}</span>
+                </div>
+                <audio controls autoplay src="${res.data}" class="w-full h-8"></audio>
+              </div>
+            `;
+          }
           return '';
         }).join('');
+
+        mediaHtml = `<div class="space-y-2 pt-2 border-t border-surface-800">${mediaElements}</div>`;
       }
 
       let stepBody = '';
@@ -1974,6 +2053,14 @@
       document.getElementById('pt-cond-true')?.addEventListener('click', () => advancePlaytestPort(currentNode.id, 'out_true', 'True'));
       document.getElementById('pt-cond-false')?.addEventListener('click', () => advancePlaytestPort(currentNode.id, 'out_false', 'False'));
       document.getElementById('pt-stop-btn')?.addEventListener('click', stopPlaytest);
+
+      centeredPlaytestContent.querySelectorAll('[data-action="playtest-view-res"]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const res = currentNode.resources.find(r => r.id === el.dataset.resId);
+          if (res) openResourceViewer(res);
+        });
+      });
+
       lucide.createIcons();
     }
 
