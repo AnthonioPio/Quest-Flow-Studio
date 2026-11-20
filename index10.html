@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Quest Flow Studio — Google Drive & Auth Enabled</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Inter & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- JSZip for ZIP Archive Export & Import -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Google Identity Services (GIS) SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            surface: {
+              950: '#0b0f19',
+              900: '#131a2a',
+              850: '#172033',
+              800: '#1d273d',
+              700: '#29354f',
+              600: '#394869',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    input, textarea, select { user-select: text; -webkit-user-select: text; }
+    body { margin: 0; padding: 0; overflow: hidden; background-color: #0b0f19; color: #e2e8f0; font-family: 'Inter', sans-serif; touch-action: none; }
+    #canvas-container {
+      background-color: #0b0f19;
+      background-image: radial-gradient(#243047 1.3px, transparent 1.3px);
+      background-size: 24px 24px;
+      background-position: 0px 0px;
+      touch-action: none;
+    }
+    #canvas-container.tool-select { cursor: default; }
+    #canvas-container.tool-pan { cursor: grab; }
+    #canvas-container.tool-pan.is-panning { cursor: grabbing; }
+
+    #canvas-world.playtest-blur, #palette-sidebar.playtest-blur, #inspector-sidebar.playtest-blur {
+      filter: blur(6px) brightness(0.7);
+      transition: filter 0.3s ease;
+      pointer-events: none;
+    }
+
+    #canvas-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; transition: filter 0.3s ease; }
+    #connections-svg { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; z-index: 10; }
+    .edge-hit-area { fill: none; stroke: transparent; stroke-width: 18px; cursor: pointer; pointer-events: stroke; }
+    .edge-path { fill: none; stroke: #475569; stroke-width: 2.5px; stroke-linecap: round; transition: stroke 0.15s ease; pointer-events: none; }
+    .edge-group:hover .edge-path { stroke: #94a3b8; stroke-width: 3px; }
+    .edge-group.selected .edge-path { stroke: #38bdf8 !important; stroke-width: 3.5px; filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6)); }
+    .edge-draft { fill: none; stroke: #38bdf8; stroke-width: 2.5px; stroke-dasharray: 6 6; stroke-linecap: round; animation: dashFlow 0.6s linear infinite; pointer-events: none; }
+    @keyframes dashFlow { to { stroke-dashoffset: -14; } }
+
+    .flow-node {
+      position: absolute; width: 290px; border-radius: 12px;
+      background: rgba(19, 26, 42, 0.95); backdrop-filter: blur(12px);
+      border: 1.5px solid #29354f; box-shadow: 0 14px 32px -6px rgba(0, 0, 0, 0.7);
+      z-index: 20; transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .flow-node:hover { border-color: #3d4f73; }
+    .flow-node.selected { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25), 0 18px 36px -6px rgba(0, 0, 0, 0.85); z-index: 30; }
+
+    .port-socket {
+      width: 14px; height: 14px; border-radius: 9999px; background-color: #131a2a;
+      border: 2.5px solid #64748b; cursor: crosshair; transition: transform 0.12s ease, background-color 0.12s ease;
+      position: absolute; top: 50%; transform: translateY(-50%); z-index: 40;
+    }
+    .port-socket.input-port { left: -8px; }
+    .port-socket.output-port { right: -8px; }
+    .port-socket:hover { transform: translateY(-50%) scale(1.35); background-color: #38bdf8; border-color: #e0f2fe; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #29354f; border-radius: 9999px; }
+
+    .sidebar-panel { transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; will-change: width; }
+    #palette-sidebar.collapsed, #inspector-sidebar.collapsed {
+      width: 0 !important; min-width: 0 !important; max-width: 0 !important; padding: 0 !important; border-width: 0 !important; opacity: 0; overflow: hidden; pointer-events: none;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col overflow-hidden bg-surface-950 text-slate-200">
+
+  <!-- Google Login Lock Screen Overlay -->
+  <div id="login-lock-screen" class="fixed inset-0 z-[100] bg-surface-950 flex flex-col items-center justify-center p-4">
+    <div class="bg-surface-900 border border-surface-700/80 rounded-3xl max-w-md w-full p-8 shadow-2xl flex flex-col items-center text-center space-y-6">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-xl shadow-amber-500/25 text-white">
+        <i data-lucide="compass" class="w-8 h-8"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-white">Quest Flow Studio</h1>
+        <p class="text-xs text-slate-400 mt-1">Sign in with your Google account to access your quest editor and Google Drive storage.</p>
+      </div>
+
+      <button id="google-login-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm transition shadow-lg cursor-pointer">
+        <svg class="w-5 h-5" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>Sign in with Google</span>
+      </button>
+
+      <div id="login-status-indicator" class="text-[11px] text-amber-400 font-mono">
+        Initializing Google Services...
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Toolbar -->
+  <header class="h-14 bg-surface-900 border-b border-surface-700/80 px-3 sm:px-4 flex items-center justify-between z-50 shrink-0 gap-2">
+    <div class="flex items-center gap-2.5 shrink-0">
+      <button id="toggle-palette-btn" class="p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 border border-surface-700 transition" title="Toggle Quest Nodes Sidebar">
+        <i data-lucide="panel-left" class="w-4 h-4"></i>
+      </button>
+
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+          <i data-lucide="compass" class="w-4 h-4 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition">QuestFlow Studio</h1>
+            <span id="top-project-badge" class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-800 text-amber-400 border border-surface-700">No Project</span>
+          </div>
+          <p id="top-project-subtitle" class="text-[11px] text-slate-400 hidden xl:block">Google Drive & Media Manager Active</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Action Buttons -->
+    <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1">
+      <button id="playtest-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition shadow-sm shrink-0">
+        <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+        <span>Playtest</span>
+      </button>
+
+      <button id="save-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition shrink-0" title="Save ZIP">
+        <i data-lucide="file-archive" class="w-3.5 h-3.5"></i>
+        <span class="hidden sm:inline">Save ZIP</span>
+      </button>
+
+      <div class="h-4 w-px bg-surface-700 mx-0.5 hidden sm:block"></div>
+
+      <!-- Google Drive Sync Buttons -->
+      <button id="sync-to-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold transition shrink-0" title="Sync to Drive">
+        <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
+        <span class="hidden md:inline">Sync to Drive</span>
+      </button>
+
+      <button id="sync-from-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition shrink-0" title="Sync from Drive">
+        <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
+        <span class="hidden md:inline">Sync from Drive</span>
+      </button>
+
+      <button id="close-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-surface-700 text-xs font-medium transition shrink-0" title="Project Manager">
+        <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span class="hidden sm:inline">Project Manager</span>
+      </button>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center gap-2 shrink-0">
+      <button id="logout-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition cursor-pointer" title="Logout">
+        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+        <span class="hidden xl:inline">Logout</span>
+      </button>
+
+      <button id="delete-selected-btn" disabled class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 disabled:opacity-40 disabled:pointer-events-none hover:bg-rose-500/20 text-rose-400 border border-surface-700 text-xs font-medium transition">
+        <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+      </button>
+
+      <button id="toggle-inspector-btn" class="p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 border border-surface-700 transition" title="Toggle Inspector">
+        <i data-lucide="panel-right" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="flex-1 flex relative overflow-hidden">
+    <!-- Left Sidebar: Palette -->
+    <aside id="palette-sidebar" class="sidebar-panel collapsed w-64 min-w-[260px] bg-surface-900/95 backdrop-blur-md border-r border-surface-700/80 flex flex-col z-40 shrink-0">
+      <div class="p-3.5 border-b border-surface-800 flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-200 truncate">Quest Nodes</h2>
+        </div>
+        <button id="close-palette-btn" class="p-1.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-700 text-slate-400 hover:text-white transition"><i data-lucide="panel-left-close" class="w-4 h-4"></i></button>
+      </div>
+      <div class="px-3 pt-3">
+        <div class="relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+          <input id="palette-search" type="text" placeholder="Filter quest nodes..." class="w-full bg-surface-950 border border-surface-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition" />
+        </div>
+      </div>
+      <div id="palette-list" class="flex-1 overflow-y-auto p-3 space-y-2.5"></div>
+    </aside>
+
+    <!-- Center Canvas -->
+    <main id="canvas-container" class="flex-1 relative overflow-hidden tool-select">
+      <button id="expand-palette-tab" class="absolute top-3.5 left-0 z-30 flex items-center gap-1.5 pl-2.5 pr-3 py-2 rounded-r-xl bg-surface-900/95 hover:bg-surface-800 backdrop-blur-md border border-l-0 border-surface-700 text-slate-200 shadow-xl transition"><i data-lucide="panel-left-open" class="w-4 h-4 text-amber-400"></i><span class="text-xs font-semibold">Nodes</span></button>
+      <button id="expand-inspector-tab" class="absolute top-3.5 right-0 z-30 flex items-center gap-1.5 pl-3 pr-2.5 py-2 rounded-l-xl bg-surface-900/95 hover:bg-surface-800 backdrop-blur-md border border-r-0 border-surface-700 text-slate-200 shadow-xl transition"><span class="text-xs font-semibold">Inspector</span><i data-lucide="panel-right-open" class="w-4 h-4 text-sky-400"></i></button>
+
+      <div id="canvas-world">
+        <svg id="connections-svg">
+          <defs>
+            <marker id="arrow-default" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#64748b" />
+            </marker>
+          </defs>
+          <g id="edges-layer"></g>
+          <path id="draft-edge" class="edge-draft hidden" d=""></path>
+        </svg>
+        <div id="nodes-layer"></div>
+      </div>
+
+      <div id="empty-hint" class="hidden pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+        <div class="w-12 h-12 rounded-2xl bg-surface-800 border border-surface-700 flex items-center justify-center mb-3 text-amber-400"><i data-lucide="map" class="w-6 h-6"></i></div>
+        <p class="text-sm font-medium text-slate-200">Active Quest is Empty</p>
+      </div>
+
+      <div class="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
+        <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition"><i data-lucide="mouse-pointer" class="w-4 h-4"></i></button>
+        <button id="tool-pan-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition"><i data-lucide="hand" class="w-4 h-4"></i></button>
+        <div class="w-px h-5 bg-surface-700 mx-0.5"></div>
+        <button id="zoom-out-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition"><i data-lucide="minus" class="w-4 h-4"></i></button>
+        <span id="zoom-level-label" class="px-2 text-xs font-mono text-slate-300 min-w-[52px] text-center">100%</span>
+        <button id="zoom-in-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition"><i data-lucide="plus" class="w-4 h-4"></i></button>
+        <div class="w-px h-5 bg-surface-700 mx-0.5"></div>
+        <button id="fit-view-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition"><i data-lucide="maximize-2" class="w-4 h-4"></i></button>
+      </div>
+
+      <div id="status-toast" class="pointer-events-none opacity-0 transition-opacity duration-200 absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-surface-900/95 border border-surface-700 px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 text-xs text-slate-200">
+        <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+        <span id="status-text">Ready</span>
+      </div>
+
+      <div id="centered-playtest-overlay" class="hidden absolute inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div id="centered-playtest-card" class="bg-surface-900/95 backdrop-blur-xl border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl flex flex-col max-h-[85vh]"></div>
+      </div>
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside id="inspector-sidebar" class="sidebar-panel collapsed w-80 min-w-[320px] bg-surface-900/95 backdrop-blur-md border-l border-surface-700/80 flex flex-col z-40 shrink-0">
+      <div class="p-2.5 border-b border-surface-800 flex items-center justify-between gap-2 bg-surface-950/40">
+        <button id="close-inspector-btn" class="p-1.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-700 text-slate-400 hover:text-white transition"><i data-lucide="panel-right-close" class="w-4 h-4"></i></button>
+        <div class="flex-1 grid grid-cols-2 gap-1 bg-surface-950 p-1 rounded-lg border border-surface-800">
+          <button id="tab-inspector-btn" class="flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold bg-surface-800 text-white transition"><i data-lucide="sliders" class="w-3.5 h-3.5 text-sky-400"></i><span>Inspector</span></button>
+          <button id="tab-playtest-btn" class="flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 transition"><i data-lucide="gamepad-2" class="w-3.5 h-3.5 text-amber-400"></i><span>Playtest</span></button>
+        </div>
+      </div>
+      <div id="inspector-panel" class="flex-1 overflow-y-auto p-4"></div>
+      <div id="playtest-panel" class="hidden flex-1 overflow-y-auto p-4 flex-col"></div>
+      <div class="p-3 border-t border-surface-800 bg-surface-950/70 flex items-center justify-between text-[11px] font-mono text-slate-400">
+        <span id="stats-nodes">Nodes: 0</span>
+        <span id="stats-edges">Connections: 0</span>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Project Manager Modal -->
+  <div id="startup-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl flex flex-col max-h-[88vh]">
+      <div class="flex items-center justify-between mb-4 pb-3 border-b border-surface-800">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-lg shadow-amber-500/30 text-white shrink-0"><i data-lucide="folder-kanban" class="w-5 h-5"></i></div>
+          <div>
+            <h2 class="text-base font-bold text-white tracking-tight">Project Manager & Google Drive</h2>
+            <p class="text-xs text-slate-400">Manage campaigns and sync with Google Drive</p>
+          </div>
+        </div>
+        <button id="close-explorer-modal-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div class="relative flex-1 min-w-[200px]">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input id="explorer-search" type="text" placeholder="Search projects and quests..." class="w-full bg-surface-950 border border-surface-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition" />
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="modal-sync-to-drive-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0"><i data-lucide="cloud-upload" class="w-4 h-4"></i><span>Sync to Drive</span></button>
+          <button id="modal-sync-from-drive-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition shrink-0"><i data-lucide="cloud-download" class="w-4 h-4"></i><span>Sync from Drive</span></button>
+          <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0"><i data-lucide="file-plus" class="w-4 h-4 text-amber-400"></i><span>Blank Project</span></button>
+        </div>
+      </div>
+
+      <div id="project-manager-list" class="flex-1 overflow-y-auto space-y-4 pr-1"></div>
+
+      <div class="pt-3 mt-4 border-t border-surface-800 flex items-center justify-between text-xs">
+        <button id="clear-persistence-btn" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30 font-medium transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span>Clear Local Data</span></button>
+        <span id="project-count-summary" class="text-slate-500">Projects Available</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="delete-confirm-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
+        <div>
+          <h3 id="delete-modal-title" class="text-sm font-semibold text-white">Delete Quest</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Are you sure? This action cannot be undone.</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button id="cancel-delete-btn" class="px-3.5 py-1.5 rounded-lg bg-surface-800 text-xs text-slate-300">Cancel</button>
+        <button id="confirm-delete-btn" class="px-3.5 py-1.5 rounded-lg bg-rose-600 text-xs text-white">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com';[span_0](start_span)[span_0](end_span)
+    const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
+    let tokenClient = null;
+    let accessToken = localStorage.getItem('questforge_oauth_token') || null;
+
+    const NODE_TYPES = {
+      questStart: { type: 'questStart', title: 'Quest Start', description: 'Entry point defining quest ID and level', icon: 'flag', accent: '#10b981', badgeBg: 'bg-emerald-500/15', badgeText: 'text-emerald-400', borderAccent: 'border-emerald-500/40', inputs: [], outputs: [{ id: 'out_start', label: 'Start' }], defaultConfig: { questId: 'qst_01_new', questType: 'Main Story', minLevel: '1' } },
+      dialogue: { type: 'dialogue', title: 'Dialogue / NPC', description: 'NPC spoken line and reaction tone', icon: 'message-square-quote', accent: '#6366f1', badgeBg: 'bg-indigo-500/15', badgeText: 'text-indigo-400', borderAccent: 'border-indigo-500/40', inputs: [{ id: 'in_prev', label: 'In' }], outputs: [{ id: 'out_next', label: 'Next' }], defaultConfig: { npcName: 'Guard Captain', reaction: 'Neutral', dialogueText: 'Halt, adventurer!' } },
+      playerChoice: { type: 'playerChoice', title: 'Player Choice', description: 'Interactive dialogue fork', icon: 'git-fork', accent: '#f59e0b', badgeBg: 'bg-amber-500/15', badgeText: 'text-amber-400', borderAccent: 'border-amber-500/40', inputs: [{ id: 'in_prev', label: 'In' }], outputs: [], defaultConfig: { choices: [{ id: 'choice_0', label: 'Accept' }, { id: 'choice_1', label: 'Decline' }] } },
+      objective: { type: 'objective', title: 'Objective / Task', description: 'Trackable gameplay goal', icon: 'target', accent: '#06b6d4', badgeBg: 'bg-cyan-500/15', badgeText: 'text-cyan-400', borderAccent: 'border-cyan-500/40', inputs: [{ id: 'in_prev', label: 'In' }], outputs: [{ id: 'out_complete', label: 'Complete' }], defaultConfig: { objectiveType: 'Kill Target', targetName: 'Bandit', requiredCount: '5' } },
+      condition: { type: 'condition', title: 'Condition / Check', description: 'Evaluates world state', icon: 'shield-question', accent: '#a855f7', badgeBg: 'bg-purple-500/15', badgeText: 'text-purple-400', borderAccent: 'border-purple-500/40', inputs: [{ id: 'in_prev', label: 'In' }], outputs: [{ id: 'out_true', label: 'True' }, { id: 'out_false', label: 'False' }], defaultConfig: { conditionType: 'Has Item', conditionValue: 'item_key' } },
+      questReward: { type: 'questReward', title: 'Quest Reward / End', description: 'Concludes quest branch', icon: 'trophy', accent: '#f43f5e', badgeBg: 'bg-rose-500/15', badgeText: 'text-rose-400', borderAccent: 'border-rose-500/40', inputs: [{ id: 'in_prev', label: 'In' }], outputs: [], defaultConfig: { outcome: 'Quest Complete', xpReward: '300', goldReward: '150', itemReward: 'Shield' } }
+    };
+
+    const DEFAULT_PROJECTS = [{
+      id: 'proj_sample', title: 'Chronicles of Aethelgard [Sample Campaign]', description: 'Sample campaign project.', isSample: true,
+      quests: [{
+        id: 'qst_04_shrine', title: 'The Sunken Shrine', type: 'Main Story', minLevel: 5, description: 'Enter the Sunken Shrine.',
+        nodes: [
+          { id: 'node_start', type: 'questStart', title: 'The Sunken Shrine', x: 64, y: 200, notes: '', resources: [], config: { questId: 'qst_04_shrine', questType: 'Main Story', minLevel: '5' } },
+          { id: 'node_npc', type: 'dialogue', title: 'High Priestess Lyra', x: 380, y: 200, notes: '', resources: [], config: { npcName: 'Lyra', reaction: 'Urgent', dialogueText: 'Enter the Sunken Shrine!' } }
+        ],
+        edges: [{ id: 'edge_1', sourceNodeId: 'node_start', sourcePortId: 'out_start', targetNodeId: 'node_npc', targetPortId: 'in_prev' }]
+      }]
+    }];
+
+    let PROJECTS = [];
+    const LOCAL_STORAGE_KEY = 'questforge_projects_v9';
+
+    function loadProjectsFromStorage() {
+      try {
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+        PROJECTS = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
+      } catch (err) { PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS)); }
+    }
+
+    function saveProjectsToStorage() {
+      try {
+        if (state.activeProjectId && state.activeQuestId) {
+          const project = PROJECTS.find(p => p.id === state.activeProjectId);
+          const quest = project?.quests.find(q => q.id === state.activeQuestId);
+          if (quest) { quest.nodes = JSON.parse(JSON.stringify(state.nodes)); quest.edges = JSON.parse(JSON.stringify(state.edges)); }
+        }
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(PROJECTS));
+      } catch (err) {}
+    }
+
+    // Google Auth Initialization & Handlers
+    const loginLockScreen = document.getElementById('login-lock-screen');
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const loginStatusIndicator = document.getElementById('login-status-indicator');
+
+    function initGoogleAuth() {
+      if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+        loginStatusIndicator.textContent = 'Waiting for Google Services SDK...';
+        setTimeout(initGoogleAuth, 300);
+        return;
+      }
+
+      try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: (response) => {
+            if (response.access_token) {
+              accessToken = response.access_token;
+              localStorage.setItem('questforge_oauth_token', accessToken);
+              unlockApp();
+            }
+          }
+        });
+        loginStatusIndicator.textContent = 'Ready to Sign In';
+        loginStatusIndicator.className = 'text-[11px] text-emerald-400 font-mono';
+      } catch (err) {
+        loginStatusIndicator.textContent = 'Google Auth Init Error';
+        loginStatusIndicator.className = 'text-[11px] text-rose-400 font-mono';
+      }
+
+      if (accessToken) {
+        unlockApp();
+      } else {
+        lockApp();
+      }
+    }
+
+    function unlockApp() {
+      loginLockScreen.classList.add('hidden');
+      loadProjectsFromStorage();
+      renderPalette();
+      if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
+        loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+      }
+      openProjectManagerModal();
+      showToast('Successfully signed in with Google', 'emerald');
+    }
+
+    function lockApp() {
+      loginLockScreen.classList.remove('hidden');
+    }
+
+    googleLoginBtn.addEventListener('click', () => {
+      if (tokenClient) {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+      } else {
+        alert('Google SDK is still loading or blocked. Please check your network connection or ad-blocker.');
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      accessToken = null;
+      localStorage.removeItem('questforge_oauth_token');
+      lockApp();
+      showToast('Logged out successfully', 'amber');
+    });
+
+    // Google Drive Sync API Methods
+    async function syncToGoogleDrive() {
+      if (!accessToken) { showToast('Not authenticated with Google', 'rose'); return; }
+      showToast('Syncing projects to Google Drive...', 'amber');
+      saveProjectsToStorage();
+
+      const fileMetadata = { name: 'questforge_projects_backup.json', mimeType: 'application/json' };
+      const fileContent = JSON.stringify(PROJECTS, null, 2);
+
+      try {
+        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='questforge_projects_backup.json' and trashed=false`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const searchData = await searchRes.json();
+        const existingFile = searchData.files && searchData.files[0];
+
+        if (existingFile) {
+          await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: fileContent
+          });
+        } else {
+          const form = new FormData();
+          form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
+          form.append('file', new Blob([fileContent], { type: 'application/json' }));
+          await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${accessToken}` },
+            body: form
+          });
+        }
+        showToast('Successfully synced to Google Drive!', 'emerald');
+      } catch (err) {
+        showToast(`Drive Sync Error: ${err.message}`, 'rose');
+      }
+    }
+
+    async function syncFromGoogleDrive() {
+      if (!accessToken) { showToast('Not authenticated with Google', 'rose'); return; }
+      showToast('Fetching from Google Drive...', 'amber');
+      try {
+        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='questforge_projects_backup.json' and trashed=false`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const searchData = await searchRes.json();
+        const existingFile = searchData.files && searchData.files[0];
+        if (!existingFile) { showToast('No backup file found on Google Drive.', 'amber'); return; }
+
+        const downloadRes = await fetch(`https://www.googleapis.com/drive/v3/files/${existingFile.id}?alt=media`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (downloadRes.ok) {
+          const cloudProjects = await downloadRes.json();
+          if (Array.isArray(cloudProjects)) {
+            PROJECTS = cloudProjects;
+            saveProjectsToStorage();
+            if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
+              loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+            }
+            renderProjectManager();
+            showToast('Successfully synced from Google Drive!', 'emerald');
+          }
+        }
+      } catch (err) {
+        showToast(`Drive Import Error: ${err.message}`, 'rose');
+      }
+    }
+
+    document.getElementById('sync-to-drive-btn').addEventListener('click', syncToGoogleDrive);
+    document.getElementById('sync-from-drive-btn').addEventListener('click', syncFromGoogleDrive);
+    document.getElementById('modal-sync-to-drive-btn').addEventListener('click', syncToGoogleDrive);
+    document.getElementById('modal-sync-from-drive-btn').addEventListener('click', syncFromGoogleDrive);
+
+    // App State
+    const GRID_SIZE = 24;
+    const state = {
+      activeProjectId: null, activeQuestId: null,
+      nodes: [], edges: [], selectedNodeIds: new Set(), selectedEdgeId: null,
+      snapToGrid: true, currentTool: 'select', rightTab: 'inspector',
+      sidebars: { leftOpen: false, rightOpen: false },
+      viewport: { x: 40, y: 40, zoom: 1 },
+      interaction: { isPanning: false, panStartX: 0, panStartY: 0, draggingNodeId: null, dragOffsets: new Map(), connecting: null },
+      playtest: { active: false, currentNodeId: null, lastEdgeId: null, history: [], finished: false },
+      pendingDelete: null
+    };
+
+    const canvasContainer = document.getElementById('canvas-container');
+    const canvasWorld = document.getElementById('canvas-world');
+    const nodesLayer = document.getElementById('nodes-layer');
+    const edgesLayer = document.getElementById('edges-layer');
+    const draftEdge = document.getElementById('draft-edge');
+    const paletteList = document.getElementById('palette-list');
+    const paletteSearch = document.getElementById('palette-search');
+    const inspectorPanel = document.getElementById('inspector-panel');
+    const playtestPanel = document.getElementById('playtest-panel');
+    const centeredPlaytestOverlay = document.getElementById('centered-playtest-overlay');
+    const centeredPlaytestCard = document.getElementById('centered-playtest-card');
+    const tabInspectorBtn = document.getElementById('tab-inspector-btn');
+    const tabPlaytestBtn = document.getElementById('tab-playtest-btn');
+    const zoomLevelLabel = document.getElementById('zoom-level-label');
+    const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+    const emptyHint = document.getElementById('empty-hint');
+    const statsNodes = document.getElementById('stats-nodes');
+    const statsEdges = document.getElementById('stats-edges');
+    const topQuestTitle = document.getElementById('top-quest-title');
+    const topProjectBadge = document.getElementById('top-project-badge');
+    const topProjectSubtitle = document.getElementById('top-project-subtitle');
+    const toolSelectBtn = document.getElementById('tool-select-btn');
+    const toolPanBtn = document.getElementById('tool-pan-btn');
+    const paletteSidebar = document.getElementById('palette-sidebar');
+    const inspectorSidebar = document.getElementById('inspector-sidebar');
+    const togglePaletteBtn = document.getElementById('toggle-palette-btn');
+    const closePaletteBtn = document.getElementById('close-palette-btn');
+    const expandPaletteTab = document.getElementById('expand-palette-tab');
+    const toggleInspectorBtn = document.getElementById('toggle-inspector-btn');
+    const closeInspectorBtn = document.getElementById('close-inspector-btn');
+    const expandInspectorTab = document.getElementById('expand-inspector-tab');
+    const startupModal = document.getElementById('startup-modal');
+    const explorerSearch = document.getElementById('explorer-search');
+    const projectManagerList = document.getElementById('project-manager-list');
+    const projectCountSummary = document.getElementById('project-count-summary');
+    const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+    const deleteModalTitle = document.getElementById('delete-modal-title');
+
+    function setCanvasTool(tool) {
+      state.currentTool = tool;
+      if (tool === 'select') {
+        canvasContainer.className = 'flex-1 relative overflow-hidden tool-select';
+        toolSelectBtn.className = 'p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition';
+        toolPanBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition';
+      } else {
+        canvasContainer.className = 'flex-1 relative overflow-hidden tool-pan';
+        toolPanBtn.className = 'p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 transition';
+        toolSelectBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition';
+      }
+    }
+
+    toolSelectBtn.addEventListener('click', () => setCanvasTool('select'));
+    toolPanBtn.addEventListener('click', () => setCanvasTool('pan'));
+
+    function setLeftSidebarOpen(isOpen) {
+      state.sidebars.leftOpen = isOpen;
+      paletteSidebar.classList.toggle('collapsed', !isOpen);
+      expandPaletteTab.classList.toggle('hidden', isOpen);
+      setTimeout(renderEdges, 260);
+    }
+
+    function setRightSidebarOpen(isOpen) {
+      state.sidebars.rightOpen = isOpen;
+      inspectorSidebar.classList.toggle('collapsed', !isOpen);
+      expandInspectorTab.classList.toggle('hidden', isOpen);
+      setTimeout(renderEdges, 260);
+    }
+
+    togglePaletteBtn.addEventListener('click', () => setLeftSidebarOpen(!state.sidebars.leftOpen));
+    closePaletteBtn.addEventListener('click', () => setLeftSidebarOpen(false));
+    expandPaletteTab.addEventListener('click', () => setLeftSidebarOpen(true));
+    toggleInspectorBtn.addEventListener('click', () => setRightSidebarOpen(!state.sidebars.rightOpen));
+    closeInspectorBtn.addEventListener('click', () => setRightSidebarOpen(false));
+    expandInspectorTab.addEventListener('click', () => setRightSidebarOpen(true));
+
+    function generateId(prefix = 'id') { return `${prefix}_${Math.random().toString(36).substring(2, 8)}`; }
+    function snapCoord(val) { return state.snapToGrid ? Math.round(val / GRID_SIZE) * GRID_SIZE : Math.round(val); }
+    function escapeHtml(str) { return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+    let toastTimeout = null;
+    function showToast(message, color = 'amber') {
+      const toast = document.getElementById('status-toast');
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      const colors = { sky: 'bg-sky-400', emerald: 'bg-emerald-400', amber: 'bg-amber-400', rose: 'bg-rose-400' };
+      dot.className = `w-2 h-2 rounded-full ${colors[color] || colors.amber}`;
+      text.textContent = message;
+      toast.classList.remove('opacity-0'); toast.classList.add('opacity-100');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0'); }, 2400);
+    }
+
+    function screenToWorld(clientX, clientY) {
+      const rect = canvasContainer.getBoundingClientRect();
+      return { x: (clientX - rect.left - state.viewport.x) / state.viewport.zoom, y: (clientY - rect.top - state.viewport.y) / state.viewport.zoom };
+    }
+
+    function applyViewportTransform() {
+      const { x, y, zoom } = state.viewport;
+      canvasWorld.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
+      canvasContainer.style.backgroundPosition = `${x}px ${y}px`;
+      canvasContainer.style.backgroundSize = `${GRID_SIZE * zoom}px ${GRID_SIZE * zoom}px`;
+      zoomLevelLabel.textContent = `${Math.round(zoom * 100)}%`;
+    }
+
+    function switchRightTab(tabName) {
+      state.rightTab = tabName;
+      const isInspector = tabName === 'inspector';
+      inspectorPanel.classList.toggle('hidden', !isInspector);
+      playtestPanel.classList.toggle('hidden', isInspector);
+      playtestPanel.classList.toggle('flex', !isInspector);
+      if (isInspector) renderInspector();
+      else renderPlaytestPanel();
+      setRightSidebarOpen(true);
+    }
+
+    function updateHeaderProjectInfo() {
+      const project = PROJECTS.find(p => p.id === state.activeProjectId);
+      if (!project) return;
+      topProjectBadge.textContent = project.isSample ? 'Sample' : project.title;
+      topProjectSubtitle.textContent = project.description;
+      const quest = project.quests.find(q => q.id === state.activeQuestId);
+      topQuestTitle.textContent = quest ? quest.title : project.title;
+    }
+
+    // Project Manager & Deletion
+    function renderProjectManager(filterQuery = '') {
+      projectManagerList.innerHTML = '';
+      const query = filterQuery.trim().toLowerCase();
+      let totalProjects = PROJECTS.length;
+      let totalQuestsCount = PROJECTS.reduce((acc, p) => acc + p.quests.length, 0);
+      projectCountSummary.textContent = `${totalProjects} Projects • ${totalQuestsCount} Total Quests`;
+
+      PROJECTS.forEach((proj) => {
+        const filteredQuests = proj.quests.filter(q => !query || q.title.toLowerCase().includes(query));
+        if (query && filteredQuests.length === 0 && !proj.title.toLowerCase().includes(query)) return;
+        const questsToShow = query ? filteredQuests : proj.quests;
+
+        const projCard = document.createElement('div');
+        projCard.className = 'rounded-xl bg-surface-850/80 border border-surface-700/80 overflow-hidden shadow-md';
+
+        const questsHtml = questsToShow.map(q => `
+          <div class="p-3 bg-surface-900/90 hover:bg-surface-800 border-t border-surface-800/80 flex items-center justify-between gap-3 group cursor-pointer transition" data-action="open-quest" data-project-id="${proj.id}" data-quest-id="${q.id}">
+            <div class="flex items-start gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5"><i data-lucide="scroll" class="w-4 h-4"></i></div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-white group-hover:text-amber-300 transition truncate">${escapeHtml(q.title)}</span>
+                  <span class="px-1.5 py-0.5 rounded bg-surface-950 text-[10px] font-mono text-amber-400 border border-surface-800 shrink-0">${escapeHtml(q.type)}</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">${escapeHtml(q.description)}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
+              <button data-action="open-quest-btn" data-project-id="${proj.id}" data-quest-id="${q.id}" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition">Open</button>
+              <button data-action="delete-quest" data-project-id="${proj.id}" data-quest-id="${q.id}" class="p-1.5 rounded-lg bg-surface-850 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-surface-700 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
+          </div>
+        `).join('');
+
+        projCard.innerHTML = `
+          <div class="p-4 bg-surface-850 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <i data-lucide="folder-kanban" class="w-4 h-4 text-amber-400 shrink-0"></i>
+                <h3 class="text-sm font-bold text-white truncate">${escapeHtml(proj.title)}</h3>
+                <span class="px-2 py-0.5 rounded bg-surface-950 text-[10px] font-mono text-sky-400 border border-surface-800 shrink-0">${proj.quests.length} Quests</span>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">${escapeHtml(proj.description)}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button data-action="add-quest" data-project-id="${proj.id}" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold transition"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Add Quest</span></button>
+              <button data-action="delete-project" data-project-id="${proj.id}" class="p-1.5 rounded-lg bg-surface-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-surface-700 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>
+          </div>
+          <div class="divide-y divide-surface-800">${questsHtml || `<div class="p-4 text-center text-xs text-slate-500">No quests in this project.</div>`}</div>
+        `;
+        projectManagerList.appendChild(projCard);
+      });
+
+      projectManagerList.querySelectorAll('[data-action="open-quest"], [data-action="open-quest-btn"]').forEach(el => {
+        el.addEventListener('click', e => { e.stopPropagation(); loadQuestIntoWorkspace(el.dataset.projectId, el.dataset.questId); startupModal.classList.add('hidden'); });
+      });
+      projectManagerList.querySelectorAll('[data-action="add-quest"]').forEach(el => {
+        el.addEventListener('click', e => { e.stopPropagation(); createNewQuestInProject(el.dataset.projectId); });
+      });
+      projectManagerList.querySelectorAll('[data-action="delete-quest"]').forEach(el => {
+        el.addEventListener('click', e => { e.stopPropagation(); promptDeleteQuest(el.dataset.projectId, el.dataset.questId); });
+      });
+      projectManagerList.querySelectorAll('[data-action="delete-project"]').forEach(el => {
+        el.addEventListener('click', e => { e.stopPropagation(); promptDeleteProject(el.dataset.projectId); });
+      });
+      lucide.createIcons();
+    }
+
+    function openProjectManagerModal() { renderProjectManager(explorerSearch.value); startupModal.classList.remove('hidden'); }
+
+    function promptDeleteQuest(projectId, questId) {
+      const proj = PROJECTS.find(p => p.id === projectId);
+      const quest = proj?.quests.find(q => q.id === questId);
+      if (!proj || !quest) return;
+      if (proj.quests.length <= 1) { showToast('Cannot delete the last quest in a project.', 'rose'); return; }
+      state.pendingDelete = { type: 'quest', projectId, questId };
+      deleteModalTitle.textContent = `Delete Quest "${quest.title}"?`;
+      deleteConfirmModal.classList.remove('hidden');
+    }
+
+    function promptDeleteProject(projectId) {
+      const proj = PROJECTS.find(p => p.id === projectId);
+      if (!proj) return;
+      if (PROJECTS.length <= 1) { showToast('Cannot delete final remaining project.', 'rose'); return; }
+      state.pendingDelete = { type: 'project', projectId };
+      deleteModalTitle.textContent = `Delete Project "${proj.title}"?`;
+      deleteConfirmModal.classList.remove('hidden');
+    }
+
+    document.getElementById('cancel-delete-btn').addEventListener('click', () => { deleteConfirmModal.classList.add('hidden'); state.pendingDelete = null; });
+    document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+      const pd = state.pendingDelete;
+      if (!pd) return;
+      if (pd.type === 'quest') {
+        const proj = PROJECTS.find(p => p.id === pd.projectId);
+        if (proj) {
+          proj.quests = proj.quests.filter(q => q.id !== pd.questId);
+          if (state.activeQuestId === pd.questId && proj.quests.length > 0) loadQuestIntoWorkspace(proj.id, proj.quests[0].id);
+        }
+      } else if (pd.type === 'project') {
+        PROJECTS = PROJECTS.filter(p => p.id !== pd.projectId);
+        if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+      }
+      deleteConfirmModal.classList.add('hidden');
+      state.pendingDelete = null;
+      saveProjectsToStorage();
+      renderProjectManager(explorerSearch.value);
+      showToast('Deleted successfully', 'rose');
+    });
+
+    function loadQuestIntoWorkspace(projectId, questId) {
+      const project = PROJECTS.find(p => p.id === projectId);
+      if (!project) return;
+      const quest = project.quests.find(q => q.id === questId);
+      if (!quest) return;
+      state.activeProjectId = project.id;
+      state.activeQuestId = quest.id;
+      state.nodes = JSON.parse(JSON.stringify(quest.nodes || []));
+      state.edges = JSON.parse(JSON.stringify(quest.edges || []));
+      renderNodes();
+      requestAnimationFrame(() => { fitCanvasView(); renderEdges(); updateStats(); updateHeaderProjectInfo(); });
+      saveProjectsToStorage();
+    }
+
+    function createNewQuestInProject(projectId) {
+      const project = PROJECTS.find(p => p.id === projectId);
+      if (!project) return;
+      const title = prompt('Enter quest title:', `Chapter ${project.quests.length + 1}`);
+      if (!title || !title.trim()) return;
+      const newQId = generateId('qst');
+      project.quests.push({
+        id: newQId, title: title.trim(), type: 'Main Story', minLevel: 1, description: '',
+        nodes: [{ id: generateId('node'), type: 'questStart', title: title.trim(), x: 64, y: 200, notes: '', resources: [], config: { questId: newQId, questType: 'Main Story', minLevel: '1' } }],
+        edges: []
+      });
+      loadQuestIntoWorkspace(projectId, newQId);
+      startupModal.classList.add('hidden');
+      saveProjectsToStorage();
+    }
+
+    document.getElementById('new-blank-project-btn').addEventListener('click', () => {
+      const projName = prompt('Enter Project Name:', 'New Campaign');
+      if (!projName || !projName.trim()) return;
+      const pId = generateId('proj'); const qId = generateId('qst');
+      PROJECTS.push({
+        id: pId, title: projName.trim(), description: 'New campaign.', isSample: false,
+        quests: [{ id: qId, title: 'Starting Quest', type: 'Main Story', minLevel: 1, description: '', nodes: [{ id: generateId('node'), type: 'questStart', title: 'Starting Quest', x: 64, y: 200, notes: '', resources: [], config: { questId: qId, questType: 'Main Story', minLevel: '1' } }], edges: [] }]
+      });
+      saveProjectsToStorage();
+      loadQuestIntoWorkspace(pId, qId);
+      startupModal.classList.add('hidden');
+    });
+
+    document.getElementById('clear-persistence-btn').addEventListener('click', () => {
+      if (confirm('Clear all local projects?')) {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
+        loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+        renderProjectManager();
+        showToast('Local storage cleared', 'amber');
+      }
+    });
+
+    // ZIP Export
+    document.getElementById('save-quest-btn').addEventListener('click', async () => {
+      const project = PROJECTS.find(p => p.id === state.activeProjectId);
+      if (!project) return;
+      const quest = project.quests.find(q => q.id === state.activeQuestId) || project.quests[0];
+      quest.nodes = JSON.parse(JSON.stringify(state.nodes));
+      quest.edges = JSON.parse(JSON.stringify(state.edges));
+
+      const zip = new JSZip();
+      zip.file('quest.json', JSON.stringify({ schemaVersion: '2.1.0', nodes: quest.nodes, connections: quest.edges }, null, 2));
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a'); a.href = url; a.download = `${quest.id}.zip`; a.click();
+      URL.revokeObjectURL(url);
+      showToast('Saved ZIP archive successfully', 'emerald');
+    });
+
+    // Palette & Nodes
+    function renderPalette(filterText = '') {
+      paletteList.innerHTML = '';
+      const query = filterText.trim().toLowerCase();
+      Object.values(NODE_TYPES).forEach(tpl => {
+        if (query && !tpl.title.toLowerCase().includes(query)) return;
+        const item = document.createElement('div');
+        item.className = 'group p-3 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700/80 cursor-pointer transition flex items-start gap-3 shadow-sm';
+        item.innerHTML = `
+          <div class="w-8 h-8 rounded-lg ${tpl.badgeBg} ${tpl.badgeText} border ${tpl.borderAccent} flex items-center justify-center shrink-0 mt-0.5"><i data-lucide="${tpl.icon}" class="w-4 h-4"></i></div>
+          <div class="min-w-0 flex-1">
+            <span class="text-xs font-semibold text-slate-100 truncate">${tpl.title}</span>
+            <p class="text-[11px] text-slate-400 mt-1 leading-snug">${tpl.description}</p>
+          </div>
+        `;
+        item.addEventListener('click', () => {
+          const rect = canvasContainer.getBoundingClientRect();
+          const pos = screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+          addNode(tpl.type, pos.x - 140, pos.y - 60);
+        });
+        paletteList.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    function addNode(type, x, y, customData = null) {
+      const template = NODE_TYPES[type];
+      if (!template) return null;
+      const node = {
+        id: customData?.id || generateId('qnode'),
+        type: template.type,
+        title: customData?.title || template.title,
+        x: snapCoord(x), y: snapCoord(y),
+        notes: customData?.notes || '',
+        resources: customData?.resources || [],
+        config: customData?.config ? { ...template.defaultConfig, ...customData.config } : JSON.parse(JSON.stringify(template.defaultConfig))
+      };
+      state.nodes.push(node);
+      selectNode(node.id);
+      renderNodes(); renderEdges(); updateStats(); saveProjectsToStorage();
+      return node;
+    }
+
+    function deleteNode(nodeId) {
+      state.nodes = state.nodes.filter(n => n.id !== nodeId);
+      state.edges = state.edges.filter(e => e.sourceNodeId !== nodeId && e.targetNodeId !== nodeId);
+      state.selectedNodeIds.delete(nodeId);
+      renderNodes(); renderEdges(); renderInspector(); updateStats(); saveProjectsToStorage();
+      showToast('Node deleted', 'rose');
+    }
+
+    function deleteSelectedNodes() {
+      state.nodes = state.nodes.filter(n => !state.selectedNodeIds.has(n.id));
+      state.edges = state.edges.filter(e => !state.selectedNodeIds.has(e.sourceNodeId) && !state.selectedNodeIds.has(e.targetNodeId));
+      state.selectedNodeIds.clear();
+      renderNodes(); renderEdges(); renderInspector(); updateStats(); saveProjectsToStorage();
+    }
+
+    function selectNode(nodeId) {
+      state.selectedNodeIds.clear();
+      state.selectedNodeIds.add(nodeId);
+      state.selectedEdgeId = null;
+      updateSelectionVisuals();
+      if (state.rightTab === 'inspector') renderInspector();
+    }
+
+    function updateSelectionVisuals() {
+      document.querySelectorAll('.flow-node').forEach(el => {
+        el.classList.toggle('selected', state.selectedNodeIds.has(el.dataset.nodeId));
+      });
+      deleteSelectedBtn.disabled = state.selectedNodeIds.size === 0 && !state.selectedEdgeId;
+    }
+
+    function getNodeOutputs(node) {
+      if (node.type === 'playerChoice') return (node.config.choices || [{ id: 'choice_0', label: '1' }]).map((ch, idx) => ({ id: ch.id, label: `Opt ${idx + 1}` }));
+      return NODE_TYPES[node.type].outputs;
+    }
+
+    function renderNodes() {
+      nodesLayer.innerHTML = '';
+      emptyHint.classList.toggle('hidden', state.nodes.length > 0);
+
+      state.nodes.forEach(node => {
+        const tpl = NODE_TYPES[node.type];
+        const el = document.createElement('div');
+        el.className = `flow-node ${state.selectedNodeIds.has(node.id) ? 'selected' : ''}`;
+        el.dataset.nodeId = node.id;
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+
+        const inputsHtml = tpl.inputs.map(p => `<div class="port-socket input-port" data-node-id="${node.id}" data-port-id="${p.id}" data-port-type="input"></div>`).join('');
+        const outputsHtml = getNodeOutputs(node).map(p => `<div class="port-socket output-port" data-node-id="${node.id}" data-port-id="${p.id}" data-port-type="output"></div>`).join('');
+
+        el.innerHTML = `
+          <div class="h-1.5 w-full rounded-t-[10px]" style="background-color: ${tpl.accent}"></div>
+          <div class="px-3 py-2.5 border-b border-surface-800 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="${tpl.icon}" class="w-3.5 h-3.5 ${tpl.badgeText}"></i>
+              <span class="text-xs font-semibold text-white truncate">${escapeHtml(node.title)}</span>
+            </div>
+          </div>
+          <div class="p-3 space-y-2">
+            <div class="text-[11px] text-slate-300 truncate">${escapeHtml(node.config.dialogueText || node.config.questId || node.config.targetName || '')}</div>
+            <div class="flex justify-between relative h-4 mt-2">${inputsHtml}${outputsHtml}</div>
+          </div>
+        `;
+
+        el.addEventListener('pointerdown', e => {
+          if (state.currentTool === 'pan' || state.playtest.active) return;
+          e.stopPropagation();
+          selectNode(node.id);
+          const pos = screenToWorld(e.clientX, e.clientY);
+          state.interaction.draggingNodeId = node.id;
+          state.interaction.dragOffsets.set(node.id, { x: pos.x - node.x, y: pos.y - node.y });
+          el.setPointerCapture(e.pointerId);
+        });
+
+        el.querySelectorAll('.output-port').forEach(portEl => {
+          portEl.addEventListener('pointerdown', e => {
+            e.stopPropagation();
+            const center = getPortWorldPosition(node.id, portEl.dataset.portId, 'output');
+            state.interaction.connecting = { sourceNodeId: node.id, sourcePortId: portEl.dataset.portId, startX: center.x, startY: center.y };
+            draftEdge.setAttribute('d', computeBezierPath(center.x, center.y, center.x, center.y));
+            draftEdge.classList.remove('hidden');
+          });
+        });
+
+        nodesLayer.appendChild(el);
+      });
+      lucide.createIcons();
+    }
+
+    function getPortWorldPosition(nodeId, portId, portType) {
+      const portEl = document.querySelector(`.port-socket[data-node-id="${nodeId}"][data-port-id="${portId}"][data-port-type="${portType}"]`);
+      if (!portEl) {
+        const n = state.nodes.find(n => n.id === nodeId);
+        return n ? { x: n.x + (portType === 'input' ? 0 : 290), y: n.y + 90 } : { x: 0, y: 0 };
+      }
+      const rect = portEl.getBoundingClientRect();
+      return screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }
+
+    function computeBezierPath(x1, y1, x2, y2) {
+      const dx = Math.abs(x2 - x1);
+      const curvature = Math.max(60, dx * 0.52);
+      return `M ${x1} ${y1} C ${x1 + curvature} ${y1}, ${x2 - curvature} ${y2}, ${x2} ${y2}`;
+    }
+
+    function renderEdges() {
+      edgesLayer.innerHTML = '';
+      state.edges.forEach(edge => {
+        const start = getPortWorldPosition(edge.sourceNodeId, edge.sourcePortId, 'output');
+        const end = getPortWorldPosition(edge.targetNodeId, edge.targetPortId, 'input');
+        const d = computeBezierPath(start.x, start.y, end.x, end.y);
+
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', `edge-group ${state.selectedEdgeId === edge.id ? 'selected' : ''}`);
+        group.dataset.edgeId = edge.id;
+
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        hit.setAttribute('class', 'edge-hit-area');
+        hit.setAttribute('d', d);
+        hit.addEventListener('pointerdown', e => { e.stopPropagation(); state.selectedEdgeId = edge.id; state.selectedNodeIds.clear(); updateSelectionVisuals(); renderEdges(); });
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'edge-path');
+        path.setAttribute('d', d);
+        path.setAttribute('marker-end', 'url(#arrow-default)');
+
+        group.appendChild(hit);
+        group.appendChild(path);
+        edgesLayer.appendChild(group);
+      });
+    }
+
+    // Panning & Connection handling
+    canvasContainer.addEventListener('pointerdown', e => {
+      if (state.playtest.active) return;
+      if (state.currentTool === 'pan' || e.button === 1) {
+        state.interaction.isPanning = true;
+        state.interaction.panStartX = e.clientX - state.viewport.x;
+        state.interaction.panStartY = e.clientY - state.viewport.y;
+        canvasContainer.classList.add('is-panning');
+      }
+    });
+
+    window.addEventListener('pointermove', e => {
+      if (state.interaction.isPanning) {
+        state.viewport.x = e.clientX - state.interaction.panStartX;
+        state.viewport.y = e.clientY - state.interaction.panStartY;
+        applyViewportTransform();
+      } else if (state.interaction.draggingNodeId) {
+        const pos = screenToWorld(e.clientX, e.clientY);
+        const offset = state.interaction.dragOffsets.get(state.interaction.draggingNodeId);
+        const node = state.nodes.find(n => n.id === state.interaction.draggingNodeId);
+        if (node && offset) {
+          node.x = snapCoord(pos.x - offset.x);
+          node.y = snapCoord(pos.y - offset.y);
+          const el = document.querySelector(`.flow-node[data-node-id="${node.id}"]`);
+          if (el) { el.style.left = `${node.x}px`; el.style.top = `${node.y}px`; }
+          renderEdges();
+        }
+      } else if (state.interaction.connecting) {
+        const pos = screenToWorld(e.clientX, e.clientY);
+        draftEdge.setAttribute('d', computeBezierPath(state.interaction.connecting.startX, state.interaction.connecting.startY, pos.x, pos.y));
+      }
+    });
+
+    window.addEventListener('pointerup', e => {
+      state.interaction.isPanning = false;
+      state.interaction.draggingNodeId = null;
+      canvasContainer.classList.remove('is-panning');
+      if (state.interaction.connecting) {
+        const hovered = document.elementFromPoint(e.clientX, e.clientY);
+        if (hovered && hovered.classList.contains('input-port')) {
+          const tNodeId = hovered.dataset.nodeId;
+          const tPortId = hovered.dataset.portId;
+          const { sourceNodeId, sourcePortId } = state.interaction.connecting;
+          if (tNodeId !== sourceNodeId) {
+            state.edges = state.edges.filter(ed => !(ed.sourceNodeId === sourceNodeId && ed.sourcePortId === sourcePortId));
+            state.edges.push({ id: generateId('qedge'), sourceNodeId, sourcePortId, targetNodeId: tNodeId, targetPortId: tPortId });
+            renderEdges();
+            saveProjectsToStorage();
+          }
+        }
+        state.interaction.connecting = null;
+        draftEdge.classList.add('hidden');
+      }
+    });
+
+    canvasContainer.addEventListener('wheel', e => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+      state.viewport.zoom = Math.min(2.2, Math.max(0.35, state.viewport.zoom * zoomFactor));
+      applyViewportTransform();
+    }, { passive: false });
+
+    function fitCanvasView() {
+      if (state.nodes.length === 0) return;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      state.nodes.forEach(n => {
+        minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+        maxX = Math.max(maxX, n.x + 290); maxY = Math.max(maxY, n.y + 190);
+      });
+      const rect = canvasContainer.getBoundingClientRect();
+      const zoom = Math.min(1, Math.max(0.4, Math.min((rect.width - 100) / (maxX - minX), (rect.height - 100) / (maxY - minY))));
+      state.viewport.zoom = zoom;
+      state.viewport.x = (rect.width - (maxX - minX) * zoom) / 2 - minX * zoom;
+      state.viewport.y = (rect.height - (maxY - minY) * zoom) / 2 - minY * zoom;
+      applyViewportTransform();
+      renderEdges();
+    }
+
+    // Inspector & Full Node Property Editors (Restoring Branching Choices)
+    function renderInspector() {
+      if (state.selectedNodeIds.size === 1) {
+        const nodeId = Array.from(state.selectedNodeIds)[0];
+        const node = state.nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        let customConfigHtml = '';
+        if (node.type === 'dialogue') {
+          customConfigHtml = `
+            <div class="space-y-3 pt-3 border-t border-surface-800">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">NPC Name</label>
+                <input id="cfg-npc-name" type="text" value="${escapeHtml(node.config.npcName || '')}" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Dialogue Text</label>
+                <textarea id="cfg-dialogue-text" rows="3" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white resize-none">${escapeHtml(node.config.dialogueText || '')}</textarea>
+              </div>
+            </div>
+          `;
+        } else if (node.type === 'playerChoice') {
+          const choices = node.config.choices || [];
+          const choicesHtml = choices.map((ch, idx) => `
+            <div class="flex items-center gap-2 mb-2">
+              <input type="text" data-choice-idx="${idx}" value="${escapeHtml(ch.label)}" class="choice-input flex-1 bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" placeholder="Choice ${idx + 1}" />
+              <button data-action="remove-choice" data-choice-idx="${idx}" class="p-1.5 rounded-lg bg-surface-850 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-surface-700"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
+          `).join('');
+
+          customConfigHtml = `
+            <div class="space-y-3 pt-3 border-t border-surface-800">
+              <div class="flex items-center justify-between">
+                <label class="block text-[11px] font-semibold text-slate-300">Dialogue Choices (${choices.length})</label>
+                <button id="add-choice-btn" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">+ Add Choice</button>
+              </div>
+              <div class="space-y-1">${choicesHtml}</div>
+            </div>
+          `;
+        } else if (node.type === 'objective') {
+          customConfigHtml = `
+            <div class="space-y-3 pt-3 border-t border-surface-800">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Target Name</label>
+                <input id="cfg-target-name" type="text" value="${escapeHtml(node.config.targetName || '')}" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Required Count</label>
+                <input id="cfg-required-count" type="text" value="${escapeHtml(node.config.requiredCount || '')}" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+            </div>
+          `;
+        }
+
+        inspectorPanel.innerHTML = `
+          <div class="space-y-4">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1">Node Title</label>
+              <input id="inspector-title" type="text" value="${escapeHtml(node.title)}" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+            </div>
+            ${customConfigHtml}
+            <button id="inspector-delete-btn" class="w-full py-2 bg-rose-500/15 text-rose-400 border border-rose-500/30 rounded-lg text-xs font-medium">Delete Node</button>
+          </div>
+        `;
+
+        document.getElementById('inspector-title').addEventListener('input', e => { node.title = e.target.value; renderNodes(); saveProjectsToStorage(); });
+        document.getElementById('inspector-delete-btn').addEventListener('click', () => deleteNode(node.id));
+
+        if (node.type === 'dialogue') {
+          document.getElementById('cfg-npc-name').addEventListener('input', e => { node.config.npcName = e.target.value; saveProjectsToStorage(); });
+          document.getElementById('cfg-dialogue-text').addEventListener('input', e => { node.config.dialogueText = e.target.value; renderNodes(); saveProjectsToStorage(); });
+        } else if (node.type === 'playerChoice') {
+          document.getElementById('add-choice-btn').addEventListener('click', () => {
+            if (!node.config.choices) node.config.choices = [];
+            node.config.choices.push({ id: generateId('choice'), label: `Option ${node.config.choices.length + 1}` });
+            renderInspector(); renderNodes(); renderEdges(); saveProjectsToStorage();
+          });
+          inspectorPanel.querySelectorAll('.choice-input').forEach(inp => {
+            inp.addEventListener('input', e => {
+              const idx = parseInt(e.target.dataset.choiceIdx);
+              node.config.choices[idx].label = e.target.value;
+              renderNodes(); saveProjectsToStorage();
+            });
+          });
+          inspectorPanel.querySelectorAll('[data-action="remove-choice"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const idx = parseInt(btn.dataset.choiceIdx);
+              node.config.choices.splice(idx, 1);
+              renderInspector(); renderNodes(); renderEdges(); saveProjectsToStorage();
+            });
+          });
+        } else if (node.type === 'objective') {
+          document.getElementById('cfg-target-name').addEventListener('input', e => { node.config.targetName = e.target.value; renderNodes(); saveProjectsToStorage(); });
+          document.getElementById('cfg-required-count').addEventListener('input', e => { node.config.requiredCount = e.target.value; saveProjectsToStorage(); });
+        }
+        lucide.createIcons();
+        return;
+      }
+      inspectorPanel.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">Select any node to inspect properties.</div>`;
+    }
+
+    function startPlaytest() {
+      if (state.nodes.length === 0) return;
+      const startNode = state.nodes.find(n => n.type === 'questStart') || state.nodes[0];
+      state.playtest = { active: true, currentNodeId: startNode.id, lastEdgeId: null, history: [], finished: false };
+
+      canvasWorld.classList.add('playtest-blur');
+      paletteSidebar.classList.add('playtest-blur');
+      inspectorSidebar.classList.add('playtest-blur');
+      centeredPlaytestOverlay.classList.remove('hidden');
+      renderPlaytestPanel();
+    }
+
+    function stopPlaytest() {
+      state.playtest.active = false;
+      canvasWorld.classList.remove('playtest-blur');
+      paletteSidebar.classList.remove('playtest-blur');
+      inspectorSidebar.classList.remove('playtest-blur');
+      centeredPlaytestOverlay.classList.add('hidden');
+      renderEdges();
+    }
+
+    function renderPlaytestPanel() {
+      const currentNode = state.nodes.find(n => n.id === state.playtest.currentNodeId);
+      if (!currentNode) { stopPlaytest(); return; }
+
+      let actionHtml = `<button id="pt-next-btn" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl cursor-pointer">Continue</button>`;
+
+      if (currentNode.type === 'playerChoice') {
+        const choices = currentNode.config.choices || [];
+        actionHtml = `<div class="space-y-2">` + choices.map((ch, idx) => `
+          <button data-choice-id="${ch.id}" class="pt-choice-btn w-full text-left p-3 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs text-white font-medium transition cursor-pointer">
+            ${idx + 1}. ${escapeHtml(ch.label)}
+          </button>
+        `).join('') + `</div>`;
+      }
+
+      centeredPlaytestCard.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-surface-800">
+            <span class="text-xs font-bold text-white">${escapeHtml(currentNode.title)}</span>
+            <button id="pt-stop-btn" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 text-xs font-medium cursor-pointer">End Playtest</button>
+          </div>
+          <div class="p-4 bg-surface-950 rounded-xl border border-surface-800">
+            <p class="text-xs text-slate-200">${escapeHtml(currentNode.config.dialogueText || currentNode.config.targetName || currentNode.config.questId || currentNode.title)}</p>
+          </div>
+          ${actionHtml}
+        </div>
+      `;
+
+      document.getElementById('pt-stop-btn').addEventListener('click', stopPlaytest);
+      const nextBtn = document.getElementById('pt-next-btn');
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          const edge = state.edges.find(e => e.sourceNodeId === currentNode.id);
+          if (edge) {
+            state.playtest.currentNodeId = edge.targetNodeId;
+            renderPlaytestPanel();
+          } else {
+            alert('Quest Completed!');
+            stopPlaytest();
+          }
+        });
+      }
+      centeredPlaytestCard.querySelectorAll('.pt-choice-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const choiceId = btn.dataset.choiceId;
+          const edge = state.edges.find(e => e.sourceNodeId === currentNode.id && e.sourcePortId === choiceId);
+          if (edge) {
+            state.playtest.currentNodeId = edge.targetNodeId;
+            renderPlaytestPanel();
+          } else {
+            alert('Quest Branch Completed!');
+            stopPlaytest();
+          }
+        });
+      });
+    }
+
+    function updateStats() {
+      statsNodes.textContent = `Nodes: ${state.nodes.length}`;
+      statsEdges.textContent = `Connections: ${state.edges.length}`;
+    }
+
+    // Event Bindings
+    document.getElementById('playtest-btn').addEventListener('click', startPlaytest);
+    tabInspectorBtn.addEventListener('click', () => switchRightTab('inspector'));
+    tabPlaytestBtn.addEventListener('click', () => switchRightTab('playtest'));
+    document.getElementById('close-quest-btn').addEventListener('click', openProjectManagerModal);
+    document.getElementById('close-explorer-modal-btn').addEventListener('click', () => startupModal.classList.add('hidden'));
+    deleteSelectedBtn.addEventListener('click', deleteSelectedNodes);
+    paletteSearch.addEventListener('input', e => renderPalette(e.target.value));
+    explorerSearch.addEventListener('input', e => renderProjectManager(e.target.value));
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initGoogleAuth();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
