@@ -154,49 +154,6 @@
       filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6));
     }
 
-    .edge-group.active-edge .edge-path {
-      stroke: #fbbf24 !important;
-      stroke-width: 3.5px;
-      stroke-dasharray: 8 6;
-      animation: dashFlow 0.7s linear infinite;
-      filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.7));
-    }
-
-    .edge-draft {
-      fill: none;
-      stroke: #38bdf8;
-      stroke-width: 2.5px;
-      stroke-dasharray: 6 6;
-      stroke-linecap: round;
-      animation: dashFlow 0.6s linear infinite;
-      pointer-events: none;
-    }
-
-    @keyframes dashFlow {
-      to {
-        stroke-dashoffset: -14;
-      }
-    }
-
-    /* Edge Label Pill */
-    .edge-label-bg {
-      fill: #131a2a;
-      stroke: #29354f;
-      stroke-width: 1.2px;
-      rx: 6px;
-      ry: 6px;
-    }
-
-    .edge-label-text {
-      fill: #cbd5e1;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      font-weight: 600;
-      text-anchor: middle;
-      dominant-baseline: central;
-      pointer-events: none;
-    }
-
     /* Node Styling */
     .flow-node {
       position: absolute;
@@ -218,22 +175,6 @@
       border-color: #38bdf8;
       box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25), 0 18px 36px -6px rgba(0, 0, 0, 0.85);
       z-index: 30;
-    }
-
-    .flow-node.playtest-active {
-      border-color: #fbbf24 !important;
-      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.35), 0 0 28px rgba(251, 191, 36, 0.45) !important;
-      z-index: 35;
-      animation: nodePulse 1.8s ease-in-out infinite;
-    }
-
-    @keyframes nodePulse {
-      0%, 100% {
-        box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.35), 0 0 24px rgba(251, 191, 36, 0.4);
-      }
-      50% {
-        box-shadow: 0 0 0 5px rgba(251, 191, 36, 0.5), 0 0 36px rgba(251, 191, 36, 0.65);
-      }
     }
 
     /* Ports / Sockets */
@@ -265,11 +206,6 @@
       background-color: #38bdf8;
       border-color: #e0f2fe;
       box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
-    }
-
-    .port-socket.connected {
-      background-color: #94a3b8;
-      border-color: #e2e8f0;
     }
 
     /* Custom scrollbars */
@@ -323,6 +259,26 @@
 </head>
 <body class="h-screen w-screen flex flex-col overflow-hidden bg-surface-950 text-slate-200">
 
+  <!-- ========================================================================= -->
+  <!-- MANDATORY GOOGLE LOGIN GATE (BLOCKS APP UNTIL AUTHENTICATED)             -->
+  <!-- ========================================================================= -->
+  <div id="auth-gate-modal" class="fixed inset-0 z-100 bg-surface-950 flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-surface-700/80 rounded-2xl max-w-md w-full p-8 shadow-2xl flex flex-col items-center text-center relative">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-xl shadow-amber-500/20 text-white mb-5">
+        <i data-lucide="compass" class="w-8 h-8"></i>
+      </div>
+      <h1 class="text-xl font-bold text-white tracking-tight">Quest Flow Studio</h1>
+      <p class="text-xs text-slate-400 mt-1.5 mb-8">Please sign in with your Google Account to access your cloud workspace, projects, and Google Drive storage.</p>
+      
+      <button id="gate-google-login-btn" class="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition shadow-lg shadow-blue-500/20">
+        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12.24 10.28V14h5.45c-.24 1.34-1.57 3.92-5.45 3.92-3.28 0-5.96-2.72-5.96-6.08s2.68-6.08 5.96-6.08c1.87 0 3.12.79 3.84 1.48l2.95-2.85C17.31 2.94 15.04 2 12.24 2 6.58 2 2 6.58 2 12.24s4.58 10.24 10.24 10.24c5.91 0 9.83-4.16 9.83-10.02 0-.69-.07-1.21-.19-1.72H12.24z"/></svg>
+        <span>Sign in with Google</span>
+      </button>
+
+      <p class="text-[11px] text-slate-500 mt-6">Secure authentication powered by Google Identity Services.</p>
+    </div>
+  </div>
+
   <!-- Top Toolbar -->
   <header class="h-14 bg-surface-900 border-b border-surface-700/80 px-3 sm:px-4 flex items-center justify-between z-50 shrink-0 gap-2">
     <!-- Left: Brand & Palette Collapse/Expand Toggle -->
@@ -337,7 +293,7 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition" title="Click to Rename Quest">QuestForge</h1>
+            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition" title="Click to Rename Quest">Quest Flow Studio</h1>
             <span id="top-project-badge" class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-800 text-amber-400 border border-surface-700">No Project</span>
           </div>
           <p id="top-project-subtitle" class="text-[11px] text-slate-400 hidden xl:block">Media & Project Manager Active</p>
@@ -377,7 +333,7 @@
     <div class="flex items-center gap-2 shrink-0">
       <button id="google-login-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition" title="Sign in with Google">
         <i data-lucide="user-check" class="w-3.5 h-3.5 text-blue-400"></i>
-        <span id="google-login-label" class="hidden md:inline">Google Login</span>
+        <span id="google-login-label" class="hidden md:inline">Connected</span>
       </button>
 
       <button id="delete-selected-btn" disabled class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 disabled:opacity-40 disabled:pointer-events-none hover:bg-rose-500/20 text-rose-400 border border-surface-700 text-xs font-medium transition" title="Delete Selected (Del / Backspace)">
@@ -398,7 +354,7 @@
     <aside id="palette-sidebar" class="sidebar-panel collapsed w-64 min-w-[260px] bg-surface-900/95 backdrop-blur-md border-r border-surface-700/80 flex flex-col z-40 shrink-0">
       <div class="p-3.5 border-b border-surface-800 flex items-center justify-between gap-2">
         <div class="min-w-0">
-          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-200 truncate">Quest Nodes</h2>
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-200 truncate">Quest Flow Studio Nodes</h2>
           <p class="text-[11px] text-slate-400 mt-0.5 truncate">Drag to canvas or click to add</p>
         </div>
         <button id="close-palette-btn" class="p-1.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-700/80 text-slate-400 hover:text-white transition shrink-0" title="Collapse Left Sidebar ([)">
@@ -444,9 +400,6 @@
             </marker>
             <marker id="arrow-selected" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#38bdf8" />
-            </marker>
-            <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#fbbf24" />
             </marker>
           </defs>
           <g id="edges-layer"></g>
@@ -529,7 +482,7 @@
   </div>
 
   <!-- Project Manager & Google Drive Modal -->
-  <div id="startup-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+  <div id="startup-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl flex flex-col max-h-[88vh]">
       <div class="flex items-center justify-between mb-4 pb-3 border-b border-surface-800">
         <div class="flex items-center gap-3">
@@ -600,40 +553,16 @@
     </div>
   </div>
 
-  <!-- Resource Viewer Modal -->
-  <div id="resource-viewer-modal" class="hidden fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-2xl w-full p-5 shadow-2xl flex flex-col max-h-[85vh]">
-      <div class="flex items-center justify-between mb-3 pb-2 border-b border-surface-800">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-8 h-8 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-            <i data-lucide="eye" class="w-4 h-4"></i>
-          </div>
-          <div class="min-w-0">
-            <h3 id="viewer-file-title" class="text-sm font-bold text-white truncate">Media Resource</h3>
-            <p id="viewer-file-type" class="text-[11px] font-mono text-slate-400 uppercase">Type</p>
-          </div>
-        </div>
-        <button id="close-viewer-modal-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-      <div id="viewer-content-container" class="flex-1 overflow-auto flex items-center justify-center bg-surface-950 rounded-xl p-4 min-h-[260px] max-h-[55vh]"></div>
-      <div class="pt-3 mt-3 border-t border-surface-800 flex justify-end">
-        <button id="close-viewer-btn" class="px-4 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-semibold text-slate-200 transition">Close</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Hidden File Input for Importing -->
   <input type="file" id="hidden-file-input" accept=".zip,.json" class="hidden" />
 
   <script>
     /**
-     * QuestFlow Studio — Google Login, Google Drive Storage, Media Attachments & Touch Support
+     * Quest Flow Studio — Google Login, Google Drive Storage, Media Attachments & Touch Support
      */
 
     // Google API Client & Auth Configuration
-    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com'; // Replace with your Google Cloud Console OAuth 2.0 Client ID
+    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com';[cite: 2]
     const API_KEY = 'YOUR_GOOGLE_API_KEY'; // Optional API Key
     const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
@@ -641,7 +570,7 @@
     let tokenClient = null;
 
     // =========================================================================
-    // 1. NODE TEMPLATES CONFIGURATION (CUSTOM OPTIONS & SKILL CHECK REMOVED)
+    // 1. NODE TEMPLATES CONFIGURATION
     // =========================================================================
     const NODE_TYPES = {
       questStart: {
@@ -693,7 +622,7 @@
         badgeText: 'text-amber-400',
         borderAccent: 'border-amber-500/40',
         inputs: [{ id: 'in_prev', label: 'In' }],
-        fieldSchema: [], // Skill Check section removed
+        fieldSchema: [],
         defaultConfig: {
           choices: [
             { id: 'choice_0', label: 'Accept the quest' },
@@ -790,7 +719,7 @@
     ];
 
     let PROJECTS = [];
-    const LOCAL_STORAGE_KEY = 'questforge_projects_v5';
+    const LOCAL_STORAGE_KEY = 'questflow_studio_projects_v5';
 
     function loadProjectsFromStorage() {
       try {
@@ -832,6 +761,8 @@
             if (response && response.access_token) {
               googleAuthToken = response.access_token;
               document.getElementById('google-login-label').textContent = 'Connected';
+              // Hide authentication gate modal and unlock main app
+              document.getElementById('auth-gate-modal').classList.add('hidden');
               showToast('Successfully signed in with Google!', 'emerald');
             }
           }
@@ -863,12 +794,12 @@
       
       const zip = new JSZip();
       const projectData = JSON.stringify(PROJECTS, null, 2);
-      zip.file("questforge_projects_backup.json", projectData);
+      zip.file("questflow_studio_backup.json", projectData);
 
       try {
         const content = await zip.generateAsync({ type: 'blob' });
         const metadata = {
-          name: 'QuestForge_Backup.zip',
+          name: 'QuestFlowStudio_Backup.zip',
           mimeType: 'application/zip'
         };
 
@@ -892,6 +823,7 @@
       }
     }
 
+    document.getElementById('gate-google-login-btn').addEventListener('click', handleGoogleLogin);
     document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
     document.getElementById('gdrive-sync-btn').addEventListener('click', syncToGoogleDrive);
     document.getElementById('modal-gdrive-sync-btn').addEventListener('click', syncToGoogleDrive);
@@ -957,10 +889,6 @@
     const deleteConfirmModal = document.getElementById('delete-confirm-modal');
     const deleteModalTitle = document.getElementById('delete-modal-title');
     const deleteModalDesc = document.getElementById('delete-modal-desc');
-    const resourceViewerModal = document.getElementById('resource-viewer-modal');
-    const viewerFileTitle = document.getElementById('viewer-file-title');
-    const viewerFileType = document.getElementById('viewer-file-type');
-    const viewerContentContainer = document.getElementById('viewer-content-container');
     const centeredPlaytestOverlay = document.getElementById('centered-playtest-overlay');
     const centeredPlaytestCard = document.getElementById('centered-playtest-card');
 
@@ -1071,7 +999,7 @@
       if (!project) {
         topProjectBadge.textContent = 'No Project';
         topProjectSubtitle.textContent = 'Select a project in Project Manager';
-        topQuestTitle.textContent = 'QuestForge';
+        topQuestTitle.textContent = 'Quest Flow Studio';
         return;
       }
       topProjectBadge.textContent = project.isSample ? 'Sample Project' : project.title;
@@ -1311,7 +1239,7 @@
         return { id: n.id, type: n.type, title: n.title, position: { x: n.x, y: n.y }, notes: n.notes || '', properties: { ...n.config }, resources: cleanResources };
       });
 
-      const payload = { schemaVersion: '2.1.0', engine: 'QuestForge', questMetadata: { questId: quest.id, title: quest.title }, nodes: exportNodes, connections: quest.edges };
+      const payload = { schemaVersion: '2.1.0', engine: 'Quest Flow Studio', questMetadata: { questId: quest.id, title: quest.title }, nodes: exportNodes, connections: quest.edges };
       zip.file("quest.json", JSON.stringify(payload, null, 2));
 
       const content = await zip.generateAsync({ type: "blob" });
@@ -1368,7 +1296,7 @@
     hiddenFileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFileImport(e.target.files[0]); });
 
     // =========================================================================
-    // 7. PALETTE & NODE RENDERING (CUSTOM TYPES & HEADERS CLEANED)
+    // 7. PALETTE & NODE RENDERING
     // =========================================================================
     function renderPalette() {
       paletteList.innerHTML = '';
@@ -1777,7 +1705,7 @@
     }
 
     // =========================================================================
-    // 11. PLAYTEST SIMULATOR (BLURRED CANVAS & CENTERED MODAL)
+    // 11. PLAYTEST SIMULATOR
     // =========================================================================
     function startPlaytest() {
       if (state.nodes.length === 0) { showToast('Add quest nodes first', 'amber'); return; }
@@ -1853,7 +1781,7 @@
         loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
       }
       renderProjectManager();
-      startupModal.classList.remove('hidden');
+      // Initially show startup modal only AFTER Google login gate completes
       initGoogleAuth();
       lucide.createIcons();
     });
