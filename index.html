@@ -268,7 +268,7 @@
         <i data-lucide="compass" class="w-8 h-8"></i>
       </div>
       <h1 class="text-xl font-bold text-white tracking-tight">Quest Flow Studio</h1>
-      <p class="text-xs text-slate-400 mt-1.5 mb-8">Please sign in with your Google Account to unlock your cloud workspace, projects, and Google Drive storage.</p>
+      <p class="text-xs text-slate-400 mt-1.5 mb-8">Please sign in with your Google Account to unlock your cloud workspace, cross-device projects, and Google Drive storage.</p>
       
       <button id="gate-google-login-btn" class="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition shadow-lg shadow-blue-500/20 cursor-pointer">
         <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12.24 10.28V14h5.45c-.24 1.34-1.57 3.92-5.45 3.92-3.28 0-5.96-2.72-5.96-6.08s2.68-6.08 5.96-6.08c1.87 0 3.12.79 3.84 1.48l2.95-2.85C17.31 2.94 15.04 2 12.24 2 6.58 2 2 6.58 2 12.24s4.58 10.24 10.24 10.24c5.91 0 9.83-4.16 9.83-10.02 0-.69-.07-1.21-.19-1.72H12.24z"/></svg>
@@ -329,11 +329,11 @@
       </button>
     </div>
 
-    <!-- Right: Google Account Status, Delete Selected & Inspector Collapse Toggle -->
+    <!-- Right: Google Account / Logout, Delete Selected & Inspector Collapse Toggle -->
     <div class="flex items-center gap-2 shrink-0">
-      <button id="google-login-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition" title="Google Drive Connected">
+      <button id="google-login-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition" title="Click to Sign Out">
         <i data-lucide="user-check" class="w-3.5 h-3.5 text-blue-400"></i>
-        <span id="google-login-label" class="hidden md:inline">Connected</span>
+        <span id="google-login-label" class="hidden md:inline">Google Login</span>
       </button>
 
       <button id="delete-selected-btn" disabled class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 disabled:opacity-40 disabled:pointer-events-none hover:bg-rose-500/20 text-rose-400 border border-surface-700 text-xs font-medium transition" title="Delete Selected (Del / Backspace)">
@@ -558,7 +558,7 @@
 
   <script>
     /**
-     * Quest Flow Studio — Google Login, Google Drive Storage, Media Attachments & Touch Support
+     * Quest Flow Studio — Google Login, Auto-Load Cloud Drive Backup, Logout & Touch Support
      */
 
     // Google API Client & Auth Configuration
@@ -750,20 +750,23 @@
     }
 
     // =========================================================================
-    // 2. GOOGLE LOGIN & DRIVE SYNC INTEGRATION
+    // 2. GOOGLE LOGIN, AUTO-LOAD FROM DRIVE & LOGOUT INTEGRATION
     // =========================================================================
     function initGoogleAuth() {
       try {
         tokenClient = google.accounts.oauth2.initTokenClient({
           client_id: CLIENT_ID,
           scope: SCOPES,
-          callback: (response) => {
+          callback: async (response) => {
             if (response && response.access_token) {
               googleAuthToken = response.access_token;
-              document.getElementById('google-login-label').textContent = 'Connected';
+              document.getElementById('google-login-label').textContent = 'Connected (Logout)';
               // Hide authentication gate modal and unlock main app
               document.getElementById('auth-gate-modal').classList.add('hidden');
-              showToast('Successfully signed in with Google & Connected Drive!', 'emerald');
+              showToast('Successfully signed in with Google!', 'emerald');
+              
+              // Automatically check Google Drive for existing backups and load across devices
+              await loadProjectsFromGoogleDrive();
             }
           }
         });
@@ -780,6 +783,59 @@
         tokenClient.requestAccessToken({ prompt: 'consent' });
       } else {
         showToast('Google Sign-In client not loaded. Check Client ID.', 'rose');
+      }
+    }
+
+    function handleGoogleLogout() {
+      googleAuthToken = null;
+      document.getElementById('google-login-label').textContent = 'Google Login';
+      // Show authentication gate modal again
+      document.getElementById('auth-gate-modal').classList.remove('hidden');
+      showToast('Signed out successfully.', 'amber');
+    }
+
+    document.getElementById('google-login-btn').addEventListener('click', () => {
+      if (googleAuthToken) {
+        if (confirm('Are you sure you want to sign out of your Google Account?')) {
+          handleGoogleLogout();
+        }
+      } else {
+        handleGoogleLogin();
+      }
+    });
+
+    async function loadProjectsFromGoogleDrive() {
+      if (!googleAuthToken) return;
+      try {
+        showToast('Checking Google Drive for existing cloud backup...', 'sky');
+        const query = encodeURIComponent("name = 'QuestFlowStudio_Backup.zip' and trashed = false");
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, {
+          headers: { 'Authorization': 'Bearer ' + googleAuthToken }
+        });
+        const data = await res.json();
+        if (data.files && data.files.length > 0) {
+          const fileId = data.files[0].id;
+          const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+            headers: { 'Authorization': 'Bearer ' + googleAuthToken }
+          });
+          const blob = await fileRes.blob();
+          const zip = new JSZip();
+          const zipContent = await zip.loadAsync(blob);
+          if (zipContent.files['questflow_studio_backup.json']) {
+            const jsonStr = await zipContent.files['questflow_studio_backup.json'].async('text');
+            PROJECTS = JSON.parse(jsonStr);
+            saveProjectsToStorage();
+            if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
+              loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+            }
+            renderProjectManager();
+            showToast('Successfully loaded projects from Google Drive!', 'emerald');
+          }
+        } else {
+          showToast('No prior cloud backup found. Using local workspace.', 'amber');
+        }
+      } catch (err) {
+        console.log('Auto-load from Drive note:', err);
       }
     }
 
@@ -824,7 +880,6 @@
     }
 
     document.getElementById('gate-google-login-btn').addEventListener('click', handleGoogleLogin);
-    document.getElementById('google-login-btn').addEventListener('click', handleGoogleLogin);
     document.getElementById('gdrive-sync-btn').addEventListener('click', syncToGoogleDrive);
     document.getElementById('modal-gdrive-sync-btn').addEventListener('click', syncToGoogleDrive);
 
