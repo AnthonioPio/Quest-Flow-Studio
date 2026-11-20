@@ -773,7 +773,6 @@
               document.getElementById('auth-gate-modal').classList.add('hidden');
               showToast('Successfully signed in with Google!', 'emerald');
               
-              // Automatically sync FROM Google Drive on login
               await syncFromGoogleDrive(true);
             }
           }
@@ -811,7 +810,6 @@
       }
     });
 
-    // SYNC FROM GOOGLE DRIVE (Download / Restore Backup FROM cloud)
     async function syncFromGoogleDrive(isAutomatic = false) {
       if (!googleAuthToken) {
         if (!isAutomatic) {
@@ -858,7 +856,6 @@
       }
     }
 
-    // SYNC TO GOOGLE DRIVE (Upload & Backup TO cloud)
     async function syncToGoogleDrive() {
       if (!googleAuthToken) {
         showToast('Please sign in with Google first!', 'amber');
@@ -1706,6 +1703,27 @@
         const tpl = NODE_TYPES[node.type];
         if (!node.resources) node.resources = [];
 
+        let specialConfigHtml = '';
+        if (node.type === 'playerChoice') {
+          if (!node.config.choices) node.config.choices = [{ id: 'choice_0', label: 'Option 1' }, { id: 'choice_1', label: 'Option 2' }];
+          const choicesListHtml = node.config.choices.map((ch, idx) => `
+            <div class="flex items-center gap-2 mb-2">
+              <input type="text" data-choice-idx="${idx}" value="${escapeHtml(ch.label)}" class="choice-label-input flex-1 bg-surface-950 border border-surface-700 rounded px-2 py-1 text-xs text-white" placeholder="Choice label..."/>
+              <button data-remove-choice="${idx}" class="p-1 rounded bg-rose-500/20 text-rose-400 text-xs hover:bg-rose-500/30" title="Remove Choice"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
+          `).join('');
+
+          specialConfigHtml = `
+            <div class="pt-2 border-t border-surface-800 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-[11px] font-semibold text-amber-400">Branch Choices (${node.config.choices.length})</label>
+                <button id="add-choice-btn" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300 text-[10px] font-semibold">+ Add Option</button>
+              </div>
+              <div class="space-y-1">${choicesListHtml}</div>
+            </div>
+          `;
+        }
+
         const schemaHtml = tpl.fieldSchema.map(f => {
           const val = node.config[f.key] ?? '';
           if (f.type === 'select') {
@@ -1733,7 +1751,7 @@
         inspectorPanel.innerHTML = `
           <div class="space-y-4">
             <div><label class="block text-[11px] text-slate-400 mb-1">Title</label><input id="ins-title" type="text" value="${escapeHtml(node.title)}" class="w-full bg-surface-950 border border-surface-700 rounded px-2 py-1 text-xs text-white"/></div>
-            <div class="space-y-3 pt-2 border-t border-surface-800">${schemaHtml}</div>
+            <div class="space-y-3 pt-2 border-t border-surface-800">${schemaHtml}${specialConfigHtml}</div>
             <div class="pt-2 border-t border-surface-800 space-y-2">
               <div class="flex items-center justify-between"><span class="text-[11px] text-slate-400">Media Resources</span><button id="add-res-btn" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-[10px]">Add File</button><input type="file" id="node-file" accept="image/*,video/*,audio/*" class="hidden"/></div>
               <div class="space-y-1.5">${resourcesHtml || '<span class="text-[10px] text-slate-500">No attached files.</span>'}</div>
@@ -1745,6 +1763,7 @@
         `;
 
         document.getElementById('ins-title').addEventListener('input', (e) => { node.title = e.target.value; renderNodes(); saveProjectsToStorage(); });
+        
         inspectorPanel.querySelectorAll('.inspector-field').forEach(el => {
           el.addEventListener('change', (e) => {
             node.config[e.target.dataset.fieldKey] = e.target.value;
@@ -1755,6 +1774,40 @@
         inspectorPanel.querySelectorAll('.inspector-custom').forEach(el => {
           el.addEventListener('input', (e) => { node.config[e.target.dataset.customKey] = e.target.value; renderNodes(); saveProjectsToStorage(); });
         });
+
+        // Player Choice Choice Editor Handlers
+        document.getElementById('add-choice-btn')?.addEventListener('click', () => {
+          if (!node.config.choices) node.config.choices = [];
+          const newId = `choice_${node.config.choices.length}`;
+          node.config.choices.push({ id: newId, label: `Option ${node.config.choices.length + 1}` });
+          renderInspector(); renderNodes(); renderEdges(); saveProjectsToStorage();
+        });
+
+        inspectorPanel.querySelectorAll('.choice-label-input').forEach(input => {
+          input.addEventListener('input', (e) => {
+            const idx = parseInt(e.target.dataset.choiceIdx);
+            if (node.config.choices[idx]) {
+              node.config.choices[idx].label = e.target.value;
+              renderNodes(); saveProjectsToStorage();
+            }
+          });
+        });
+
+        inspectorPanel.querySelectorAll('[data-remove-choice]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = parseInt(e.currentTarget.dataset.removeChoice);
+            if (node.config.choices.length <= 2) {
+              showToast('Player choices require at least 2 options', 'amber');
+              return;
+            }
+            const removedChoice = node.config.choices[idx];
+            node.config.choices.splice(idx, 1);
+            // Remove connected edges for this choice
+            state.edges = state.edges.filter(ed => !(ed.sourceNodeId === node.id && ed.sourcePortId === removedChoice.id));
+            renderInspector(); renderNodes(); renderEdges(); saveProjectsToStorage();
+          });
+        });
+
         document.getElementById('ins-del-btn').addEventListener('click', () => deleteNode(node.id));
         document.getElementById('add-res-btn')?.addEventListener('click', () => document.getElementById('node-file').click());
         document.getElementById('node-file')?.addEventListener('change', (e) => {
@@ -1771,6 +1824,7 @@
         inspectorPanel.querySelectorAll('[data-remove-res]').forEach(btn => {
           btn.addEventListener('click', () => { node.resources.splice(parseInt(btn.dataset.removeRes), 1); renderInspector(); saveProjectsToStorage(); });
         });
+        lucide.createIcons();
         return;
       }
       inspectorPanel.innerHTML = `<div class="text-center text-xs text-slate-500 py-10">Select a node to inspect properties.</div>`;
