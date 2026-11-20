@@ -101,7 +101,7 @@
 </head>
 <body class="h-screen w-screen flex flex-col overflow-hidden bg-surface-950 text-slate-200">
 
-  <!-- Google Login Lock Screen Overlay (Fixed z-[100]) -->
+  <!-- Google Login Lock Screen Overlay -->
   <div id="login-lock-screen" class="fixed inset-0 z-[100] bg-surface-950 flex flex-col items-center justify-center p-4">
     <div class="bg-surface-900 border border-surface-700/80 rounded-3xl max-w-md w-full p-8 shadow-2xl flex flex-col items-center text-center space-y-6">
       <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-xl shadow-amber-500/25 text-white">
@@ -182,7 +182,7 @@
 
     <!-- Right Controls -->
     <div class="flex items-center gap-2 shrink-0">
-      <button id="logout-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition" title="Logout">
+      <button id="logout-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition cursor-pointer" title="Logout">
         <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
         <span class="hidden xl:inline">Logout</span>
       </button>
@@ -331,7 +331,7 @@
   </div>
 
   <script>
-    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com';//[cite: 2]
+    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com';[cite: 2]
     const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
     let tokenClient = null;
     let accessToken = localStorage.getItem('questforge_oauth_token') || null;
@@ -358,7 +358,7 @@
     }];
 
     let PROJECTS = [];
-    const LOCAL_STORAGE_KEY = 'questforge_projects_v8';
+    const LOCAL_STORAGE_KEY = 'questforge_projects_v9';
 
     function loadProjectsFromStorage() {
       try {
@@ -441,16 +441,10 @@
     });
 
     logoutBtn.addEventListener('click', () => {
-      if (accessToken) {
-        google.accounts.oauth2.revokeToken(accessToken, () => {
-          accessToken = null;
-          localStorage.removeItem('questforge_oauth_token');
-          lockApp();
-          showToast('Logged out successfully', 'amber');
-        });
-      } else {
-        lockApp();
-      }
+      accessToken = null;
+      localStorage.removeItem('questforge_oauth_token');
+      lockApp();
+      showToast('Logged out successfully', 'amber');
     });
 
     // Google Drive Sync API Methods
@@ -1100,23 +1094,102 @@
       renderEdges();
     }
 
-    // Inspector & Playtest
+    // Inspector & Full Node Property Editors (Restoring Branching Choices)
     function renderInspector() {
       if (state.selectedNodeIds.size === 1) {
         const nodeId = Array.from(state.selectedNodeIds)[0];
         const node = state.nodes.find(n => n.id === nodeId);
         if (!node) return;
+
+        let customConfigHtml = '';
+        if (node.type === 'dialogue') {
+          customConfigHtml = `
+            <div class="space-y-3 pt-3 border-t border-surface-800">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">NPC Name</label>
+                <input id="cfg-npc-name" type="text" value="${escapeHtml(node.config.npcName || '')}" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Dialogue Text</label>
+                <textarea id="cfg-dialogue-text" rows="3" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white resize-none">${escapeHtml(node.config.dialogueText || '')}</textarea>
+              </div>
+            </div>
+          `;
+        } else if (node.type === 'playerChoice') {
+          const choices = node.config.choices || [];
+          const choicesHtml = choices.map((ch, idx) => `
+            <div class="flex items-center gap-2 mb-2">
+              <input type="text" data-choice-idx="${idx}" value="${escapeHtml(ch.label)}" class="choice-input flex-1 bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" placeholder="Choice ${idx + 1}" />
+              <button data-action="remove-choice" data-choice-idx="${idx}" class="p-1.5 rounded-lg bg-surface-850 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-surface-700"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
+          `).join('');
+
+          customConfigHtml = `
+            <div class="space-y-3 pt-3 border-t border-surface-800">
+              <div class="flex items-center justify-between">
+                <label class="block text-[11px] font-semibold text-slate-300">Dialogue Choices (${choices.length})</label>
+                <button id="add-choice-btn" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">+ Add Choice</button>
+              </div>
+              <div class="space-y-1">${choicesHtml}</div>
+            </div>
+          `;
+        } else if (node.type === 'objective') {
+          customConfigHtml = `
+            <div class="space-y-3 pt-3 border-t border-surface-800">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Target Name</label>
+                <input id="cfg-target-name" type="text" value="${escapeHtml(node.config.targetName || '')}" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Required Count</label>
+                <input id="cfg-required-count" type="text" value="${escapeHtml(node.config.requiredCount || '')}" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+              </div>
+            </div>
+          `;
+        }
+
         inspectorPanel.innerHTML = `
           <div class="space-y-4">
             <div>
               <label class="block text-[11px] font-semibold text-slate-300 mb-1">Node Title</label>
               <input id="inspector-title" type="text" value="${escapeHtml(node.title)}" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
             </div>
+            ${customConfigHtml}
             <button id="inspector-delete-btn" class="w-full py-2 bg-rose-500/15 text-rose-400 border border-rose-500/30 rounded-lg text-xs font-medium">Delete Node</button>
           </div>
         `;
+
         document.getElementById('inspector-title').addEventListener('input', e => { node.title = e.target.value; renderNodes(); saveProjectsToStorage(); });
         document.getElementById('inspector-delete-btn').addEventListener('click', () => deleteNode(node.id));
+
+        if (node.type === 'dialogue') {
+          document.getElementById('cfg-npc-name').addEventListener('input', e => { node.config.npcName = e.target.value; saveProjectsToStorage(); });
+          document.getElementById('cfg-dialogue-text').addEventListener('input', e => { node.config.dialogueText = e.target.value; renderNodes(); saveProjectsToStorage(); });
+        } else if (node.type === 'playerChoice') {
+          document.getElementById('add-choice-btn').addEventListener('click', () => {
+            if (!node.config.choices) node.config.choices = [];
+            node.config.choices.push({ id: generateId('choice'), label: `Option ${node.config.choices.length + 1}` });
+            renderInspector(); renderNodes(); renderEdges(); saveProjectsToStorage();
+          });
+          inspectorPanel.querySelectorAll('.choice-input').forEach(inp => {
+            inp.addEventListener('input', e => {
+              const idx = parseInt(e.target.dataset.choiceIdx);
+              node.config.choices[idx].label = e.target.value;
+              renderNodes(); saveProjectsToStorage();
+            });
+          });
+          inspectorPanel.querySelectorAll('[data-action="remove-choice"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const idx = parseInt(btn.dataset.choiceIdx);
+              node.config.choices.splice(idx, 1);
+              renderInspector(); renderNodes(); renderEdges(); saveProjectsToStorage();
+            });
+          });
+        } else if (node.type === 'objective') {
+          document.getElementById('cfg-target-name').addEventListener('input', e => { node.config.targetName = e.target.value; renderNodes(); saveProjectsToStorage(); });
+          document.getElementById('cfg-required-count').addEventListener('input', e => { node.config.requiredCount = e.target.value; saveProjectsToStorage(); });
+        }
+        lucide.createIcons();
         return;
       }
       inspectorPanel.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">Select any node to inspect properties.</div>`;
@@ -1147,6 +1220,17 @@
       const currentNode = state.nodes.find(n => n.id === state.playtest.currentNodeId);
       if (!currentNode) { stopPlaytest(); return; }
 
+      let actionHtml = `<button id="pt-next-btn" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl cursor-pointer">Continue</button>`;
+
+      if (currentNode.type === 'playerChoice') {
+        const choices = currentNode.config.choices || [];
+        actionHtml = `<div class="space-y-2">` + choices.map((ch, idx) => `
+          <button data-choice-id="${ch.id}" class="pt-choice-btn w-full text-left p-3 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs text-white font-medium transition cursor-pointer">
+            ${idx + 1}. ${escapeHtml(ch.label)}
+          </button>
+        `).join('') + `</div>`;
+      }
+
       centeredPlaytestCard.innerHTML = `
         <div class="space-y-4">
           <div class="flex items-center justify-between pb-3 border-b border-surface-800">
@@ -1154,21 +1238,38 @@
             <button id="pt-stop-btn" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 text-xs font-medium cursor-pointer">End Playtest</button>
           </div>
           <div class="p-4 bg-surface-950 rounded-xl border border-surface-800">
-            <p class="text-xs text-slate-200">${escapeHtml(currentNode.config.dialogueText || currentNode.config.questId || currentNode.title)}</p>
+            <p class="text-xs text-slate-200">${escapeHtml(currentNode.config.dialogueText || currentNode.config.targetName || currentNode.config.questId || currentNode.title)}</p>
           </div>
-          <button id="pt-next-btn" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl cursor-pointer">Continue</button>
+          ${actionHtml}
         </div>
       `;
+
       document.getElementById('pt-stop-btn').addEventListener('click', stopPlaytest);
-      document.getElementById('pt-next-btn').addEventListener('click', () => {
-        const edge = state.edges.find(e => e.sourceNodeId === currentNode.id);
-        if (edge) {
-          state.playtest.currentNodeId = edge.targetNodeId;
-          renderPlaytestPanel();
-        } else {
-          alert('Quest Completed!');
-          stopPlaytest();
-        }
+      const nextBtn = document.getElementById('pt-next-btn');
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          const edge = state.edges.find(e => e.sourceNodeId === currentNode.id);
+          if (edge) {
+            state.playtest.currentNodeId = edge.targetNodeId;
+            renderPlaytestPanel();
+          } else {
+            alert('Quest Completed!');
+            stopPlaytest();
+          }
+        });
+      }
+      centeredPlaytestCard.querySelectorAll('.pt-choice-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const choiceId = btn.dataset.choiceId;
+          const edge = state.edges.find(e => e.sourceNodeId === currentNode.id && e.sourcePortId === choiceId);
+          if (edge) {
+            state.playtest.currentNodeId = edge.targetNodeId;
+            renderPlaytestPanel();
+          } else {
+            alert('Quest Branch Completed!');
+            stopPlaytest();
+          }
+        });
       });
     }
 
