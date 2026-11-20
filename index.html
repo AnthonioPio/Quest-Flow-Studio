@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Quest Flow Studio — Project & Media Manager</title>
+  <title>Quest Flow Studio — Google Drive & Auth Enabled</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Inter & JetBrains Mono Fonts -->
@@ -14,6 +14,8 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- JSZip for ZIP Archive Export & Import -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Google Identity Services (GIS) SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <script>
     tailwind.config = {
@@ -320,6 +322,33 @@
 </head>
 <body class="h-screen w-screen flex flex-col overflow-hidden bg-surface-950 text-slate-200">
 
+  <!-- Google Login Lock Screen Overlay -->
+  <div id="login-lock-screen" class="fixed inset-0 z-100 bg-surface-950 flex flex-col items-center justify-center p-4">
+    <div class="bg-surface-900 border border-surface-700/80 rounded-3xl max-w-md w-full p-8 shadow-2xl flex flex-col items-center text-center space-y-6">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-xl shadow-amber-500/25 text-white">
+        <i data-lucide="compass" class="w-8 h-8"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-white">Quest Flow Studio</h1>
+        <p class="text-xs text-slate-400 mt-1">Sign in with your Google account to access your quest editor and Google Drive storage.</p>
+      </div>
+
+      <button id="google-login-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm transition shadow-lg">
+        <svg class="w-5 h-5" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>Sign in with Google</span>
+      </button>
+
+      <div class="text-[11px] text-slate-500 font-mono">
+        OAuth Client ID: 516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com[cite: 2]
+      </div>
+    </div>
+  </div>
+
   <!-- Top Toolbar -->
   <header class="h-14 bg-surface-900 border-b border-surface-700/80 px-3 sm:px-4 flex items-center justify-between z-50 shrink-0 gap-2">
     <!-- Left: Brand & Palette Collapse/Expand Toggle -->
@@ -334,15 +363,15 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition" title="Click to Rename Quest">QuestForge</h1>
+            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition" title="Click to Rename Quest">QuestFlow Studio</h1>
             <span id="top-project-badge" class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-800 text-amber-400 border border-surface-700">No Project</span>
           </div>
-          <p id="top-project-subtitle" class="text-[11px] text-slate-400 hidden xl:block">Media & Project Manager Active</p>
+          <p id="top-project-subtitle" class="text-[11px] text-slate-400 hidden xl:block">Google Drive & Media Manager Active</p>
         </div>
       </div>
     </div>
 
-    <!-- Center: Playtest, Save ZIP, Project Manager, Snap & JSON Actions -->
+    <!-- Center: Playtest, Save ZIP, Google Drive Sync, Project Manager, Snap & JSON Actions -->
     <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1">
       <button id="playtest-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition shadow-sm shrink-0">
         <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
@@ -354,6 +383,19 @@
         <span class="hidden sm:inline">Save ZIP</span>
       </button>
 
+      <div class="h-4 w-px bg-surface-700 mx-0.5 hidden sm:block"></div>
+
+      <!-- Google Drive Sync Buttons -->
+      <button id="sync-to-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold transition shrink-0" title="Sync Projects to Google Drive">
+        <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
+        <span class="hidden md:inline">Sync to Drive</span>
+      </button>
+
+      <button id="sync-from-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition shrink-0" title="Sync Projects from Google Drive">
+        <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
+        <span class="hidden md:inline">Sync from Drive</span>
+      </button>
+
       <button id="close-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-surface-700 hover:border-amber-500/40 text-xs font-medium transition shrink-0" title="Open Project Manager">
         <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-amber-400"></i>
         <span class="hidden sm:inline">Project Manager</span>
@@ -363,25 +405,17 @@
         <i data-lucide="magnet" class="w-3.5 h-3.5"></i>
         <span class="hidden md:inline">Snap: ON</span>
       </button>
-
-      <div class="h-4 w-px bg-surface-700 mx-0.5 hidden sm:block"></div>
-
-      <button id="export-json-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition shrink-0" title="Export Quest JSON">
-        <i data-lucide="download" class="w-3.5 h-3.5 text-cyan-400"></i>
-        <span class="hidden lg:inline">Export JSON</span>
-      </button>
-
-      <button id="import-json-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition shrink-0" title="Import Quest ZIP or JSON File">
-        <i data-lucide="upload" class="w-3.5 h-3.5 text-indigo-400"></i>
-        <span class="hidden lg:inline">Open File</span>
-      </button>
     </div>
 
-    <!-- Right: Delete Selected & Inspector Collapse/Expand Toggle -->
+    <!-- Right: Logout & Inspector Toggle -->
     <div class="flex items-center gap-2 shrink-0">
+      <button id="logout-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition" title="Logout & Lock App">
+        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+        <span class="hidden xl:inline">Logout</span>
+      </button>
+
       <button id="delete-selected-btn" disabled class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 disabled:opacity-40 disabled:pointer-events-none hover:bg-rose-500/20 text-rose-400 border border-surface-700 text-xs font-medium transition" title="Delete Selected (Del / Backspace)">
         <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
-        <span class="hidden xl:inline">Delete</span>
       </button>
 
       <button id="toggle-inspector-btn" class="p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 border border-surface-700 transition" title="Toggle Inspector / Playtest Sidebar (])">
@@ -421,8 +455,8 @@
       <!-- Quick Tips Footer -->
       <div class="p-3 border-t border-surface-800 bg-surface-950/70 text-[11px] text-slate-400 space-y-1">
         <div class="flex items-center justify-between">
-          <span>Multiple Choices</span>
-          <span class="text-amber-400">Min 2, Unlimited</span>
+          <span>Google Drive</span>
+          <span class="text-sky-400">Sync Active</span>
         </div>
         <div class="flex items-center justify-between">
           <span>Custom Types</span>
@@ -540,7 +574,7 @@
         <!-- Populated dynamically -->
       </div>
 
-      <!-- Tab 2: Interactive RPG Quest Playtest Simulator (Sidebar view fallback) -->
+      <!-- Tab 2: Interactive RPG Quest Playtest Simulator -->
       <div id="playtest-panel" class="hidden flex-1 overflow-y-auto p-4 flex-col">
         <!-- Populated dynamically -->
       </div>
@@ -564,8 +598,8 @@
             <i data-lucide="folder-kanban" class="w-5 h-5"></i>
           </div>
           <div>
-            <h2 class="text-base font-bold text-white tracking-tight">Project Manager</h2>
-            <p class="text-xs text-slate-400">Select a project to open, or manage campaigns, quests, and media assets</p>
+            <h2 class="text-base font-bold text-white tracking-tight">Project Manager & Google Drive</h2>
+            <p class="text-xs text-slate-400">Manage campaigns, quests, and sync directly with Google Drive</p>
           </div>
         </div>
         <button id="close-explorer-modal-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition" title="Close Project Manager">
@@ -580,17 +614,17 @@
           <input id="explorer-search" type="text" placeholder="Search projects and quests..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition" />
         </div>
         <div class="flex items-center gap-2">
-          <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0" title="Load Blank Project">
-            <i data-lucide="file-plus" class="w-4 h-4"></i>
+          <button id="modal-sync-to-drive-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0">
+            <i data-lucide="cloud-upload" class="w-4 h-4"></i>
+            <span>Sync to Drive</span>
+          </button>
+          <button id="modal-sync-from-drive-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition shrink-0">
+            <i data-lucide="cloud-download" class="w-4 h-4"></i>
+            <span>Sync from Drive</span>
+          </button>
+          <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
+            <i data-lucide="file-plus" class="w-4 h-4 text-amber-400"></i>
             <span>Blank Project</span>
-          </button>
-          <button id="new-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
-            <i data-lucide="folder-plus" class="w-4 h-4 text-amber-400"></i>
-            <span>New Project</span>
-          </button>
-          <button id="explorer-import-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
-            <i data-lucide="folder-open" class="w-4 h-4 text-indigo-400"></i>
-            <span>Import</span>
           </button>
         </div>
       </div>
@@ -602,9 +636,9 @@
 
       <!-- Modal Footer -->
       <div class="pt-3 mt-4 border-t border-surface-800 flex items-center justify-between text-xs">
-        <button id="clear-persistence-btn" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 font-medium transition" title="Clear localStorage saved data and reset to defaults">
+        <button id="clear-persistence-btn" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 font-medium transition" title="Clear saved data">
           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-          <span>Clear Persistent Data</span>
+          <span>Clear Local Data</span>
         </button>
         <span id="project-count-summary" class="text-slate-500">Projects Available</span>
       </div>
@@ -683,39 +717,18 @@
   <!-- Hidden File Input for Importing ZIP / JSON -->
   <input type="file" id="hidden-file-input" accept=".zip,.json" class="hidden" />
 
-  <!-- Export / Import JSON Modal -->
-  <div id="json-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-xl w-full p-5 shadow-2xl flex flex-col max-h-[85vh]">
-      <div class="flex items-center justify-between mb-3">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-            <i data-lucide="file-code-2" class="w-4 h-4"></i>
-          </div>
-          <div>
-            <h3 id="json-modal-title" class="text-sm font-semibold text-white">Quest Graph JSON</h3>
-            <p id="json-modal-subtitle" class="text-xs text-slate-400">Game-engine ready quest structure</p>
-          </div>
-        </div>
-        <button id="close-json-modal-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <textarea id="json-textarea" rows="12" spellcheck="false" class="w-full flex-1 bg-surface-950 border border-surface-700 focus:border-cyan-500 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none resize-none leading-relaxed"></textarea>
-
-      <div id="json-modal-actions" class="flex flex-wrap items-center justify-end gap-2 mt-4">
-        <!-- Populated dynamically -->
-      </div>
-    </div>
-  </div>
-
   <script>
     /**
-     * QuestForge — Game Quest Flow & Narrative Node Editor with Blurred Playtest & Centered Modal
+     * QuestFlow Studio — Google OAuth Login, Google Drive Sync, and Quest Flow Editor
      */
 
+    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com'; //[cite: 2]
+    const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
+    let tokenClient = null;
+    let accessToken = localStorage.getItem('questforge_oauth_token') || null;
+
     // =========================================================================
-    // 1. NODE TEMPLATES CONFIGURATION (WITH CUSTOM OPTIONS)
+    // 1. NODE TEMPLATES CONFIGURATION
     // =========================================================================
     const NODE_TYPES = {
       questStart: {
@@ -862,14 +875,11 @@
       }
     };
 
-    // =========================================================================
-    // 2. DEFAULT SAMPLE PROJECTS REPOSITORY
-    // =========================================================================
     const DEFAULT_PROJECTS = [
       {
         id: 'proj_sample_campaign',
         title: 'Chronicles of Aethelgard [Sample Project]',
-        description: 'Sample campaign project showcasing primary storylines, custom objective types, and custom outcomes.',
+        description: 'Sample campaign project showcasing primary storylines and custom objectives.',
         isSample: true,
         quests: [
           {
@@ -877,10 +887,10 @@
             title: 'The Sunken Shrine',
             type: 'Main Story',
             minLevel: 5,
-            description: 'The sea barrier weakens! Enter the Sunken Shrine and recover the Abyssal Pearl.',
+            description: 'Enter the Sunken Shrine and recover the Abyssal Pearl.',
             nodes: [
               { id: 'node_start_shrine', type: 'questStart', title: 'The Sunken Shrine', x: 48, y: 216, notes: '', resources: [], config: { questId: 'qst_04_sunken_shrine', questType: 'Main Story', customQuestType: '', minLevel: '5' } },
-              { id: 'node_npc_elder', type: 'dialogue', title: 'High Priestess Lyra', x: 380, y: 216, notes: '', resources: [], config: { npcName: 'High Priestess Lyra', reaction: 'Urgent', customReaction: '', dialogueText: 'The sea barrier weakens! Enter the Sunken Shrine and recover the Abyssal Pearl.' } },
+              { id: 'node_npc_elder', type: 'dialogue', title: 'High Priestess Lyra', x: 380, y: 216, notes: '', resources: [], config: { npcName: 'High Priestess Lyra', reaction: 'Urgent', customReaction: '', dialogueText: 'The sea barrier weakens! Enter the Sunken Shrine.' } },
               { id: 'node_choice_approach', type: 'playerChoice', title: 'Choose Approach', x: 710, y: 216, notes: '', resources: [], config: { choices: [{ id: 'choice_0', label: 'Dive straight into the flooded crypt' }, { id: 'choice_1', label: 'Persuade Harbor Guard for diving bell' }] } },
               { id: 'node_reward_hero', type: 'questReward', title: 'Shrine Restored', x: 1060, y: 144, notes: '', resources: [], config: { outcome: 'Quest Complete', customOutcome: '', xpReward: '650', goldReward: '300', itemReward: 'Tidecaller Trident' } }
             ],
@@ -894,11 +904,8 @@
       }
     ];
 
-    // =========================================================================
-    // 3. PERSISTENT STORAGE ENGINE (LOCALSTORAGE)
-    // =========================================================================
     let PROJECTS = [];
-    const LOCAL_STORAGE_KEY = 'questforge_projects_v4';
+    const LOCAL_STORAGE_KEY = 'questforge_projects_v5';
 
     function loadProjectsFromStorage() {
       try {
@@ -910,7 +917,6 @@
           saveProjectsToStorage();
         }
       } catch (err) {
-        console.error('Failed to load storage:', err);
         PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
       }
     }
@@ -931,22 +937,188 @@
       }
     }
 
-    function clearPersistentStorage() {
-      if (confirm('Are you sure you want to clear all saved projects and reset to default sample data?')) {
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
-        PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
-        const firstProj = PROJECTS[0];
-        loadQuestIntoWorkspace(firstProj.id, firstProj.quests[0].id);
-        renderProjectManager();
-        showToast('Cleared persistent data and reset to sample project', 'amber');
+    // =========================================================================
+    // 2. GOOGLE AUTH & DRIVE SYNC INTEGRATION
+    // =========================================================================
+    const loginLockScreen = document.getElementById('login-lock-screen');
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    function initGoogleAuth() {
+      if (typeof google === 'undefined' || !google.accounts) {
+        setTimeout(initGoogleAuth, 500);
+        return;
+      }
+
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: (response) => {
+          if (response.access_token) {
+            accessToken = response.access_token;
+            localStorage.setItem('questforge_oauth_token', accessToken);
+            unlockApp();
+          }
+        }
+      });
+
+      if (accessToken) {
+        unlockApp();
+      } else {
+        lockApp();
       }
     }
 
+    function unlockApp() {
+      loginLockScreen.classList.add('hidden');
+      loadProjectsFromStorage();
+      renderPalette();
+      if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
+        loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+      }
+      openProjectManagerModal();
+      showToast('Successfully signed in with Google', 'emerald');
+    }
+
+    function lockApp() {
+      loginLockScreen.classList.remove('hidden');
+    }
+
+    googleLoginBtn.addEventListener('click', () => {
+      if (tokenClient) {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+      } else {
+        showToast('Google API not loaded yet. Please try again.', 'rose');
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      if (accessToken) {
+        google.accounts.oauth2.revokeToken(accessToken, () => {
+          accessToken = null;
+          localStorage.removeItem('questforge_oauth_token');
+          lockApp();
+          showToast('Logged out successfully', 'amber');
+        });
+      } else {
+        lockApp();
+      }
+    });
+
+    // Google Drive Sync API Methods
+    async function syncToGoogleDrive() {
+      if (!accessToken) {
+        showToast('Not authenticated with Google', 'rose');
+        return;
+      }
+
+      showToast('Syncing projects to Google Drive...', 'amber');
+      saveProjectsToStorage();
+
+      const fileMetadata = {
+        name: 'questforge_projects_backup.json',
+        mimeType: 'application/json'
+      };
+
+      const fileContent = JSON.stringify(PROJECTS, null, 2);
+
+      try {
+        // Search if file already exists in Drive
+        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='questforge_projects_backup.json' and trashed=false`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const searchData = await searchRes.json();
+        const existingFile = searchData.files && searchData.files[0];
+
+        if (existingFile) {
+          // Update existing file
+          const updateRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`, {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: fileContent
+          });
+          if (updateRes.ok) {
+            showToast('Successfully synced projects to Google Drive!', 'emerald');
+          } else {
+            throw new Error('Failed to update file on Google Drive');
+          }
+        } else {
+          // Create new file
+          const form = new FormData();
+          form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
+          form.append('file', new Blob([fileContent], { type: 'application/json' }));
+
+          const createRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${accessToken}` },
+            body: form
+          });
+          if (createRes.ok) {
+            showToast('Successfully uploaded projects to Google Drive!', 'emerald');
+          } else {
+            throw new Error('Failed to create file on Google Drive');
+          }
+        }
+      } catch (err) {
+        showToast(`Drive Sync Error: ${err.message}`, 'rose');
+      }
+    }
+
+    async function syncFromGoogleDrive() {
+      if (!accessToken) {
+        showToast('Not authenticated with Google', 'rose');
+        return;
+      }
+
+      showToast('Fetching projects from Google Drive...', 'amber');
+
+      try {
+        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='questforge_projects_backup.json' and trashed=false`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const searchData = await searchRes.json();
+        const existingFile = searchData.files && searchData.files[0];
+
+        if (!existingFile) {
+          showToast('No backup file found on Google Drive.', 'amber');
+          return;
+        }
+
+        const downloadRes = await fetch(`https://www.googleapis.com/drive/v3/files/${existingFile.id}?alt=media`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+
+        if (downloadRes.ok) {
+          const cloudProjects = await downloadRes.json();
+          if (Array.isArray(cloudProjects)) {
+            PROJECTS = cloudProjects;
+            saveProjectsToStorage();
+            if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
+              loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+            }
+            renderProjectManager();
+            showToast('Successfully synced projects from Google Drive!', 'emerald');
+          }
+        } else {
+          throw new Error('Failed to download backup from Google Drive');
+        }
+      } catch (err) {
+        showToast(`Drive Import Error: ${err.message}`, 'rose');
+      }
+    }
+
+    document.getElementById('sync-to-drive-btn').addEventListener('click', syncToGoogleDrive);
+    document.getElementById('sync-from-drive-btn').addEventListener('click', syncFromGoogleDrive);
+    document.getElementById('modal-sync-to-drive-btn').addEventListener('click', syncToGoogleDrive);
+    document.getElementById('modal-sync-from-drive-btn').addEventListener('click', syncFromGoogleDrive);
+
     // =========================================================================
-    // 4. APPLICATION STATE
+    // 3. APPLICATION STATE & WORKSPACE
     // =========================================================================
     const GRID_SIZE = 24;
-
     const state = {
       activeProjectId: null,
       activeQuestId: null,
@@ -958,42 +1130,17 @@
       currentTool: 'select',
       rightTab: 'inspector',
       inspectorMode: 'edit',
-      sidebars: {
-        leftOpen: false,
-        rightOpen: false
-      },
-      viewport: {
-        x: 40,
-        y: 40,
-        zoom: 1
-      },
+      sidebars: { leftOpen: false, rightOpen: false },
+      viewport: { x: 40, y: 40, zoom: 1 },
       interaction: {
-        isPanning: false,
-        panStartX: 0,
-        panStartY: 0,
-        isBoxSelecting: false,
-        boxStartX: 0,
-        boxStartY: 0,
-        boxCurrentX: 0,
-        boxCurrentY: 0,
-        draggingNodeId: null,
-        dragOffsets: new Map(),
-        connecting: null
+        isPanning: false, panStartX: 0, panStartY: 0,
+        isBoxSelecting: false, boxStartX: 0, boxStartY: 0, boxCurrentX: 0, boxCurrentY: 0,
+        draggingNodeId: null, dragOffsets: new Map(), connecting: null
       },
-      playtest: {
-        active: false,
-        currentNodeId: null,
-        lastEdgeId: null,
-        history: [],
-        rewards: { xp: 0, gold: 0, items: [] },
-        finished: false
-      },
+      playtest: { active: false, currentNodeId: null, lastEdgeId: null, history: [], finished: false },
       pendingDelete: null
     };
 
-    // =========================================================================
-    // 5. DOM REFERENCES
-    // =========================================================================
     const canvasContainer = document.getElementById('canvas-container');
     const canvasWorld = document.getElementById('canvas-world');
     const nodesLayer = document.getElementById('nodes-layer');
@@ -1019,7 +1166,6 @@
 
     const toolSelectBtn = document.getElementById('tool-select-btn');
     const toolPanBtn = document.getElementById('tool-pan-btn');
-
     const paletteSidebar = document.getElementById('palette-sidebar');
     const inspectorSidebar = document.getElementById('inspector-sidebar');
     const togglePaletteBtn = document.getElementById('toggle-palette-btn');
@@ -1048,9 +1194,6 @@
     const viewerFileType = document.getElementById('viewer-file-type');
     const viewerContentContainer = document.getElementById('viewer-content-container');
 
-    // =========================================================================
-    // 6. TOOL SWITCHING
-    // =========================================================================
     function setCanvasTool(tool) {
       state.currentTool = tool;
       if (tool === 'select') {
@@ -1069,9 +1212,6 @@
     toolSelectBtn.addEventListener('click', () => setCanvasTool('select'));
     toolPanBtn.addEventListener('click', () => setCanvasTool('pan'));
 
-    // =========================================================================
-    // 7. SIDEBAR COLLAPSE / EXPAND ENGINE
-    // =========================================================================
     function setLeftSidebarOpen(isOpen) {
       state.sidebars.leftOpen = isOpen;
       if (isOpen) {
@@ -1103,14 +1243,10 @@
     togglePaletteBtn.addEventListener('click', () => setLeftSidebarOpen(!state.sidebars.leftOpen));
     closePaletteBtn.addEventListener('click', () => setLeftSidebarOpen(false));
     expandPaletteTab.addEventListener('click', () => setLeftSidebarOpen(true));
-
     toggleInspectorBtn.addEventListener('click', () => setRightSidebarOpen(!state.sidebars.rightOpen));
     closeInspectorBtn.addEventListener('click', () => setRightSidebarOpen(false));
     expandInspectorTab.addEventListener('click', () => setRightSidebarOpen(true));
 
-    // =========================================================================
-    // 8. UTILITY FUNCTIONS
-    // =========================================================================
     function generateId(prefix = 'id') {
       return `${prefix}_${Math.random().toString(36).substring(2, 8)}`;
     }
@@ -1133,13 +1269,7 @@
       const dot = document.getElementById('status-dot');
       const text = document.getElementById('status-text');
 
-      const colors = {
-        sky: 'bg-sky-400',
-        emerald: 'bg-emerald-400',
-        amber: 'bg-amber-400',
-        rose: 'bg-rose-400',
-        purple: 'bg-purple-400'
-      };
+      const colors = { sky: 'bg-sky-400', emerald: 'bg-emerald-400', amber: 'bg-amber-400', rose: 'bg-rose-400', purple: 'bg-purple-400' };
       dot.className = `w-2 h-2 rounded-full ${colors[color] || colors.amber}`;
       text.textContent = message;
       toast.classList.remove('opacity-0');
@@ -1171,7 +1301,6 @@
     function switchRightTab(tabName) {
       state.rightTab = tabName;
       const isInspector = tabName === 'inspector';
-
       inspectorPanel.classList.toggle('hidden', !isInspector);
       playtestPanel.classList.toggle('hidden', isInspector);
       playtestPanel.classList.toggle('flex', !isInspector);
@@ -1185,7 +1314,6 @@
         tabInspectorBtn.className = 'flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 transition';
         renderPlaytestPanel();
       }
-
       setRightSidebarOpen(true);
     }
 
@@ -1194,19 +1322,13 @@
       if (!project) {
         topProjectBadge.textContent = 'No Project';
         topProjectSubtitle.textContent = 'Select a project in Project Manager';
-        topQuestTitle.textContent = 'QuestForge';
+        topQuestTitle.textContent = 'QuestFlow Studio';
         return;
       }
-
       topProjectBadge.textContent = project.isSample ? 'Sample Project' : project.title;
       topProjectSubtitle.textContent = project.description;
-
       const quest = project.quests.find((q) => q.id === state.activeQuestId);
-      if (quest) {
-        topQuestTitle.textContent = quest.title;
-      } else {
-        topQuestTitle.textContent = project.title;
-      }
+      topQuestTitle.textContent = quest ? quest.title : project.title;
     }
 
     topQuestTitle.addEventListener('click', () => {
@@ -1214,7 +1336,6 @@
       const project = PROJECTS.find(p => p.id === state.activeProjectId);
       const quest = project?.quests.find(q => q.id === state.activeQuestId);
       if (!quest) return;
-
       const newTitle = prompt('Rename Active Quest:', quest.title);
       if (newTitle && newTitle.trim()) {
         quest.title = newTitle.trim();
@@ -1226,46 +1347,24 @@
     });
 
     // =========================================================================
-    // 9. PROJECT MANAGER & QUEST/PROJECT DELETION ENGINE
+    // 4. PROJECT MANAGER & DELETION ENGINE
     // =========================================================================
     function renderProjectManager(filterQuery = '') {
       projectManagerList.innerHTML = '';
       const query = filterQuery.trim().toLowerCase();
-
       let totalProjects = PROJECTS.length;
       let totalQuestsCount = PROJECTS.reduce((acc, p) => acc + p.quests.length, 0);
-
       projectCountSummary.textContent = `${totalProjects} Projects • ${totalQuestsCount} Total Quests`;
 
-      const sortedProjects = [...PROJECTS].sort((a, b) => {
-        if (a.isSample && !b.isSample) return 1;
-        if (!a.isSample && b.isSample) return -1;
-        return 0;
-      });
-
-      sortedProjects.forEach((proj) => {
-        const filteredQuests = proj.quests.filter((q) => {
-          return (
-            !query ||
-            q.title.toLowerCase().includes(query) ||
-            q.id.toLowerCase().includes(query) ||
-            q.type.toLowerCase().includes(query) ||
-            proj.title.toLowerCase().includes(query) ||
-            q.description.toLowerCase().includes(query)
-          );
-        });
-
-        if (query && filteredQuests.length === 0 && !proj.title.toLowerCase().includes(query)) {
-          return;
-        }
-
+      PROJECTS.forEach((proj) => {
+        const filteredQuests = proj.quests.filter((q) => !query || q.title.toLowerCase().includes(query) || q.type.toLowerCase().includes(query));
+        if (query && filteredQuests.length === 0 && !proj.title.toLowerCase().includes(query)) return;
         const questsToShow = query ? filteredQuests : proj.quests;
 
         const projCard = document.createElement('div');
         projCard.className = 'rounded-xl bg-surface-850/80 border border-surface-700/80 overflow-hidden shadow-md';
 
         const questsHtml = questsToShow.map((q) => {
-          const mediaCount = (q.nodes || []).reduce((acc, n) => acc + (n.resources?.length || 0), 0);
           return `
             <div class="p-3 bg-surface-900/90 hover:bg-surface-800 border-t border-surface-800/80 flex items-center justify-between gap-3 group cursor-pointer transition" data-action="open-quest" data-project-id="${proj.id}" data-quest-id="${q.id}">
               <div class="flex items-start gap-2.5 min-w-0">
@@ -1278,20 +1377,9 @@
                     <span class="px-1.5 py-0.5 rounded bg-surface-950 text-[10px] font-mono text-amber-400 border border-surface-800 shrink-0">${escapeHtml(q.type)}</span>
                   </div>
                   <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-1 leading-relaxed">${escapeHtml(q.description)}</p>
-                  <div class="flex items-center gap-3 mt-1.5 text-[10px] font-mono text-slate-500">
-                    <span>ID: ${escapeHtml(q.id)}</span>
-                    <span>•</span>
-                    <span>Level ${q.minLevel}+</span>
-                    <span>•</span>
-                    <span>${q.nodes.length} Nodes</span>
-                    ${mediaCount > 0 ? `<span>•</span><span class="text-sky-400">${mediaCount} Media Assets</span>` : ''}
-                  </div>
                 </div>
               </div>
               <div class="flex items-center gap-1.5 shrink-0" onclick="event.stopPropagation()">
-                <button data-action="rename-quest" data-project-id="${proj.id}" data-quest-id="${q.id}" class="p-1.5 rounded-lg bg-surface-850 hover:bg-sky-500/20 text-slate-400 hover:text-sky-400 border border-surface-700 transition" title="Rename Quest">
-                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                </button>
                 <button data-action="open-quest-btn" data-project-id="${proj.id}" data-quest-id="${q.id}" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition flex items-center gap-1">
                   <span>Open</span>
                   <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
@@ -1310,90 +1398,51 @@
               <div class="flex items-center gap-2">
                 <i data-lucide="folder-kanban" class="w-4 h-4 text-amber-400 shrink-0"></i>
                 <h3 class="text-sm font-bold text-white truncate">${escapeHtml(proj.title)}</h3>
-                ${proj.isSample ? `<span class="px-2 py-0.5 rounded bg-amber-500/20 text-[10px] font-mono text-amber-300 border border-amber-500/40 shrink-0">Sample Project</span>` : ''}
                 <span class="px-2 py-0.5 rounded bg-surface-950 text-[10px] font-mono text-sky-400 border border-surface-800 shrink-0">${proj.quests.length} Quests</span>
               </div>
               <p class="text-xs text-slate-400 mt-1 leading-relaxed">${escapeHtml(proj.description)}</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <button data-action="add-quest" data-project-id="${proj.id}" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold transition" title="Add New Quest">
+              <button data-action="add-quest" data-project-id="${proj.id}" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-semibold transition">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                 <span class="hidden sm:inline">Add Quest</span>
               </button>
-              <button data-action="delete-project" data-project-id="${proj.id}" class="p-1.5 rounded-lg bg-surface-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-surface-700 transition" title="Delete Entire Project">
+              <button data-action="delete-project" data-project-id="${proj.id}" class="p-1.5 rounded-lg bg-surface-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-surface-700 transition" title="Delete Project">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
               </button>
             </div>
           </div>
-          <div class="divide-y divide-surface-800">
-            ${questsHtml || `<div class="p-4 text-center text-xs text-slate-500">No quests in this project. Add one or delete the project.</div>`}
-          </div>
+          <div class="divide-y divide-surface-800">${questsHtml || `<div class="p-4 text-center text-xs text-slate-500">No quests in this project.</div>`}</div>
         `;
-
         projectManagerList.appendChild(projCard);
       });
 
-      projectManagerList.querySelectorAll('[data-action="open-quest"]').forEach((el) => {
-        el.addEventListener('click', () => {
-          const pId = el.dataset.projectId;
-          const qId = el.dataset.questId;
-          loadQuestIntoWorkspace(pId, qId);
-          startupModal.classList.add('hidden');
-        });
-      });
-
-      projectManagerList.querySelectorAll('[data-action="open-quest-btn"]').forEach((el) => {
+      projectManagerList.querySelectorAll('[data-action="open-quest"], [data-action="open-quest-btn"]').forEach((el) => {
         el.addEventListener('click', (e) => {
           e.stopPropagation();
-          const pId = el.dataset.projectId;
-          const qId = el.dataset.questId;
-          loadQuestIntoWorkspace(pId, qId);
+          loadQuestIntoWorkspace(el.dataset.projectId, el.dataset.questId);
           startupModal.classList.add('hidden');
-        });
-      });
-
-      projectManagerList.querySelectorAll('[data-action="rename-quest"]').forEach((el) => {
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const pId = el.dataset.projectId;
-          const qId = el.dataset.questId;
-          const proj = PROJECTS.find(p => p.id === pId);
-          const quest = proj?.quests.find(q => q.id === qId);
-          if (!quest) return;
-
-          const newName = prompt('Enter new quest title:', quest.title);
-          if (newName && newName.trim()) {
-            quest.title = newName.trim();
-            renderProjectManager(explorerSearch.value);
-            updateHeaderProjectInfo();
-            saveProjectsToStorage();
-            showToast(`Renamed quest to "${quest.title}"`, 'emerald');
-          }
         });
       });
 
       projectManagerList.querySelectorAll('[data-action="add-quest"]').forEach((el) => {
         el.addEventListener('click', (e) => {
           e.stopPropagation();
-          const pId = el.dataset.projectId;
-          createNewQuestInProject(pId);
+          createNewQuestInProject(el.dataset.projectId);
         });
       });
 
       projectManagerList.querySelectorAll('[data-action="delete-quest"]').forEach((el) => {
         el.addEventListener('click', (e) => {
           e.stopPropagation();
-          const pId = el.dataset.projectId;
-          const qId = el.dataset.questId;
-          promptDeleteQuest(pId, qId);
+          promptDeleteQuest(el.dataset.projectId, el.dataset.questId);
         });
       });
 
       projectManagerList.querySelectorAll('[data-action="delete-project"]').forEach((el) => {
         el.addEventListener('click', (e) => {
           e.stopPropagation();
-          const pId = el.dataset.projectId;
-          promptDeleteProject(pId);
+          promptDeleteProject(el.dataset.projectId);
         });
       });
 
@@ -1409,30 +1458,24 @@
       const proj = PROJECTS.find(p => p.id === projectId);
       const quest = proj?.quests.find(q => q.id === questId);
       if (!proj || !quest) return;
-
       if (proj.quests.length <= 1) {
-        showToast('Cannot delete the last quest in a project. Delete the project instead.', 'rose');
+        showToast('Cannot delete the last quest in a project.', 'rose');
         return;
       }
-
       state.pendingDelete = { type: 'quest', projectId, questId };
       deleteModalTitle.textContent = `Delete Quest "${quest.title}"?`;
-      deleteModalDesc.textContent = `This will permanently delete this quest graph and its nodes.`;
       deleteConfirmModal.classList.remove('hidden');
     }
 
     function promptDeleteProject(projectId) {
       const proj = PROJECTS.find(p => p.id === projectId);
       if (!proj) return;
-
       if (PROJECTS.length <= 1) {
-        showToast('Cannot delete the final remaining project.', 'rose');
+        showToast('Cannot delete final remaining project.', 'rose');
         return;
       }
-
       state.pendingDelete = { type: 'project', projectId };
       deleteModalTitle.textContent = `Delete Project "${proj.title}"?`;
-      deleteModalDesc.textContent = `This will permanently delete the project and all ${proj.quests.length} contained quests.`;
       deleteConfirmModal.classList.remove('hidden');
     }
 
@@ -1444,39 +1487,22 @@
     document.getElementById('confirm-delete-btn').addEventListener('click', () => {
       const pd = state.pendingDelete;
       if (!pd) return;
-
       if (pd.type === 'quest') {
         const proj = PROJECTS.find(p => p.id === pd.projectId);
         if (proj) {
           proj.quests = proj.quests.filter(q => q.id !== pd.questId);
-          if (state.activeQuestId === pd.questId) {
-            if (proj.quests.length > 0) {
-              loadQuestIntoWorkspace(proj.id, proj.quests[0].id);
-            } else {
-              state.activeQuestId = null;
-              state.nodes = [];
-              state.edges = [];
-              renderNodes();
-              renderEdges();
-            }
+          if (state.activeQuestId === pd.questId && proj.quests.length > 0) {
+            loadQuestIntoWorkspace(proj.id, proj.quests[0].id);
           }
-          showToast('Quest deleted successfully', 'rose');
+          showToast('Quest deleted', 'rose');
         }
       } else if (pd.type === 'project') {
-        const idx = PROJECTS.findIndex(p => p.id === pd.projectId);
-        if (idx !== -1) {
-          PROJECTS.splice(idx, 1);
-          if (state.activeProjectId === pd.projectId) {
-            const nextProj = PROJECTS[0];
-            state.activeProjectId = nextProj.id;
-            if (nextProj.quests.length > 0) {
-              loadQuestIntoWorkspace(nextProj.id, nextProj.quests[0].id);
-            }
-          }
-          showToast('Project deleted successfully', 'rose');
+        PROJECTS = PROJECTS.filter(p => p.id !== pd.projectId);
+        if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
+          loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
         }
+        showToast('Project deleted', 'rose');
       }
-
       deleteConfirmModal.classList.add('hidden');
       state.pendingDelete = null;
       saveProjectsToStorage();
@@ -1484,15 +1510,13 @@
     });
 
     function loadQuestIntoWorkspace(projectId, questId) {
-      stopPlaytest();
-      const project = PROJECTS.find((p) => p.id === projectId);
+      const project = PROJECTS.find(p => p.id === projectId);
       if (!project) return;
-      const quest = project.quests.find((q) => q.id === questId);
+      const quest = project.quests.find(q => q.id === questId);
       if (!quest) return;
 
       state.activeProjectId = project.id;
       state.activeQuestId = quest.id;
-
       state.nodes = JSON.parse(JSON.stringify(quest.nodes || []));
       state.edges = JSON.parse(JSON.stringify(quest.edges || []));
       clearSelection();
@@ -1504,16 +1528,14 @@
         updateStats();
         updateHeaderProjectInfo();
       });
-
       saveProjectsToStorage();
       showToast(`Opened "${quest.title}"`, 'emerald');
     }
 
     function createNewQuestInProject(projectId) {
-      const project = PROJECTS.find((p) => p.id === projectId);
+      const project = PROJECTS.find(p => p.id === projectId);
       if (!project) return;
-
-      const defaultName = prompt('Enter title for the new quest:', `Chapter ${project.quests.length + 1}: The Journey Begins`);
+      const defaultName = prompt('Enter quest title:', `Chapter ${project.quests.length + 1}`);
       if (!defaultName || !defaultName.trim()) return;
 
       const newQId = generateId('qst');
@@ -1522,393 +1544,109 @@
         title: defaultName.trim(),
         type: 'Main Story',
         minLevel: 1,
-        description: 'New narrative quest graph in project.',
-        nodes: [
-          {
-            id: generateId('node'),
-            type: 'questStart',
-            title: defaultName.trim(),
-            x: 64,
-            y: 200,
-            notes: '',
-            resources: [],
-            config: { questId: newQId, questType: 'Main Story', customQuestType: '', minLevel: '1' }
-          }
-        ],
+        description: 'New quest graph.',
+        nodes: [{ id: generateId('node'), type: 'questStart', title: defaultName.trim(), x: 64, y: 200, notes: '', resources: [], config: { questId: newQId, questType: 'Main Story', customQuestType: '', minLevel: '1' } }],
         edges: []
       };
-
       project.quests.push(newQuest);
       loadQuestIntoWorkspace(projectId, newQId);
       startupModal.classList.add('hidden');
       saveProjectsToStorage();
-      showToast(`Created quest "${newQuest.title}"`, 'emerald');
     }
 
     document.getElementById('new-blank-project-btn').addEventListener('click', () => {
-      const projName = prompt('Enter Blank Project Name:', 'My Blank Campaign');
+      const projName = prompt('Enter Project Name:', 'My Campaign');
       if (!projName || !projName.trim()) return;
-
-      const blankProjId = generateId('proj');
-      const blankQuestId = generateId('qst');
-
-      const blankProject = {
-        id: blankProjId,
-        title: projName.trim(),
-        description: 'Fresh blank game project.',
-        isSample: false,
-        quests: [
-          {
-            id: blankQuestId,
-            title: 'Starting Quest',
-            type: 'Main Story',
-            minLevel: 1,
-            description: 'Beginning of a new journey.',
-            nodes: [
-              {
-                id: generateId('node'),
-                type: 'questStart',
-                title: 'Starting Quest',
-                x: 64,
-                y: 200,
-                notes: '',
-                resources: [],
-                config: { questId: blankQuestId, questType: 'Main Story', customQuestType: '', minLevel: '1' }
-              }
-            ],
-            edges: []
-          }
-        ]
-      };
-
-      PROJECTS.push(blankProject);
+      const pId = generateId('proj');
+      const qId = generateId('qst');
+      PROJECTS.push({
+        id: pId, title: projName.trim(), description: 'New campaign.', isSample: false,
+        quests: [{ id: qId, title: 'Starting Quest', type: 'Main Story', minLevel: 1, description: '', nodes: [{ id: generateId('node'), type: 'questStart', title: 'Starting Quest', x: 64, y: 200, notes: '', resources: [], config: { questId: qId, questType: 'Main Story', customQuestType: '', minLevel: '1' } }], edges: [] }]
+      });
       saveProjectsToStorage();
-      loadQuestIntoWorkspace(blankProjId, blankQuestId);
+      loadQuestIntoWorkspace(pId, qId);
       startupModal.classList.add('hidden');
-      showToast(`Created blank project "${projName.trim()}"`, 'emerald');
     });
 
-    document.getElementById('new-project-btn').addEventListener('click', () => {
-      newProjName.value = '';
-      newProjDesc.value = '';
-      newProjectModal.classList.remove('hidden');
-    });
-
-    document.getElementById('close-new-project-modal').addEventListener('click', () => {
-      newProjectModal.classList.add('hidden');
-    });
-
-    document.getElementById('cancel-new-proj-btn').addEventListener('click', () => {
-      newProjectModal.classList.add('hidden');
-    });
-
-    document.getElementById('confirm-new-proj-btn').addEventListener('click', () => {
-      const name = newProjName.value.trim();
-      const desc = newProjDesc.value.trim();
-      if (!name) {
-        showToast('Please enter a project name', 'amber');
-        return;
+    document.getElementById('clear-persistence-btn').addEventListener('click', () => {
+      if (confirm('Clear all local projects?')) {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
+        loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+        renderProjectManager();
+        showToast('Local storage cleared', 'amber');
       }
-
-      const newProj = {
-        id: generateId('proj'),
-        title: name,
-        description: desc || 'Custom game project.',
-        isSample: false,
-        quests: []
-      };
-
-      PROJECTS.push(newProj);
-      newProjectModal.classList.add('hidden');
-      saveProjectsToStorage();
-      renderProjectManager(explorerSearch.value);
-      showToast(`Created project "${name}"`, 'emerald');
-      createNewQuestInProject(newProj.id);
     });
-
-    document.getElementById('clear-persistence-btn').addEventListener('click', clearPersistentStorage);
 
     // =========================================================================
-    // 10. ZIP ARCHIVE EXPORT & IMPORT (JSZip)
+    // 5. ZIP ARCHIVE EXPORT & IMPORT (JSZip)
     // =========================================================================
     async function saveQuestAsZip() {
-      const project = PROJECTS.find((p) => p.id === state.activeProjectId);
-      if (!project) {
-        showToast('No active project selected', 'rose');
-        return;
-      }
-      let quest = project.quests.find((q) => q.id === state.activeQuestId);
-      if (!quest) {
-        quest = { id: state.activeQuestId || generateId('qst'), title: topQuestTitle.textContent, type: 'Main Story', minLevel: 1, description: '', nodes: state.nodes, edges: state.edges };
-        project.quests.push(quest);
-      } else {
-        quest.nodes = JSON.parse(JSON.stringify(state.nodes));
-        quest.edges = JSON.parse(JSON.stringify(state.edges));
-      }
+      const project = PROJECTS.find(p => p.id === state.activeProjectId);
+      if (!project) return;
+      const quest = project.quests.find(q => q.id === state.activeQuestId) || project.quests[0];
+      quest.nodes = JSON.parse(JSON.stringify(state.nodes));
+      quest.edges = JSON.parse(JSON.stringify(state.edges));
 
       const zip = new JSZip();
-      const mediaFolder = zip.folder("resources");
-
-      const exportNodes = quest.nodes.map((n) => {
-        const cleanResources = (n.resources || []).map((res) => {
+      const mediaFolder = zip.folder('resources');
+      const exportNodes = quest.nodes.map(n => {
+        const cleanResources = (n.resources || []).map(res => {
           const ext = res.name.substring(res.name.lastIndexOf('.')) || '.bin';
           const fileName = `${n.id}_${res.id}${ext}`;
-          
-          if (res.data && res.data.startsWith('data:')) {
-            const base64Data = res.data.split(',')[1];
-            mediaFolder.file(fileName, base64Data, { base64: true });
+          if (res.data?.startsWith('data:')) {
+            mediaFolder.file(fileName, res.data.split(',')[1], { base64: true });
           }
-
-          return {
-            id: res.id,
-            name: res.name,
-            type: res.type,
-            file: `resources/${fileName}`
-          };
+          return { id: res.id, name: res.name, type: res.type, file: `resources/${fileName}` };
         });
-
-        return {
-          id: n.id,
-          type: n.type,
-          title: n.title,
-          position: { x: n.x, y: n.y },
-          notes: n.notes || '',
-          properties: { ...n.config },
-          resources: cleanResources
-        };
+        return { id: n.id, type: n.type, title: n.title, position: { x: n.x, y: n.y }, notes: n.notes || '', properties: { ...n.config }, resources: cleanResources };
       });
 
-      const questPayload = {
-        schemaVersion: '2.1.0',
-        engine: 'QuestForge',
-        projectId: project.id,
-        projectTitle: project.title,
-        questMetadata: {
-          questId: quest.id,
-          title: quest.title,
-          questType: quest.type,
-          minLevel: quest.minLevel,
-          description: quest.description
-        },
-        nodes: exportNodes,
-        connections: quest.edges.map((e) => ({
-          id: e.id,
-          fromNode: e.sourceNodeId,
-          fromPort: e.sourcePortId,
-          toNode: e.targetNodeId,
-          toPort: e.targetPortId
-        })),
-        exportedAt: new Date().toISOString()
-      };
+      zip.file('quest.json', JSON.stringify({ schemaVersion: '2.1.0', engine: 'QuestFlow Studio', nodes: exportNodes, connections: quest.edges }, null, 2));
 
-      zip.file("quest.json", JSON.stringify(questPayload, null, 2));
-
-      try {
-        showToast('Packaging ZIP archive with media assets...', 'amber');
-        const content = await zip.generateAsync({ type: "blob" });
-        const fileName = `${quest.id}.zip`;
-        const url = URL.createObjectURL(content);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast(`Successfully saved ZIP archive "${fileName}"`, 'emerald');
-      } catch (err) {
-        showToast(`Failed to create ZIP: ${err.message}`, 'rose');
-      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${quest.id}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Saved ZIP archive successfully', 'emerald');
     }
 
     document.getElementById('save-quest-btn').addEventListener('click', saveQuestAsZip);
 
-    async function handleFileImport(file) {
-      if (!file) return;
-      const fileName = file.name.toLowerCase();
-
-      if (fileName.endsWith('.zip')) {
-        try {
-          showToast('Extracting ZIP archive...', 'amber');
-          const zip = new JSZip();
-          const zipContent = await zip.loadAsync(file);
-
-          if (!zipContent.files['quest.json']) {
-            throw new Error('Missing quest.json in ZIP archive.');
-          }
-
-          const jsonString = await zipContent.files['quest.json'].async('text');
-          const parsed = JSON.parse(jsonString);
-
-          for (let node of parsed.nodes) {
-            if (node.resources && Array.isArray(node.resources)) {
-              for (let res of node.resources) {
-                if (res.file && zipContent.files[res.file]) {
-                  const blob = await zipContent.files[res.file].async('blob');
-                  const reader = new FileReader();
-                  res.data = await new Promise((resolve) => {
-                    reader.onload = (e) => resolve(e.target.result);
-                    reader.readAsDataURL(blob);
-                  });
-                }
-              }
-            }
-          }
-
-          loadQuestDataIntoApp(parsed);
-          startupModal.classList.add('hidden');
-          showToast(`Successfully imported ZIP: ${file.name}`, 'emerald');
-        } catch (err) {
-          showToast(`ZIP Import Error: ${err.message}`, 'rose');
-        }
-      } else if (fileName.endsWith('.json')) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          try {
-            const parsed = JSON.parse(evt.target.result);
-            loadQuestDataIntoApp(parsed);
-            startupModal.classList.add('hidden');
-            showToast(`Successfully imported JSON: ${file.name}`, 'emerald');
-          } catch (err) {
-            showToast(`Invalid JSON: ${err.message}`, 'rose');
-          }
-        };
-        reader.readAsText(file);
-      } else {
-        showToast('Please select a valid .zip or .json quest file', 'rose');
-      }
-    }
-
-    function loadQuestDataIntoApp(parsed) {
-      let nodesArr = parsed.nodes || [];
-      let edgesArr = parsed.connections || parsed.edges || [];
-      let qTitle = parsed.questMetadata?.title || parsed.title || 'Imported Quest';
-      let qId = parsed.questMetadata?.questId || parsed.id || generateId('qst');
-      let pTitle = parsed.projectTitle || 'Imported Projects';
-
-      let targetProj = PROJECTS.find((p) => p.title.toLowerCase() === pTitle.toLowerCase());
-      if (!targetProj) {
-        targetProj = {
-          id: generateId('proj'),
-          title: pTitle,
-          description: 'Imported campaign project.',
-          isSample: false,
-          quests: []
-        };
-        PROJECTS.push(targetProj);
-      }
-
-      const mappedNodes = nodesArr.map((n) => {
-        let config = { ...(NODE_TYPES[n.type]?.defaultConfig || {}), ...(n.properties || n.config || {}) };
-        if (n.type === 'playerChoice' && !config.choices) {
-          config.choices = [
-            { id: 'choice_0', label: n.properties?.choiceALabel || 'Choice A' },
-            { id: 'choice_1', label: n.properties?.choiceBLabel || 'Choice B' }
-          ];
-        }
-        return {
-          id: n.id || generateId('qnode'),
-          type: n.type,
-          title: n.title || NODE_TYPES[n.type]?.title || 'Node',
-          x: Number(n.position?.x ?? n.x ?? 100),
-          y: Number(n.position?.y ?? n.y ?? 100),
-          notes: n.notes || '',
-          resources: n.resources || [],
-          config
-        };
-      });
-
-      const mappedEdges = edgesArr.map((e) => ({
-        id: e.id || generateId('qedge'),
-        sourceNodeId: e.fromNode || e.sourceNodeId,
-        sourcePortId: e.fromPort || e.sourcePortId,
-        targetNodeId: e.toNode || e.targetNodeId,
-        targetPortId: e.toPort || e.targetPortId
-      }));
-
-      const newQuestObj = {
-        id: qId,
-        title: qTitle,
-        type: parsed.questMetadata?.questType || 'Main Story',
-        minLevel: parsed.questMetadata?.minLevel || 1,
-        description: parsed.questMetadata?.description || 'Imported quest graph.',
-        nodes: mappedNodes,
-        edges: mappedEdges
-      };
-
-      targetProj.quests.push(newQuestObj);
-      saveProjectsToStorage();
-      loadQuestIntoWorkspace(targetProj.id, qId);
-    }
-
-    document.getElementById('explorer-import-btn').addEventListener('click', () => hiddenFileInput.click());
-    document.getElementById('import-json-btn').addEventListener('click', () => hiddenFileInput.click());
-    hiddenFileInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) {
-        handleFileImport(e.target.files[0]);
-        hiddenFileInput.value = '';
-      }
-    });
-
     // =========================================================================
-    // 11. QUEST PALETTE & DRAG-AND-DROP
+    // 6. PALETTE, NODES & EDGES RENDERING
     // =========================================================================
     function renderPalette(filterText = '') {
       paletteList.innerHTML = '';
       const query = filterText.trim().toLowerCase();
-
-      Object.values(NODE_TYPES).forEach((tpl) => {
-        if (
-          query &&
-          !tpl.title.toLowerCase().includes(query) &&
-          !tpl.category.toLowerCase().includes(query) &&
-          !tpl.description.toLowerCase().includes(query)
-        ) {
-          return;
-        }
-
+      Object.values(NODE_TYPES).forEach(tpl => {
+        if (query && !tpl.title.toLowerCase().includes(query)) return;
         const item = document.createElement('div');
-        item.className = 'group p-3 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700/80 hover:border-surface-600 cursor-grab active:cursor-grabbing transition flex items-start gap-3 shadow-sm';
+        item.className = 'group p-3 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700/80 cursor-grab transition flex items-start gap-3 shadow-sm';
         item.draggable = true;
-
         item.innerHTML = `
-          <div class="w-8 h-8 rounded-lg ${tpl.badgeBg} ${tpl.badgeText} border ${tpl.borderAccent} flex items-center justify-center shrink-0 mt-0.5">
-            <i data-lucide="${tpl.icon}" class="w-4 h-4"></i>
-          </div>
+          <div class="w-8 h-8 rounded-lg ${tpl.badgeBg} ${tpl.badgeText} border ${tpl.borderAccent} flex items-center justify-center shrink-0 mt-0.5"><i data-lucide="${tpl.icon}" class="w-4 h-4"></i></div>
           <div class="min-w-0 flex-1">
-            <div class="flex items-center justify-between gap-1">
-              <span class="text-xs font-semibold text-slate-100 truncate">${tpl.title}</span>
-              <i data-lucide="plus" class="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 transition"></i>
-            </div>
-            <span class="block text-[10px] font-mono uppercase tracking-wider ${tpl.badgeText} mt-0.5">${tpl.category}</span>
+            <span class="text-xs font-semibold text-slate-100 truncate">${tpl.title}</span>
             <p class="text-[11px] text-slate-400 mt-1 leading-snug">${tpl.description}</p>
           </div>
         `;
-
-        item.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('application/quest-node-type', tpl.type);
-          e.dataTransfer.effectAllowed = 'copy';
-        });
-
+        item.addEventListener('dragstart', e => e.dataTransfer.setData('application/quest-node-type', tpl.type));
         item.addEventListener('click', () => {
           const rect = canvasContainer.getBoundingClientRect();
-          const centerWorld = screenToWorld(
-            rect.left + rect.width / 2 + (Math.random() * 48 - 24),
-            rect.top + rect.height / 2 + (Math.random() * 48 - 24)
-          );
-          addNode(tpl.type, centerWorld.x - 140, centerWorld.y - 60);
+          const pos = screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+          addNode(tpl.type, pos.x - 140, pos.y - 60);
         });
-
         paletteList.appendChild(item);
       });
-
       lucide.createIcons();
     }
 
-    canvasContainer.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-    });
-
-    canvasContainer.addEventListener('drop', (e) => {
+    canvasContainer.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+    canvasContainer.addEventListener('drop', e => {
       e.preventDefault();
       const nodeType = e.dataTransfer.getData('application/quest-node-type');
       if (nodeType && NODE_TYPES[nodeType]) {
@@ -1917,78 +1655,48 @@
       }
     });
 
-    // =========================================================================
-    // 12. NODE MANAGEMENT & CARD RENDERING (HEADER CLOSE BUTTON REMOVED)
-    // =========================================================================
     function addNode(type, x, y, customData = null) {
       const template = NODE_TYPES[type];
       if (!template) return null;
-
       const node = {
         id: customData?.id || generateId('qnode'),
         type: template.type,
         title: customData?.title || template.title,
-        x: snapCoord(x),
-        y: snapCoord(y),
+        x: snapCoord(x), y: snapCoord(y),
         notes: customData?.notes || '',
         resources: customData?.resources || [],
-        config: customData?.config
-          ? JSON.parse(JSON.stringify({ ...template.defaultConfig, ...customData.config }))
-          : JSON.parse(JSON.stringify(template.defaultConfig))
+        config: customData?.config ? { ...template.defaultConfig, ...customData.config } : JSON.parse(JSON.stringify(template.defaultConfig))
       };
-
       state.nodes.push(node);
       selectNode(node.id);
       renderNodes();
       renderEdges();
       updateStats();
-      updateHeaderProjectInfo();
       saveProjectsToStorage();
       return node;
     }
 
     function deleteNode(nodeId) {
-      state.nodes = state.nodes.filter((n) => n.id !== nodeId);
-      state.edges = state.edges.filter(
-        (e) => e.sourceNodeId !== nodeId && e.targetNodeId !== nodeId
-      );
+      state.nodes = state.nodes.filter(n => n.id !== nodeId);
+      state.edges = state.edges.filter(e => e.sourceNodeId !== nodeId && e.targetNodeId !== nodeId);
       state.selectedNodeIds.delete(nodeId);
-      if (state.playtest.currentNodeId === nodeId) stopPlaytest();
       renderNodes();
       renderEdges();
       renderInspector();
       updateStats();
-      updateHeaderProjectInfo();
       saveProjectsToStorage();
-      showToast('Quest node deleted', 'rose');
+      showToast('Node deleted', 'rose');
     }
 
     function deleteSelectedNodes() {
-      if (state.selectedNodeIds.size === 0) return;
-      const idsToDelete = Array.from(state.selectedNodeIds);
-      state.nodes = state.nodes.filter((n) => !state.selectedNodeIds.has(n.id));
-      state.edges = state.edges.filter(
-        (e) => !state.selectedNodeIds.has(e.sourceNodeId) && !state.selectedNodeIds.has(e.targetNodeId)
-      );
+      state.nodes = state.nodes.filter(n => !state.selectedNodeIds.has(n.id));
+      state.edges = state.edges.filter(e => !state.selectedNodeIds.has(e.sourceNodeId) && !state.selectedNodeIds.has(e.targetNodeId));
       state.selectedNodeIds.clear();
       renderNodes();
       renderEdges();
       renderInspector();
       updateStats();
-      updateHeaderProjectInfo();
       saveProjectsToStorage();
-      showToast(`Deleted ${idsToDelete.length} quest nodes`, 'rose');
-    }
-
-    function deleteEdge(edgeId) {
-      state.edges = state.edges.filter((e) => e.id !== edgeId);
-      if (state.selectedEdgeId === edgeId) state.selectedEdgeId = null;
-      renderNodes();
-      renderEdges();
-      renderInspector();
-      updateStats();
-      saveProjectsToStorage();
-      showToast('Connection removed', 'rose');
     }
 
     function selectNode(nodeId, isAdditive = false) {
@@ -2014,32 +1722,18 @@
     }
 
     function updateSelectionVisuals() {
-      document.querySelectorAll('.flow-node').forEach((el) => {
-        const id = el.dataset.nodeId;
-        const isSel = state.selectedNodeIds.has(id);
-        el.classList.toggle('selected', isSel);
-        el.classList.toggle(
-          'playtest-active',
-          state.playtest.active && state.playtest.currentNodeId === id
-        );
+      document.querySelectorAll('.flow-node').forEach(el => {
+        el.classList.toggle('selected', state.selectedNodeIds.has(el.dataset.nodeId));
       });
-      document.querySelectorAll('.edge-group').forEach((el) => {
+      document.querySelectorAll('.edge-group').forEach(el => {
         el.classList.toggle('selected', el.dataset.edgeId === state.selectedEdgeId);
-        el.classList.toggle(
-          'active-edge',
-          state.playtest.active && state.playtest.lastEdgeId === el.dataset.edgeId
-        );
       });
       deleteSelectedBtn.disabled = state.selectedNodeIds.size === 0 && !state.selectedEdgeId;
     }
 
     function getNodeOutputs(node) {
       if (node.type === 'playerChoice') {
-        const choices = node.config.choices || [{ id: 'choice_0', label: 'Choice 1' }, { id: 'choice_1', label: 'Choice 2' }];
-        return choices.map((ch, idx) => ({
-          id: ch.id,
-          label: `Opt ${idx + 1}`
-        }));
+        return (node.config.choices || [{ id: 'choice_0', label: '1' }, { id: 'choice_1', label: '2' }]).map((ch, idx) => ({ id: ch.id, label: `Opt ${idx + 1}` }));
       }
       return NODE_TYPES[node.type].outputs;
     }
@@ -2047,102 +1741,11 @@
     function getNodeSummaryHtml(node) {
       const c = node.config;
       let summary = '';
-      switch (node.type) {
-        case 'questStart':
-          const qType = c.questType === 'Custom...' ? (c.customQuestType || 'Custom') : c.questType;
-          summary = `
-            <div class="space-y-1.5">
-              <div class="flex items-center justify-between gap-1">
-                <span class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono truncate">${escapeHtml(qType)}</span>
-                <span class="text-[10px] font-mono text-slate-400">Lvl ${escapeHtml(c.minLevel)}+</span>
-              </div>
-              <div class="text-[11px] font-mono text-slate-300 bg-surface-950/90 border border-surface-800 rounded px-2 py-1 truncate">${escapeHtml(c.questId)}</div>
-            </div>
-          `;
-          break;
-        case 'dialogue':
-          const reaction = c.reaction === 'Custom...' ? (c.customReaction || 'Custom') : c.reaction;
-          summary = `
-            <div class="space-y-1.5">
-              <div class="flex items-center justify-between gap-1">
-                <span class="text-[11px] font-semibold text-indigo-300 truncate">${escapeHtml(c.npcName)}</span>
-                <span class="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 text-[10px] font-mono truncate">${escapeHtml(reaction)}</span>
-              </div>
-              <p class="text-[11px] text-slate-300 bg-surface-950/90 border border-surface-800 rounded p-2 line-clamp-2 italic leading-snug">"${escapeHtml(c.dialogueText)}"</p>
-            </div>
-          `;
-          break;
-        case 'playerChoice':
-          const choices = c.choices || [];
-          const choicesHtml = choices.map((ch, idx) => `
-            <div class="text-[11px] bg-surface-950/90 border border-surface-800 rounded px-2 py-1 text-slate-300 truncate">
-              <span class="text-amber-400 font-mono font-bold mr-1">${idx + 1}:</span>${escapeHtml(ch.label)}
-            </div>
-          `).join('');
-
-          summary = `
-            <div class="space-y-1.5">
-              <div class="space-y-1 max-h-28 overflow-y-auto">
-                ${choicesHtml}
-              </div>
-            </div>
-          `;
-          break;
-        case 'objective':
-          const objType = c.objectiveType === 'Custom...' ? (c.customObjectiveType || 'Custom') : c.objectiveType;
-          summary = `
-            <div class="space-y-1.5">
-              <span class="inline-block px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono truncate max-w-full">${escapeHtml(objType)}</span>
-              <div class="flex items-center justify-between text-[11px] bg-surface-950/90 border border-surface-800 rounded px-2 py-1">
-                <span class="text-slate-200 font-medium truncate">${escapeHtml(c.targetName)}</span>
-                <span class="text-cyan-400 font-mono font-semibold shrink-0 ml-2">0 / ${escapeHtml(c.requiredCount)}</span>
-              </div>
-            </div>
-          `;
-          break;
-        case 'condition':
-          const condType = c.conditionType === 'Custom...' ? (c.customConditionType || 'Custom') : c.conditionType;
-          summary = `
-            <div class="space-y-1.5">
-              <span class="inline-block px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[10px] font-mono truncate max-w-full">${escapeHtml(condType)}</span>
-              <div class="text-[11px] font-mono text-slate-200 bg-surface-950/90 border border-surface-800 rounded px-2 py-1 truncate">${escapeHtml(c.conditionValue)}</div>
-            </div>
-          `;
-          break;
-        case 'questReward':
-          const outcomeType = c.outcome === 'Custom...' ? (c.customOutcome || 'Custom') : c.outcome;
-          summary = `
-            <div class="space-y-1.5">
-              <span class="inline-block px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[10px] font-mono truncate max-w-full">${escapeHtml(outcomeType)}</span>
-              <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
-                <div class="bg-surface-950/90 border border-surface-800 rounded px-2 py-1 text-emerald-400">+${escapeHtml(c.xpReward)} XP</div>
-                <div class="bg-surface-950/90 border border-surface-800 rounded px-2 py-1 text-amber-400">+${escapeHtml(c.goldReward)} G</div>
-              </div>
-            </div>
-          `;
-          break;
-      }
-
-      const resources = node.resources || [];
-      if (resources.length > 0) {
-        const mediaBadges = resources.map(res => {
-          let icon = 'file';
-          if (res.type === 'image') icon = 'image';
-          if (res.type === 'video') icon = 'video';
-          if (res.type === 'audio') icon = 'music';
-          return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-900 text-sky-300 border border-sky-500/30 text-[10px] font-mono truncate max-w-[120px]" title="${escapeHtml(res.name)}">
-            <i data-lucide="${icon}" class="w-3 h-3 text-sky-400 shrink-0"></i>
-            <span class="truncate">${escapeHtml(res.name)}</span>
-          </span>`;
-        }).join('');
-
-        summary += `
-          <div class="mt-2 pt-2 border-t border-surface-800 flex flex-wrap gap-1">
-            ${mediaBadges}
-          </div>
-        `;
-      }
-
+      if (node.type === 'questStart') summary = `<div class="text-[11px] font-mono text-slate-300 bg-surface-950 px-2 py-1 rounded">${escapeHtml(c.questId)}</div>`;
+      else if (node.type === 'dialogue') summary = `<p class="text-[11px] text-slate-300 italic">"${escapeHtml(c.dialogueText)}"</p>`;
+      else if (node.type === 'objective') summary = `<div class="text-[11px] text-cyan-300">${escapeHtml(c.targetName)} (${c.requiredCount})</div>`;
+      else if (node.type === 'condition') summary = `<div class="text-[11px] font-mono text-purple-300">${escapeHtml(c.conditionValue)}</div>`;
+      else if (node.type === 'questReward') summary = `<div class="text-[11px] font-mono text-emerald-400">+${c.xpReward} XP / +${c.goldReward}G</div>`;
       return summary;
     }
 
@@ -2150,925 +1753,267 @@
       nodesLayer.innerHTML = '';
       emptyHint.classList.toggle('hidden', state.nodes.length > 0);
 
-      state.nodes.forEach((node) => {
+      state.nodes.forEach(node => {
         const tpl = NODE_TYPES[node.type];
         const el = document.createElement('div');
-        const isSelected = state.selectedNodeIds.has(node.id);
-        const isPlaytestActive = state.playtest.active && state.playtest.currentNodeId === node.id;
-
-        el.className = `flow-node ${isSelected ? 'selected' : ''} ${isPlaytestActive ? 'playtest-active' : ''}`;
+        el.className = `flow-node ${state.selectedNodeIds.has(node.id) ? 'selected' : ''}`;
         el.dataset.nodeId = node.id;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
 
-        const inputsHtml = tpl.inputs
-          .map((port) => {
-            const isConnected = state.edges.some(
-              (e) => e.targetNodeId === node.id && e.targetPortId === port.id
-            );
-            return `
-              <div class="flex items-center gap-2 relative h-6">
-                <div
-                  class="port-socket input-port ${isConnected ? 'connected' : ''}"
-                  data-node-id="${node.id}"
-                  data-port-id="${port.id}"
-                  data-port-type="input"
-                  title="Input: ${port.label}"
-                ></div>
-                <span class="text-[11px] font-medium text-slate-300 pl-3">${port.label}</span>
-              </div>
-            `;
-          })
-          .join('');
-
-        const outputs = getNodeOutputs(node);
-        const outputsHtml = outputs
-          .map((port) => {
-            const isConnected = state.edges.some(
-              (e) => e.sourceNodeId === node.id && e.sourcePortId === port.id
-            );
-            return `
-              <div class="flex items-center justify-end gap-2 relative h-6">
-                <span class="text-[11px] font-medium text-slate-300 pr-3 truncate max-w-[150px]" title="${escapeHtml(port.label)}">${escapeHtml(port.label)}</span>
-                <div
-                  class="port-socket output-port ${isConnected ? 'connected' : ''}"
-                  data-node-id="${node.id}"
-                  data-port-id="${port.id}"
-                  data-port-type="output"
-                  title="Output: ${port.label} (Drag to connect)"
-                ></div>
-              </div>
-            `;
-          })
-          .join('');
+        const inputsHtml = tpl.inputs.map(p => `<div class="port-socket input-port" data-node-id="${node.id}" data-port-id="${p.id}" data-port-type="input"></div>`).join('');
+        const outputsHtml = getNodeOutputs(node).map(p => `<div class="port-socket output-port" data-node-id="${node.id}" data-port-id="${p.id}" data-port-type="output" title="${escapeHtml(p.label)}"></div>`).join('');
 
         el.innerHTML = `
-          <!-- Color-Coded Top Accent Bar -->
           <div class="h-1.5 w-full rounded-t-[10px]" style="background-color: ${tpl.accent}"></div>
-
-          <!-- Node Header (Close X button removed) -->
-          <div class="node-header px-3 py-2.5 border-b border-surface-800 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing">
-            <div class="flex items-center gap-2 min-w-0">
-              <div class="w-6 h-6 rounded-md ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center shrink-0">
-                <i data-lucide="${tpl.icon}" class="w-3.5 h-3.5"></i>
-              </div>
-              <div class="min-w-0">
-                <span class="node-title-text block text-xs font-semibold text-white truncate">${escapeHtml(node.title)}</span>
-              </div>
+          <div class="px-3 py-2.5 border-b border-surface-800 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="${tpl.icon}" class="w-3.5 h-3.5 ${tpl.badgeText}"></i>
+              <span class="node-title-text text-xs font-semibold text-white truncate">${escapeHtml(node.title)}</span>
             </div>
           </div>
-
-          <!-- Node Body -->
-          <div class="p-3 space-y-3">
+          <div class="p-3 space-y-2">
             <div class="node-summary-box">${getNodeSummaryHtml(node)}</div>
-
-            <!-- Ports Row -->
-            <div class="flex items-start justify-between gap-2 pt-1 border-t border-surface-800/70">
-              <div class="space-y-1 flex-1">${inputsHtml}</div>
-              <div class="space-y-1 flex-1 text-right">${outputsHtml}</div>
-            </div>
+            <div class="flex justify-between relative h-4 mt-2">${inputsHtml}${outputsHtml}</div>
           </div>
         `;
 
-        el.addEventListener('pointerdown', (e) => {
+        el.addEventListener('pointerdown', e => {
           if (state.currentTool === 'pan' || state.playtest.active) return;
           e.stopPropagation();
-          const isAdditive = e.shiftKey || e.metaKey || e.ctrlKey;
-          if (!state.selectedNodeIds.has(node.id)) {
-            selectNode(node.id, isAdditive);
-          } else if (isAdditive) {
-            state.selectedNodeIds.delete(node.id);
-            updateSelectionVisuals();
-            renderInspector();
-          }
-
-          const worldPos = screenToWorld(e.clientX, e.clientY);
+          selectNode(node.id, e.shiftKey || e.metaKey);
+          const pos = screenToWorld(e.clientX, e.clientY);
           state.interaction.draggingNodeId = node.id;
-          state.interaction.dragOffsets.clear();
-
-          state.selectedNodeIds.forEach((selId) => {
-            const selNode = state.nodes.find((n) => n.id === selId);
-            if (selNode) {
-              state.interaction.dragOffsets.set(selId, {
-                x: worldPos.x - selNode.x,
-                y: worldPos.y - selNode.y
-              });
-            }
-          });
+          state.interaction.dragOffsets.set(node.id, { x: pos.x - node.x, y: pos.y - node.y });
           el.setPointerCapture(e.pointerId);
         });
 
-        el.querySelectorAll('.output-port').forEach((portEl) => {
-          portEl.addEventListener('pointerdown', (e) => {
-            if (state.playtest.active) return;
+        el.querySelectorAll('.output-port').forEach(portEl => {
+          portEl.addEventListener('pointerdown', e => {
             e.stopPropagation();
-            const portCenter = getPortWorldPosition(node.id, portEl.dataset.portId, 'output');
-            state.interaction.connecting = {
-              sourceNodeId: node.id,
-              sourcePortId: portEl.dataset.portId,
-              startX: portCenter.x,
-              startY: portCenter.y
-            };
-            draftEdge.setAttribute(
-              'd',
-              computeBezierPath(portCenter.x, portCenter.y, portCenter.x, portCenter.y)
-            );
+            const center = getPortWorldPosition(node.id, portEl.dataset.portId, 'output');
+            state.interaction.connecting = { sourceNodeId: node.id, sourcePortId: portEl.dataset.portId, startX: center.x, startY: center.y };
+            draftEdge.setAttribute('d', computeBezierPath(center.x, center.y, center.x, center.y));
             draftEdge.classList.remove('hidden');
           });
         });
 
         nodesLayer.appendChild(el);
       });
-
       lucide.createIcons();
-      updateSelectionVisuals();
     }
 
-    // =========================================================================
-    // 13. CUBIC BEZIER WIRES & CONNECTOR POINT ALIGNMENT
-    // =========================================================================
     function getPortWorldPosition(nodeId, portId, portType) {
-      const selector = `.port-socket[data-node-id="${nodeId}"][data-port-id="${portId}"][data-port-type="${portType}"]`;
-      const portEl = document.querySelector(selector);
+      const portEl = document.querySelector(`.port-socket[data-node-id="${nodeId}"][data-port-id="${portId}"][data-port-type="${portType}"]`);
       if (!portEl) {
-        const node = state.nodes.find((n) => n.id === nodeId);
-        return node ? { x: node.x + (portType === 'input' ? 0 : 290), y: node.y + 90 } : { x: 0, y: 0 };
+        const n = state.nodes.find(n => n.id === nodeId);
+        return n ? { x: n.x + (portType === 'input' ? 0 : 290), y: n.y + 90 } : { x: 0, y: 0 };
       }
-
       const rect = portEl.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      return screenToWorld(centerX, centerY);
+      return screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
     }
 
     function computeBezierPath(x1, y1, x2, y2) {
       const dx = Math.abs(x2 - x1);
       const curvature = Math.max(60, dx * 0.52);
-      const cp1x = x1 + curvature;
-      const cp1y = y1;
-      const cp2x = x2 - curvature;
-      const cp2y = y2;
-      return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
-    }
-
-    function getEdgeBranchLabel(edge, sourceNode) {
-      if (!sourceNode) return null;
-      if (sourceNode.type === 'playerChoice') {
-        const choices = sourceNode.config.choices || [];
-        const found = choices.find((c) => c.id === edge.sourcePortId);
-        return found ? found.label : null;
-      }
-      if (sourceNode.type === 'condition') {
-        return edge.sourcePortId === 'out_true' ? 'True' : 'False';
-      }
-      const tpl = NODE_TYPES[sourceNode.type];
-      if (!tpl || tpl.outputs.length <= 1) return null;
-      const port = tpl.outputs.find((p) => p.id === edge.sourcePortId);
-      return port ? port.label : null;
+      return `M ${x1} ${y1} C ${x1 + curvature} ${y1}, ${x2 - curvature} ${y2}, ${x2} ${y2}`;
     }
 
     function renderEdges() {
       edgesLayer.innerHTML = '';
-
-      state.edges.forEach((edge) => {
+      state.edges.forEach(edge => {
         const start = getPortWorldPosition(edge.sourceNodeId, edge.sourcePortId, 'output');
         const end = getPortWorldPosition(edge.targetNodeId, edge.targetPortId, 'input');
         const d = computeBezierPath(start.x, start.y, end.x, end.y);
 
-        const isSelected = state.selectedEdgeId === edge.id;
-        const isActive = state.playtest.active && state.playtest.lastEdgeId === edge.id;
-
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        group.setAttribute(
-          'class',
-          `edge-group ${isSelected ? 'selected' : ''} ${isActive ? 'active-edge' : ''}`
-        );
+        group.setAttribute('class', `edge-group ${state.selectedEdgeId === edge.id ? 'selected' : ''}`);
         group.dataset.edgeId = edge.id;
 
-        const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        hitPath.setAttribute('class', 'edge-hit-area');
-        hitPath.setAttribute('d', d);
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        hit.setAttribute('class', 'edge-hit-area');
+        hit.setAttribute('d', d);
+        hit.addEventListener('pointerdown', e => { e.stopPropagation(); selectEdge(edge.id); });
 
-        const visiblePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        visiblePath.setAttribute('class', 'edge-path');
-        visiblePath.setAttribute('d', d);
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'edge-path');
+        path.setAttribute('d', d);
+        path.setAttribute('marker-end', 'url(#arrow-default)');
 
-        const sourceNode = state.nodes.find((n) => n.id === edge.sourceNodeId);
-        if (isActive) {
-          visiblePath.setAttribute('marker-end', 'url(#arrow-active)');
-        } else if (isSelected) {
-          visiblePath.setAttribute('marker-end', 'url(#arrow-selected)');
-        } else {
-          visiblePath.setAttribute('marker-end', 'url(#arrow-default)');
-          if (sourceNode && NODE_TYPES[sourceNode.type]) {
-            visiblePath.style.stroke = NODE_TYPES[sourceNode.type].accent + 'bb';
-          }
-        }
-
-        hitPath.addEventListener('pointerdown', (e) => {
-          if (state.playtest.active) return;
-          e.stopPropagation();
-          selectEdge(edge.id);
-        });
-
-        group.appendChild(hitPath);
-        group.appendChild(visiblePath);
-
-        const branchLabel = getEdgeBranchLabel(edge, sourceNode);
-        if (branchLabel) {
-          const midX = (start.x + end.x) / 2;
-          const midY = (start.y + end.y) / 2;
-          const truncatedLabel = branchLabel.length > 18 ? branchLabel.substring(0, 16) + '...' : branchLabel;
-          const badgeWidth = truncatedLabel.length * 6.5 + 14;
-
-          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          rect.setAttribute('class', 'edge-label-bg');
-          rect.setAttribute('x', midX - badgeWidth / 2);
-          rect.setAttribute('y', midY - 10);
-          rect.setAttribute('width', badgeWidth);
-          rect.setAttribute('height', 20);
-
-          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          text.setAttribute('class', 'edge-label-text');
-          text.setAttribute('x', midX);
-          text.setAttribute('y', midY);
-          text.textContent = truncatedLabel;
-
-          if (branchLabel === 'True') {
-            text.style.fill = '#34d399';
-          } else if (branchLabel === 'False') {
-            text.style.fill = '#fb7185';
-          } else {
-            text.style.fill = '#fbbf24';
-          }
-
-          group.appendChild(rect);
-          group.appendChild(text);
-        }
-
+        group.appendChild(hit);
+        group.appendChild(path);
         edgesLayer.appendChild(group);
       });
-
-      updateSelectionVisuals();
     }
 
-    // =========================================================================
-    // 14. CANVAS PAN, ZOOM & SELECTION
-    // =========================================================================
-    canvasContainer.addEventListener('pointerdown', (e) => {
+    // Canvas Mouse / Touch events
+    canvasContainer.addEventListener('pointerdown', e => {
       if (state.playtest.active) return;
-      const isBackground = e.target === canvasContainer || e.target === canvasWorld || e.target.id === 'connections-svg';
-      const isPanMode = state.currentTool === 'pan' || e.button === 1 || e.altKey;
-
-      if (isPanMode || isBackground) {
-        if (isPanMode || state.currentTool === 'pan') {
-          state.interaction.isPanning = true;
-          state.interaction.panStartX = e.clientX - state.viewport.x;
-          state.interaction.panStartY = e.clientY - state.viewport.y;
-          canvasContainer.classList.add('is-panning');
-          return;
-        }
-
-        if (isBackground && state.currentTool === 'select') {
-          const isShift = e.shiftKey || e.metaKey || e.ctrlKey;
-          if (!isShift) clearSelection();
-
-          state.interaction.isBoxSelecting = true;
-          const rect = canvasContainer.getBoundingClientRect();
-          state.interaction.boxStartX = e.clientX - rect.left;
-          state.interaction.boxStartY = e.clientY - rect.top;
-          state.interaction.boxCurrentX = state.interaction.boxStartX;
-          state.interaction.boxCurrentY = state.interaction.boxStartY;
-
-          selectionBoxEl.style.left = `${state.interaction.boxStartX}px`;
-          selectionBoxEl.style.top = `${state.interaction.boxStartY}px`;
-          selectionBoxEl.style.width = '0px';
-          selectionBoxEl.style.height = '0px';
-          selectionBoxEl.style.display = 'block';
-        }
+      if (state.currentTool === 'pan' || e.button === 1) {
+        state.interaction.isPanning = true;
+        state.interaction.panStartX = e.clientX - state.viewport.x;
+        state.interaction.panStartY = e.clientY - state.viewport.y;
+        canvasContainer.classList.add('is-panning');
       }
     });
 
-    window.addEventListener('pointermove', (e) => {
-      if (state.playtest.active) return;
+    window.addEventListener('pointermove', e => {
       if (state.interaction.isPanning) {
         state.viewport.x = e.clientX - state.interaction.panStartX;
         state.viewport.y = e.clientY - state.interaction.panStartY;
         applyViewportTransform();
-        return;
-      }
-
-      if (state.interaction.isBoxSelecting) {
-        const rect = canvasContainer.getBoundingClientRect();
-        state.interaction.boxCurrentX = e.clientX - rect.left;
-        state.interaction.boxCurrentY = e.clientY - rect.top;
-
-        const left = Math.min(state.interaction.boxStartX, state.interaction.boxCurrentX);
-        const top = Math.min(state.interaction.boxStartY, state.interaction.boxCurrentY);
-        const width = Math.abs(state.interaction.boxCurrentX - state.interaction.boxStartX);
-        const height = Math.abs(state.interaction.boxCurrentY - state.interaction.boxStartY);
-
-        selectionBoxEl.style.left = `${left}px`;
-        selectionBoxEl.style.top = `${top}px`;
-        selectionBoxEl.style.width = `${width}px`;
-        selectionBoxEl.style.height = `${height}px`;
-
-        const worldStart = screenToWorld(rect.left + left, rect.top + top);
-        const worldEnd = screenToWorld(rect.left + left + width, rect.top + top + height);
-
-        state.nodes.forEach((node) => {
-          const nodeRight = node.x + 290;
-          const nodeBottom = node.y + 190;
-          const intersects =
-            node.x < worldEnd.x &&
-            nodeRight > worldStart.x &&
-            node.y < worldEnd.y &&
-            nodeBottom > worldStart.y;
-
-          if (intersects) state.selectedNodeIds.add(node.id);
-        });
-        updateSelectionVisuals();
-        return;
-      }
-
-      if (state.interaction.draggingNodeId) {
-        const worldPos = screenToWorld(e.clientX, e.clientY);
-        state.interaction.dragOffsets.forEach((offset, nodeId) => {
-          const node = state.nodes.find((n) => n.id === nodeId);
-          if (node) {
-            node.x = snapCoord(worldPos.x - offset.x);
-            node.y = snapCoord(worldPos.y - offset.y);
-
-            const nodeEl = document.querySelector(`.flow-node[data-node-id="${node.id}"]`);
-            if (nodeEl) {
-              nodeEl.style.left = `${node.x}px`;
-              nodeEl.style.top = `${node.y}px`;
-            }
-          }
-        });
-        renderEdges();
-        return;
-      }
-
-      if (state.interaction.connecting) {
-        const worldPos = screenToWorld(e.clientX, e.clientY);
-        const { startX, startY } = state.interaction.connecting;
-        draftEdge.setAttribute('d', computeBezierPath(startX, startY, worldPos.x, worldPos.y));
-
-        document.querySelectorAll('.input-port').forEach((p) => p.classList.remove('port-highlight'));
-        const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
-        if (hoveredEl && hoveredEl.classList.contains('input-port')) {
-          if (hoveredEl.dataset.nodeId !== state.interaction.connecting.sourceNodeId) {
-            hoveredEl.classList.add('port-highlight');
-          }
+      } else if (state.interaction.draggingNodeId) {
+        const pos = screenToWorld(e.clientX, e.clientY);
+        const offset = state.interaction.dragOffsets.get(state.interaction.draggingNodeId);
+        const node = state.nodes.find(n => n.id === state.interaction.draggingNodeId);
+        if (node && offset) {
+          node.x = snapCoord(pos.x - offset.x);
+          node.y = snapCoord(pos.y - offset.y);
+          const el = document.querySelector(`.flow-node[data-node-id="${node.id}"]`);
+          if (el) { el.style.left = `${node.x}px`; el.style.top = `${node.y}px`; }
+          renderEdges();
         }
+      } else if (state.interaction.connecting) {
+        const pos = screenToWorld(e.clientX, e.clientY);
+        draftEdge.setAttribute('d', computeBezierPath(state.interaction.connecting.startX, state.interaction.connecting.startY, pos.x, pos.y));
       }
     });
 
-    window.addEventListener('pointerup', (e) => {
-      if (state.interaction.isPanning) {
-        state.interaction.isPanning = false;
-        canvasContainer.classList.remove('is-panning');
-      }
-
-      if (state.interaction.isBoxSelecting) {
-        state.interaction.isBoxSelecting = false;
-        selectionBoxEl.style.display = 'none';
-        if (state.rightTab === 'inspector') renderInspector();
-      }
-
-      if (state.interaction.draggingNodeId) {
-        state.interaction.draggingNodeId = null;
-        saveProjectsToStorage();
-        if (state.rightTab === 'inspector') renderInspector();
-      }
-
+    window.addEventListener('pointerup', e => {
+      state.interaction.isPanning = false;
+      state.interaction.draggingNodeId = null;
+      canvasContainer.classList.remove('is-panning');
       if (state.interaction.connecting) {
-        const hoveredEl = document.elementFromPoint(e.clientX, e.clientY);
-        document.querySelectorAll('.input-port').forEach((p) => p.classList.remove('port-highlight'));
-
-        if (hoveredEl && hoveredEl.classList.contains('input-port')) {
-          const targetNodeId = hoveredEl.dataset.nodeId;
-          const targetPortId = hoveredEl.dataset.portId;
+        const hovered = document.elementFromPoint(e.clientX, e.clientY);
+        if (hovered && hovered.classList.contains('input-port')) {
+          const tNodeId = hovered.dataset.nodeId;
+          const tPortId = hovered.dataset.portId;
           const { sourceNodeId, sourcePortId } = state.interaction.connecting;
-
-          state.edges = state.edges.filter(
-            (edge) => !(edge.sourceNodeId === sourceNodeId && edge.sourcePortId === sourcePortId)
-          );
-
-          if (targetNodeId !== sourceNodeId) {
-            state.edges.push({
-              id: generateId('qedge'),
-              sourceNodeId,
-              sourcePortId,
-              targetNodeId,
-              targetPortId
-            });
-            renderNodes();
+          if (tNodeId !== sourceNodeId) {
+            state.edges = state.edges.filter(ed => !(ed.sourceNodeId === sourceNodeId && ed.sourcePortId === sourcePortId));
+            state.edges.push({ id: generateId('qedge'), sourceNodeId, sourcePortId, targetNodeId: tNodeId, targetPortId: tPortId });
             renderEdges();
-            updateStats();
             saveProjectsToStorage();
-            if (state.rightTab === 'inspector') renderInspector();
-            showToast('Quest step linked', 'emerald');
           }
         }
-
         state.interaction.connecting = null;
         draftEdge.classList.add('hidden');
       }
     });
 
-    canvasContainer.addEventListener(
-      'wheel',
-      (e) => {
-        e.preventDefault();
-        const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
-        const newZoom = Math.min(2.2, Math.max(0.35, state.viewport.zoom * zoomFactor));
+    // Zoom wheel
+    canvasContainer.addEventListener('wheel', e => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+      state.viewport.zoom = Math.min(2.2, Math.max(0.35, state.viewport.zoom * zoomFactor));
+      applyViewportTransform();
+    }, { passive: false });
 
-        const rect = canvasContainer.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        state.viewport.x = mouseX - ((mouseX - state.viewport.x) / state.viewport.zoom) * newZoom;
-        state.viewport.y = mouseY - ((mouseY - state.viewport.y) / state.viewport.zoom) * newZoom;
-        state.viewport.zoom = newZoom;
-
-        applyViewportTransform();
-      },
-      { passive: false }
-    );
-
-    // =========================================================================
-    // 15. INSPECTOR PANEL
-    // =========================================================================
-    function openResourceViewer(res) {
-      viewerFileTitle.textContent = res.name;
-      viewerFileType.textContent = `${res.type.toUpperCase()} Asset Viewer`;
-
-      let previewContent = '';
-      if (res.type === 'image') {
-        previewContent = `<img src="${res.data}" alt="${escapeHtml(res.name)}" class="max-w-full max-h-[50vh] object-contain rounded-lg shadow-lg" />`;
-      } else if (res.type === 'video') {
-        previewContent = `<video controls autoplay src="${res.data}" class="max-w-full max-h-[50vh] rounded-lg shadow-lg"></video>`;
-      } else if (res.type === 'audio') {
-        previewContent = `
-          <div class="flex flex-col items-center justify-center space-y-4 py-8 px-4">
-            <div class="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-lg">
-              <i data-lucide="music" class="w-8 h-8"></i>
-            </div>
-            <p class="text-sm font-semibold text-white">${escapeHtml(res.name)}</p>
-            <audio controls autoplay src="${res.data}" class="w-full max-w-md"></audio>
-          </div>
-        `;
-      } else {
-        previewContent = `<p class="text-xs text-slate-400">Preview not available for this file format.</p>`;
-      }
-
-      viewerContentContainer.innerHTML = previewContent;
-      resourceViewerModal.classList.remove('hidden');
-      lucide.createIcons();
+    function fitCanvasView() {
+      if (state.nodes.length === 0) return;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      state.nodes.forEach(n => {
+        minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+        maxX = Math.max(maxX, n.x + 290); maxY = Math.max(maxY, n.y + 190);
+      });
+      const rect = canvasContainer.getBoundingClientRect();
+      const zoom = Math.min(1, Math.max(0.4, Math.min((rect.width - 100) / (maxX - minX), (rect.height - 100) / (maxY - minY))));
+      state.viewport.zoom = zoom;
+      state.viewport.x = (rect.width - (maxX - minX) * zoom) / 2 - minX * zoom;
+      state.viewport.y = (rect.height - (maxY - minY) * zoom) / 2 - minY * zoom;
+      applyViewportTransform();
+      renderEdges();
     }
 
-    document.getElementById('close-viewer-modal-btn').addEventListener('click', () => {
-      resourceViewerModal.classList.add('hidden');
-      viewerContentContainer.innerHTML = '';
-    });
-    document.getElementById('close-viewer-btn').addEventListener('click', () => {
-      resourceViewerModal.classList.add('hidden');
-      viewerContentContainer.innerHTML = '';
-    });
-
+    // =========================================================================
+    // 7. INSPECTOR & PLAYTEST SIMULATOR (BLURRED OVERLAY)
+    // =========================================================================
     function renderInspector() {
       if (state.selectedNodeIds.size === 1) {
         const nodeId = Array.from(state.selectedNodeIds)[0];
-        const node = state.nodes.find((n) => n.id === nodeId);
+        const node = state.nodes.find(n => n.id === nodeId);
         if (!node) return;
         const tpl = NODE_TYPES[node.type];
-        if (!node.resources) node.resources = [];
-
-        const isEditMode = state.inspectorMode === 'edit';
-
-        const schemaFieldsHtml = tpl.fieldSchema
-          .map((field) => {
-            const val = node.config[field.key] ?? '';
-            if (field.type === 'select') {
-              const opts = field.options
-                .map(
-                  (opt) =>
-                    `<option value="${escapeHtml(opt)}" ${val === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`
-                )
-                .join('');
-
-              let customInputHtml = '';
-              if (val === 'Custom...') {
-                let customKey = '';
-                let customVal = '';
-                if (node.type === 'questStart' && field.key === 'questType') {
-                  customKey = 'customQuestType';
-                  customVal = node.config.customQuestType || '';
-                } else if (node.type === 'dialogue' && field.key === 'reaction') {
-                  customKey = 'customReaction';
-                  customVal = node.config.customReaction || '';
-                } else if (node.type === 'objective' && field.key === 'objectiveType') {
-                  customKey = 'customObjectiveType';
-                  customVal = node.config.customObjectiveType || '';
-                } else if (node.type === 'condition' && field.key === 'conditionType') {
-                  customKey = 'customConditionType';
-                  customVal = node.config.customConditionType || '';
-                } else if (node.type === 'questReward' && field.key === 'outcome') {
-                  customKey = 'customOutcome';
-                  customVal = node.config.customOutcome || '';
-                }
-
-                if (customKey) {
-                  customInputHtml = `
-                    <div class="mt-2">
-                      <input
-                        type="text"
-                        data-custom-key="${customKey}"
-                        value="${escapeHtml(customVal)}"
-                        placeholder="Enter custom ${field.label.toLowerCase()}..."
-                        ${!isEditMode ? 'readonly' : ''}
-                        class="inspector-custom-field w-full bg-surface-950 border border-amber-500/60 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 focus:outline-none transition readonly:opacity-70"
-                      />
-                    </div>
-                  `;
-                }
-              }
-
-              return `
-                <div>
-                  <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">${field.label}</label>
-                  <select data-field-key="${field.key}" ${!isEditMode ? 'disabled' : ''} class="inspector-field w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none transition disabled:opacity-60 disabled:cursor-not-allowed">
-                    ${opts}
-                  </select>
-                  ${customInputHtml}
-                </div>
-              `;
-            }
-
-            if (field.type === 'textarea') {
-              return `
-                <div>
-                  <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">${field.label}</label>
-                  <textarea rows="3" data-field-key="${field.key}" ${!isEditMode ? 'readonly' : ''} class="inspector-field w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none transition resize-y readonly:opacity-70 readonly:cursor-default">${escapeHtml(val)}</textarea>
-                </div>
-              `;
-            }
-
-            return `
-              <div>
-                <label class="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">${field.label}</label>
-                <input
-                  type="${field.type}"
-                  data-field-key="${field.key}"
-                  value="${escapeHtml(val)}"
-                  ${!isEditMode ? 'readonly' : ''}
-                  class="inspector-field w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs font-mono text-slate-200 focus:outline-none transition readonly:opacity-70 readonly:cursor-default"
-                />
-              </div>
-            `;
-          })
-          .join('');
-
-        let extraSectionHtml = '';
-        if (node.type === 'playerChoice') {
-          if (!node.config.choices) {
-            node.config.choices = [
-              { id: 'choice_0', label: 'Accept the quest' },
-              { id: 'choice_1', label: 'Decline and walk away' }
-            ];
-          }
-
-          const choicesListHtml = node.config.choices.map((ch, idx) => {
-            return `
-              <div class="flex items-center gap-2 bg-surface-950 p-2 rounded-lg border border-surface-800">
-                <span class="text-xs font-mono text-amber-400 font-bold shrink-0 w-5">#${idx + 1}</span>
-                <input
-                  type="text"
-                  data-choice-idx="${idx}"
-                  value="${escapeHtml(ch.label)}"
-                  ${!isEditMode ? 'readonly' : ''}
-                  placeholder="Choice option text..."
-                  class="choice-input flex-1 bg-surface-900 border border-surface-700 focus:border-amber-500 rounded px-2.5 py-1 text-xs text-white focus:outline-none readonly:opacity-70"
-                />
-                ${isEditMode && node.config.choices.length > 2 ? `
-                  <button data-remove-choice-idx="${idx}" class="p-1.5 rounded hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition shrink-0" title="Remove Choice">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                  </button>
-                ` : ''}
-              </div>
-            `;
-          }).join('');
-
-          extraSectionHtml = `
-            <div class="pt-3 border-t border-surface-800 space-y-2.5">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Branching Choices</h3>
-                  <p class="text-[10px] text-slate-500">Minimum 2 choices required. Add as many as you need.</p>
-                </div>
-                ${isEditMode ? `
-                  <button id="add-choice-btn" class="flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-semibold transition">
-                    <i data-lucide="plus" class="w-3 h-3"></i>
-                    <span>Add Choice</span>
-                  </button>
-                ` : ''}
-              </div>
-              <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
-                ${choicesListHtml}
-              </div>
-            </div>
-          `;
-        }
-
-        const resourcesHtml = node.resources
-          .map((res, idx) => {
-            let badgeColor = 'text-sky-400 bg-sky-500/15 border-sky-500/30';
-            if (res.type === 'video') badgeColor = 'text-purple-400 bg-purple-500/15 border-purple-500/30';
-            if (res.type === 'audio') badgeColor = 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30';
-
-            return `
-              <div class="p-2.5 rounded-lg bg-surface-950 border border-surface-800 flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 min-w-0 cursor-pointer group flex-1" data-action="view-resource" data-res-idx="${idx}">
-                  <div class="w-6 h-6 rounded ${badgeColor} border flex items-center justify-center shrink-0 group-hover:scale-110 transition">
-                    <i data-lucide="${res.type === 'image' ? 'image' : res.type === 'video' ? 'video' : 'music'}" class="w-3.5 h-3.5"></i>
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <span class="text-xs font-medium text-slate-200 block truncate group-hover:text-sky-300 transition">${escapeHtml(res.name)}</span>
-                    <span class="text-[10px] font-mono uppercase text-slate-500">${res.type} (Click to View/Play)</span>
-                  </div>
-                </div>
-                <div class="flex items-center gap-1 shrink-0">
-                  <button data-action="view-resource" data-res-idx="${idx}" class="px-2 py-1 rounded bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 text-[10px] font-semibold transition flex items-center gap-1">
-                    <i data-lucide="eye" class="w-3 h-3"></i>
-                    <span>View</span>
-                  </button>
-                  ${isEditMode ? `
-                    <button data-remove-res-idx="${idx}" class="p-1 rounded hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition" title="Remove Resource">
-                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    </button>
-                  ` : ''}
-                </div>
-              </div>
-            `;
-          })
-          .join('');
 
         inspectorPanel.innerHTML = `
           <div class="space-y-4">
-            <!-- Header: Node Info & Edit/View Mode Toggle -->
-            <div class="flex items-center justify-between gap-2 p-3 rounded-xl bg-surface-850 border border-surface-700/80">
-              <div class="flex items-center gap-2.5 min-w-0">
-                <div class="w-8 h-8 rounded-lg ${tpl.badgeBg} ${tpl.badgeText} border ${tpl.borderAccent} flex items-center justify-center shrink-0">
-                  <i data-lucide="${tpl.icon}" class="w-4 h-4"></i>
-                </div>
-                <div class="min-w-0">
-                  <span class="text-[10px] font-mono uppercase tracking-wider ${tpl.badgeText}">${tpl.category}</span>
-                  <p class="text-xs font-mono text-slate-400 truncate">${node.id}</p>
-                </div>
-              </div>
-              <button id="toggle-edit-mode-btn" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg ${isEditMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-sky-500/20 text-sky-300 border border-sky-500/40'} text-xs font-semibold transition shadow-sm shrink-0" title="Toggle Edit / View Mode">
-                <i data-lucide="${isEditMode ? 'edit-3' : 'eye'}" class="w-3.5 h-3.5"></i>
-                <span>${isEditMode ? 'Editing' : 'Viewing'}</span>
-              </button>
-            </div>
-
             <div>
               <label class="block text-[11px] font-semibold text-slate-300 mb-1">Node Title</label>
-              <input
-                id="inspector-title-input"
-                type="text"
-                value="${escapeHtml(node.title)}"
-                ${!isEditMode ? 'readonly' : ''}
-                class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none transition readonly:opacity-70 readonly:cursor-default"
-              />
+              <input id="inspector-title" type="text" value="${escapeHtml(node.title)}" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
             </div>
-
-            <div class="pt-3 border-t border-surface-800 space-y-3">
-              <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Node Properties</h3>
-              ${schemaFieldsHtml}
-            </div>
-
-            ${extraSectionHtml}
-
-            <!-- Media Resources Manager Section -->
-            <div class="pt-3 border-t border-surface-800 space-y-2.5">
-              <div class="flex items-center justify-between">
-                <h3 class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Attached Media Resources</h3>
-                ${isEditMode ? `
-                  <button id="add-resource-btn" class="flex items-center gap-1 px-2 py-1 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-[11px] font-semibold transition">
-                    <i data-lucide="plus" class="w-3 h-3"></i>
-                    <span>Add File</span>
-                  </button>
-                  <input type="file" id="node-file-input" accept="image/*,video/*,audio/*" class="hidden" />
-                ` : ''}
-              </div>
-              <div class="space-y-2">
-                ${resourcesHtml || `<p class="text-[11px] text-slate-500 italic">No media assets attached. ${isEditMode ? 'Click "Add File" to attach image, video, or music.' : ''}</p>`}
-              </div>
-            </div>
-
             <div class="pt-3 border-t border-surface-800">
               <label class="block text-[11px] font-semibold text-slate-300 mb-1">Designer Notes</label>
-              <textarea
-                id="inspector-notes-input"
-                rows="2"
-                placeholder="Voice direction or stage notes..."
-                ${!isEditMode ? 'readonly' : ''}
-                class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 placeholder-slate-600 focus:outline-none transition resize-y readonly:opacity-70 readonly:cursor-default"
-              >${escapeHtml(node.notes)}</textarea>
+              <textarea id="inspector-notes" rows="2" class="w-full bg-surface-950 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-300">${escapeHtml(node.notes)}</textarea>
             </div>
-
-            ${isEditMode ? `
-              <div class="pt-3 border-t border-surface-800 flex gap-2">
-                <button id="inspector-duplicate-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-200 transition">
-                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                  <span>Duplicate</span>
-                </button>
-                <button id="inspector-delete-btn" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-medium transition">
-                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                  <span>Delete</span>
-                </button>
-              </div>
-            ` : ''}
+            <button id="inspector-delete-btn" class="w-full py-2 bg-rose-500/15 text-rose-400 border border-rose-500/30 rounded-lg text-xs font-medium">Delete Node</button>
           </div>
         `;
 
-        document.getElementById('toggle-edit-mode-btn').addEventListener('click', () => {
-          state.inspectorMode = state.inspectorMode === 'edit' ? 'view' : 'edit';
-          renderInspector();
-          showToast(`Switched inspector to ${state.inspectorMode.toUpperCase()} mode`, 'sky');
+        document.getElementById('inspector-title').addEventListener('input', e => {
+          node.title = e.target.value;
+          renderNodes();
+          saveProjectsToStorage();
         });
-
-        if (isEditMode) {
-          document.getElementById('inspector-title-input').addEventListener('input', (e) => {
-            node.title = e.target.value;
-            const titleEl = document.querySelector(
-              `.flow-node[data-node-id="${node.id}"] .node-title-text`
-            );
-            if (titleEl) titleEl.textContent = node.title;
-            saveProjectsToStorage();
-          });
-
-          document.querySelectorAll('.inspector-field').forEach((input) => {
-            const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
-            input.addEventListener(eventName, (e) => {
-              const key = e.target.dataset.fieldKey;
-              node.config[key] = e.target.value;
-              
-              if (input.tagName === 'SELECT' && e.target.value === 'Custom...') {
-                if (node.type === 'questStart' && key === 'questType') node.config.customQuestType = node.config.customQuestType || 'My Custom Quest';
-                if (node.type === 'dialogue' && key === 'reaction') node.config.customReaction = node.config.customReaction || 'My Custom Reaction';
-                if (node.type === 'objective' && key === 'objectiveType') node.config.customObjectiveType = node.config.customObjectiveType || 'My Custom Objective';
-                if (node.type === 'condition' && key === 'conditionType') node.config.customConditionType = node.config.customConditionType || 'My Custom Condition';
-                if (node.type === 'questReward' && key === 'outcome') node.config.customOutcome = node.config.customOutcome || 'My Custom Outcome';
-                renderInspector();
-              }
-
-              const summaryBox = document.querySelector(
-                `.flow-node[data-node-id="${node.id}"] .node-summary-box`
-              );
-              if (summaryBox) summaryBox.innerHTML = getNodeSummaryHtml(node);
-              saveProjectsToStorage();
-            });
-          });
-
-          document.querySelectorAll('.inspector-custom-field').forEach((input) => {
-            input.addEventListener('input', (e) => {
-              const key = e.target.dataset.customKey;
-              node.config[key] = e.target.value;
-              const summaryBox = document.querySelector(
-                `.flow-node[data-node-id="${node.id}"] .node-summary-box`
-              );
-              if (summaryBox) summaryBox.innerHTML = getNodeSummaryHtml(node);
-              saveProjectsToStorage();
-            });
-          });
-
-          document.querySelectorAll('.choice-input').forEach((input) => {
-            input.addEventListener('input', (e) => {
-              const idx = parseInt(e.target.dataset.choiceIdx, 10);
-              if (node.config.choices && node.config.choices[idx]) {
-                node.config.choices[idx].label = e.target.value;
-                renderNodes();
-                saveProjectsToStorage();
-              }
-            });
-          });
-
-          document.getElementById('add-choice-btn')?.addEventListener('click', () => {
-            if (!node.config.choices) node.config.choices = [];
-            const newChoiceId = `choice_${node.config.choices.length}`;
-            node.config.choices.push({ id: newChoiceId, label: `New Choice ${node.config.choices.length + 1}` });
-            renderNodes();
-            renderInspector();
-            saveProjectsToStorage();
-            showToast('Added choice branch', 'emerald');
-          });
-
-          inspectorPanel.querySelectorAll('[data-remove-choice-idx]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-              const idx = parseInt(btn.dataset.removeChoiceIdx, 10);
-              if (node.config.choices.length <= 2) {
-                showToast('Player choice node requires a minimum of 2 choices', 'amber');
-                return;
-              }
-              const removedChoice = node.config.choices.splice(idx, 1)[0];
-              state.edges = state.edges.filter(
-                (e) => !(e.sourceNodeId === node.id && e.sourcePortId === removedChoice.id)
-              );
-              renderNodes();
-              renderEdges();
-              renderInspector();
-              saveProjectsToStorage();
-              showToast('Choice branch removed', 'sky');
-            });
-          });
-
-          document.getElementById('inspector-notes-input').addEventListener('input', (e) => {
-            node.notes = e.target.value;
-            saveProjectsToStorage();
-          });
-
-          const nodeFileInput = document.getElementById('node-file-input');
-          document.getElementById('add-resource-btn')?.addEventListener('click', () => {
-            nodeFileInput.click();
-          });
-
-          nodeFileInput?.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            let type = 'image';
-            if (file.type.startsWith('video/')) type = 'video';
-            else if (file.type.startsWith('audio/')) type = 'audio';
-
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-              node.resources.push({
-                id: generateId('res'),
-                name: file.name,
-                type: type,
-                data: evt.target.result
-              });
-              renderNodes();
-              renderInspector();
-              saveProjectsToStorage();
-              showToast(`Attached ${type} "${file.name}"`, 'emerald');
-            };
-            reader.readAsDataURL(file);
-            nodeFileInput.value = '';
-          });
-
-          inspectorPanel.querySelectorAll('[data-remove-res-idx]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-              const idx = parseInt(btn.dataset.removeResIdx, 10);
-              node.resources.splice(idx, 1);
-              renderNodes();
-              renderInspector();
-              saveProjectsToStorage();
-              showToast('Media resource removed', 'sky');
-            });
-          });
-
-          document.getElementById('inspector-duplicate-btn').addEventListener('click', () => {
-            addNode(node.type, node.x + 48, node.y + 48, {
-              title: `${node.title} (Copy)`,
-              notes: node.notes,
-              resources: JSON.parse(JSON.stringify(node.resources)),
-              config: JSON.parse(JSON.stringify(node.config))
-            });
-            showToast('Node duplicated', 'sky');
-          });
-
-          document.getElementById('inspector-delete-btn').addEventListener('click', () => {
-            deleteNode(node.id);
-          });
-        }
-
-        inspectorPanel.querySelectorAll('[data-action="view-resource"]').forEach((el) => {
-          el.addEventListener('click', () => {
-            const idx = parseInt(el.dataset.resIdx, 10);
-            const res = node.resources[idx];
-            if (res) openResourceViewer(res);
-          });
+        document.getElementById('inspector-notes').addEventListener('input', e => {
+          node.notes = e.target.value;
+          saveProjectsToStorage();
         });
-
-        lucide.createIcons();
+        document.getElementById('inspector-delete-btn').addEventListener('click', () => deleteNode(node.id));
         return;
       }
+      inspectorPanel.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">Select any node to inspect properties.</div>`;
+    }
 
-      inspectorPanel.innerHTML = `
-        <div class="h-full flex flex-col items-center justify-center text-center py-10 px-3">
-          <div class="w-10 h-10 rounded-xl bg-surface-850 border border-surface-700 flex items-center justify-center text-slate-500 mb-3">
-            <i data-lucide="mouse-pointer" class="w-5 h-5"></i>
+    function startPlaytest() {
+      if (state.nodes.length === 0) return;
+      const startNode = state.nodes.find(n => n.type === 'questStart') || state.nodes[0];
+      state.playtest = { active: true, currentNodeId: startNode.id, lastEdgeId: null, history: [], finished: false };
+
+      canvasWorld.classList.add('playtest-blur');
+      paletteSidebar.classList.add('playtest-blur');
+      inspectorSidebar.classList.add('playtest-blur');
+      centeredPlaytestOverlay.classList.remove('hidden');
+      renderPlaytestPanel();
+    }
+
+    function stopPlaytest() {
+      state.playtest.active = false;
+      canvasWorld.classList.remove('playtest-blur');
+      paletteSidebar.classList.remove('playtest-blur');
+      inspectorSidebar.classList.remove('playtest-blur');
+      centeredPlaytestOverlay.classList.add('hidden');
+      renderEdges();
+    }
+
+    function renderPlaytestPanel() {
+      const currentNode = state.nodes.find(n => n.id === state.playtest.currentNodeId);
+      if (!currentNode) { stopPlaytest(); return; }
+      const tpl = NODE_TYPES[currentNode.type];
+
+      centeredPlaytestCard.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-surface-800">
+            <span class="text-xs font-bold text-white">${escapeHtml(currentNode.title)}</span>
+            <button id="pt-stop-btn" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 text-xs font-medium">End Playtest</button>
           </div>
-          <p class="text-xs font-medium text-slate-300">No Node Selected</p>
-          <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Select any quest node to inspect properties, attach images, videos, or music files.</p>
+          <div class="p-4 bg-surface-950 rounded-xl border border-surface-800">
+            <p class="text-xs text-slate-200">${escapeHtml(currentNode.config.dialogueText || currentNode.config.objectiveType || currentNode.title)}</p>
+          </div>
+          <button id="pt-next-btn" class="w-full py-2.5 bg-amber-500 text-slate-950 text-xs font-bold rounded-xl">Continue</button>
         </div>
       `;
-      lucide.createIcons();
+      document.getElementById('pt-stop-btn').addEventListener('click', stopPlaytest);
+      document.getElementById('pt-next-btn').addEventListener('click', () => {
+        const edge = state.edges.find(e => e.sourceNodeId === currentNode.id);
+        if (edge) {
+          state.playtest.currentNodeId = edge.targetNodeId;
+          state.playtest.lastEdgeId = edge.id;
+          renderPlaytestPanel();
+        } else {
+          alert('Quest Completed!');
+          stopPlaytest();
+        }
+      });
     }
 
     function updateStats() {
@@ -3076,440 +2021,18 @@
       statsEdges.textContent = `Connections: ${state.edges.length}`;
     }
 
-    // =========================================================================
-    // 16. PLAYTEST SIMULATOR (BLURRED CANVAS & CENTERED MODAL OVERLAY)
-    // =========================================================================
-    function startPlaytest() {
-      if (state.nodes.length === 0) {
-        showToast('Add quest nodes before playtesting', 'amber');
-        return;
-      }
-
-      const targetIds = new Set(state.edges.map((e) => e.targetNodeId));
-      const startNode =
-        state.nodes.find((n) => n.type === 'questStart') ||
-        state.nodes.find((n) => !targetIds.has(n.id)) ||
-        state.nodes[0];
-
-      state.playtest = {
-        active: true,
-        currentNodeId: startNode.id,
-        lastEdgeId: null,
-        history: [],
-        rewards: { xp: 0, gold: 0, items: [] },
-        finished: false
-      };
-
-      recordPlaytestVisit(startNode);
-      
-      // Apply blur to canvas and sidebars
-      canvasWorld.classList.add('playtest-blur');
-      paletteSidebar.classList.add('playtest-blur');
-      inspectorSidebar.classList.add('playtest-blur');
-
-      // Show centered playtest modal overlay
-      centeredPlaytestOverlay.classList.remove('hidden');
-      renderPlaytestPanel();
-
-      updateSelectionVisuals();
-      renderEdges();
-      centerOnNode(startNode);
-      showToast('Quest Playtest Started (Canvas Blurred)', 'amber');
-    }
-
-    function stopPlaytest() {
-      state.playtest.active = false;
-      state.playtest.currentNodeId = null;
-      state.playtest.lastEdgeId = null;
-
-      // Remove blur from canvas and sidebars
-      canvasWorld.classList.remove('playtest-blur');
-      paletteSidebar.classList.remove('playtest-blur');
-      inspectorSidebar.classList.remove('playtest-blur');
-
-      // Hide centered modal overlay
-      centeredPlaytestOverlay.classList.add('hidden');
-
-      updateSelectionVisuals();
-      renderEdges();
-      if (state.rightTab === 'playtest') renderPlaytestPanel();
-    }
-
-    function recordPlaytestVisit(node, actionTaken = null) {
-      if (actionTaken && state.playtest.history.length > 0) {
-        state.playtest.history[state.playtest.history.length - 1].action = actionTaken;
-      }
-      state.playtest.history.push({
-        nodeId: node.id,
-        type: node.type,
-        title: node.title,
-        action: null
-      });
-
-      if (node.type === 'questReward') {
-        state.playtest.finished = true;
-      }
-    }
-
-    function advancePlaytestPort(sourceNodeId, sourcePortId, actionLabel) {
-      const edge = state.edges.find(
-        (e) => e.sourceNodeId === sourceNodeId && e.sourcePortId === sourcePortId
-      );
-
-      if (!edge) {
-        state.playtest.finished = true;
-        if (state.playtest.history.length > 0) {
-          state.playtest.history[state.playtest.history.length - 1].action =
-            `${actionLabel} (Unlinked End)`;
-        }
-        renderPlaytestPanel();
-        return;
-      }
-
-      const nextNode = state.nodes.find((n) => n.id === edge.targetNodeId);
-      if (!nextNode) return;
-
-      state.playtest.lastEdgeId = edge.id;
-      state.playtest.currentNodeId = nextNode.id;
-      recordPlaytestVisit(nextNode, actionLabel);
-
-      updateSelectionVisuals();
-      renderEdges();
-      renderPlaytestPanel();
-      centerOnNode(nextNode);
-    }
-
-    function centerOnNode(node) {
-      const rect = canvasContainer.getBoundingClientRect();
-      const targetX = rect.width / 2 - (node.x + 145) * state.viewport.zoom;
-      const targetY = rect.height / 2 - (node.y + 90) * state.viewport.zoom;
-      state.viewport.x = targetX;
-      state.viewport.y = targetY;
-      applyViewportTransform();
-    }
-
-    function renderPlaytestPanel() {
-      const targetContainer = state.playtest.active ? centeredPlaytestCard : playtestPanel;
-
-      if (!state.playtest.active) {
-        playtestPanel.innerHTML = `
-          <div class="h-full flex flex-col items-center justify-center text-center py-10 px-3">
-            <div class="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-3">
-              <i data-lucide="gamepad-2" class="w-5 h-5"></i>
-            </div>
-            <p class="text-xs font-semibold text-slate-200">Quest Playtest Simulator</p>
-            <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">Step through your quest narrative, test dialogue choices, and experience attached media assets with a blurred background canvas.</p>
-            <button id="panel-start-playtest-btn" class="mt-5 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shadow-lg shadow-amber-500/20">
-              <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
-              <span>Start Playtest</span>
-            </button>
-          </div>
-        `;
-        document.getElementById('panel-start-playtest-btn')?.addEventListener('click', startPlaytest);
-        lucide.createIcons();
-        return;
-      }
-
-      const currentNode = state.nodes.find((n) => n.id === state.playtest.currentNodeId);
-      if (!currentNode) {
-        stopPlaytest();
-        return;
-      }
-
-      const tpl = NODE_TYPES[currentNode.type];
-      const c = currentNode.config;
-
-      let mediaPreviewHtml = '';
-      if (currentNode.resources && currentNode.resources.length > 0) {
-        const mediaItems = currentNode.resources.map((res) => {
-          if (res.type === 'image') {
-            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><img src="${res.data}" alt="${escapeHtml(res.name)}" class="w-full max-h-48 object-cover" /><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
-          }
-          if (res.type === 'video') {
-            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><video controls src="${res.data}" class="w-full max-h-48 object-cover"></video><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
-          }
-          if (res.type === 'audio') {
-            return `<div class="p-2 rounded-lg border border-surface-700 bg-surface-950 space-y-1"><audio controls src="${res.data}" class="w-full h-8"></audio><span class="block text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
-          }
-          return '';
-        }).join('');
-
-        mediaPreviewHtml = `<div class="space-y-2 pt-2 border-t border-surface-800">${mediaItems}</div>`;
-      }
-
-      let interactiveStepHtml = '';
-      if (currentNode.type === 'questStart') {
-        const qType = c.questType === 'Custom...' ? (c.customQuestType || 'Custom') : c.questType;
-        interactiveStepHtml = `
-          <div class="space-y-3">
-            <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5">
-              <div class="flex items-center justify-between text-xs font-mono">
-                <span class="text-emerald-400 font-semibold">${escapeHtml(qType)}</span>
-                <span class="text-slate-300">Req Level ${escapeHtml(c.minLevel)}</span>
-              </div>
-              <p class="text-xs font-mono text-white">${escapeHtml(c.questId)}</p>
-            </div>
-            ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-500/20">
-              <span>Begin Quest</span>
-              <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </button>
-          </div>
-        `;
-      } else if (currentNode.type === 'dialogue') {
-        const reaction = c.reaction === 'Custom...' ? (c.customReaction || 'Custom') : c.reaction;
-        interactiveStepHtml = `
-          <div class="space-y-3">
-            <div class="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-indigo-300">${escapeHtml(c.npcName)}</span>
-                <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-200 text-[10px] font-mono">${escapeHtml(reaction)}</span>
-              </div>
-              <p class="text-sm text-slate-100 leading-relaxed italic">"${escapeHtml(c.dialogueText)}"</p>
-            </div>
-            ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/20">
-              <span>Continue Dialogue</span>
-              <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </button>
-          </div>
-        `;
-      } else if (currentNode.type === 'playerChoice') {
-        const choices = c.choices || [];
-        const choiceButtonsHtml = choices.map((ch, idx) => `
-          <button data-choice-id="${ch.id}" data-choice-label="${escapeHtml(ch.label)}" class="pt-choice-btn w-full text-left p-3 rounded-xl bg-surface-850 hover:bg-amber-500/15 border border-surface-700 hover:border-amber-500/50 transition group shadow-sm">
-            <span class="text-[10px] font-mono uppercase text-amber-400 block mb-0.5">Choice ${idx + 1}</span>
-            <span class="text-xs font-medium text-white group-hover:text-amber-200">${escapeHtml(ch.label)}</span>
-          </button>
-        `).join('');
-
-        interactiveStepHtml = `
-          <div class="space-y-3">
-            ${mediaPreviewHtml}
-            <p class="text-xs text-slate-400 font-medium">Choose player response (${choices.length} options available):</p>
-            <div class="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-              ${choiceButtonsHtml}
-            </div>
-          </div>
-        `;
-      } else if (currentNode.type === 'objective') {
-        const objType = c.objectiveType === 'Custom...' ? (c.customObjectiveType || 'Custom') : c.objectiveType;
-        interactiveStepHtml = `
-          <div class="space-y-3">
-            <div class="p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-2">
-              <span class="text-[10px] font-mono uppercase tracking-wider text-cyan-400">${escapeHtml(objType)}</span>
-              <div class="flex items-center justify-between text-xs">
-                <span class="font-semibold text-white">${escapeHtml(c.targetName)}</span>
-                <span class="font-mono text-cyan-300">Required: ${escapeHtml(c.requiredCount)}</span>
-              </div>
-            </div>
-            ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-lg shadow-cyan-500/20">
-              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-              <span>Simulate Objective Complete</span>
-            </button>
-          </div>
-        `;
-      } else if (currentNode.type === 'condition') {
-        const condType = c.conditionType === 'Custom...' ? (c.customConditionType || 'Custom') : c.conditionType;
-        interactiveStepHtml = `
-          <div class="space-y-3">
-            <div class="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1.5">
-              <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400">Evaluate ${escapeHtml(condType)}</span>
-              <p class="text-xs font-mono text-white">${escapeHtml(c.conditionValue)}</p>
-            </div>
-            ${mediaPreviewHtml}
-            <div class="grid grid-cols-2 gap-2.5 pt-1">
-              <button id="pt-cond-true-btn" class="py-2.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">True ✓</button>
-              <button id="pt-cond-false-btn" class="py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold transition">False ✕</button>
-            </div>
-          </div>
-        `;
-      } else if (currentNode.type === 'questReward') {
-        const outcomeType = c.outcome === 'Custom...' ? (c.customOutcome || 'Custom') : c.outcome;
-        interactiveStepHtml = `
-          <div class="space-y-3">
-            <div class="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/40 space-y-2.5">
-              <div class="flex items-center gap-2">
-                <i data-lucide="trophy" class="w-5 h-5 text-amber-400"></i>
-                <span class="text-sm font-bold text-white">${escapeHtml(outcomeType)}</span>
-              </div>
-              <div class="grid grid-cols-2 gap-2 pt-1 text-xs font-mono">
-                <div class="bg-surface-950/90 rounded p-2 text-emerald-400">+${escapeHtml(c.xpReward)} XP</div>
-                <div class="bg-surface-950/90 rounded p-2 text-amber-400">+${escapeHtml(c.goldReward)} Gold</div>
-              </div>
-            </div>
-            ${mediaPreviewHtml}
-          </div>
-        `;
-      }
-
-      targetContainer.innerHTML = `
-        <div class="space-y-4">
-          <div class="flex items-center justify-between pb-3 border-b border-surface-800">
-            <div class="flex items-center gap-2">
-              <div class="w-7 h-7 rounded-lg ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center">
-                <i data-lucide="${tpl.icon}" class="w-4 h-4"></i>
-              </div>
-              <div>
-                <span class="text-xs font-bold text-white block">${escapeHtml(currentNode.title)}</span>
-                <span class="text-[10px] font-mono ${tpl.badgeText}">${tpl.category}</span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button id="pt-restart-btn" class="px-2.5 py-1 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-300 transition">Restart</button>
-              <button id="pt-stop-btn" class="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-xs font-medium text-rose-400 transition">End Playtest</button>
-            </div>
-          </div>
-
-          <div class="space-y-3">
-            ${interactiveStepHtml}
-          </div>
-        </div>
-      `;
-
-      document.getElementById('pt-restart-btn')?.addEventListener('click', startPlaytest);
-      document.getElementById('pt-stop-btn')?.addEventListener('click', stopPlaytest);
-      document.getElementById('pt-next-btn')?.addEventListener('click', () => {
-        const outPort = tpl.outputs[0]?.id;
-        if (outPort) advancePlaytestPort(currentNode.id, outPort, 'Continued');
-      });
-
-      targetContainer.querySelectorAll('.pt-choice-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const choiceId = btn.dataset.choiceId;
-          const choiceLabel = btn.dataset.choiceLabel;
-          advancePlaytestPort(currentNode.id, choiceId, `Choice: "${choiceLabel}"`);
-        });
-      });
-
-      document.getElementById('pt-cond-true-btn')?.addEventListener('click', () => {
-        advancePlaytestPort(currentNode.id, 'out_true', 'Condition: True');
-      });
-      document.getElementById('pt-cond-false-btn')?.addEventListener('click', () => {
-        advancePlaytestPort(currentNode.id, 'out_false', 'Condition: False');
-      });
-
-      lucide.createIcons();
-    }
-
-    function fitCanvasView() {
-      if (state.nodes.length === 0) {
-        state.viewport = { x: 48, y: 48, zoom: 1 };
-        applyViewportTransform();
-        return;
-      }
-
-      const rect = canvasContainer.getBoundingClientRect();
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-      state.nodes.forEach((n) => {
-        minX = Math.min(minX, n.x);
-        minY = Math.min(minY, n.y);
-        maxX = Math.max(maxX, n.x + 290);
-        maxY = Math.max(maxY, n.y + 190);
-      });
-
-      const graphW = maxX - minX;
-      const graphH = maxY - minY;
-      const padding = 72;
-
-      const scaleX = (rect.width - padding * 2) / graphW;
-      const scaleY = (rect.height - padding * 2) / graphH;
-      const zoom = Math.min(1, Math.max(0.4, Math.min(scaleX, scaleY)));
-
-      state.viewport.zoom = zoom;
-      state.viewport.x = (rect.width - graphW * zoom) / 2 - minX * zoom;
-      state.viewport.y = (rect.height - graphH * zoom) / 2 - minY * zoom;
-
-      applyViewportTransform();
-      renderEdges();
-    }
-
-    // =========================================================================
-    // 17. JSON EXPORT & INITIALIZATION
-    // =========================================================================
-    const jsonModal = document.getElementById('json-modal');
-    const jsonTextarea = document.getElementById('json-textarea');
-    const jsonModalTitle = document.getElementById('json-modal-title');
-    const jsonModalSubtitle = document.getElementById('json-modal-subtitle');
-    const jsonModalActions = document.getElementById('json-modal-actions');
-
-    function openExportModal() {
-      jsonModalTitle.textContent = 'Export Quest JSON';
-      jsonModalSubtitle.textContent = 'Clean game-engine ready quest structure';
-      jsonTextarea.readOnly = true;
-
-      const startNode = state.nodes.find((n) => n.type === 'questStart');
-      const payload = {
-        schemaVersion: '2.1.0',
-        engine: 'QuestForge',
-        questMetadata: startNode ? { questId: startNode.config.questId, title: startNode.title } : {},
-        nodes: state.nodes,
-        connections: state.edges
-      };
-
-      jsonTextarea.value = JSON.stringify(payload, null, 2);
-      jsonModalActions.innerHTML = `
-        <button id="json-copy-btn" class="px-3.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-200 border border-surface-700 transition">Copy to Clipboard</button>
-      `;
-      document.getElementById('json-copy-btn').addEventListener('click', () => {
-        jsonTextarea.select();
-        document.execCommand('copy');
-        showToast('JSON copied to clipboard', 'sky');
-      });
-
-      jsonModal.classList.remove('hidden');
-      lucide.createIcons();
-    }
-
-    document.getElementById('export-json-btn').addEventListener('click', openExportModal);
-    document.getElementById('close-json-modal-btn').addEventListener('click', () => jsonModal.classList.add('hidden'));
-
-    paletteSearch.addEventListener('input', (e) => renderPalette(e.target.value));
-    explorerSearch.addEventListener('input', (e) => renderProjectManager(e.target.value));
-
+    // Toolbar Event Listeners
     document.getElementById('playtest-btn').addEventListener('click', startPlaytest);
     tabInspectorBtn.addEventListener('click', () => switchRightTab('inspector'));
     tabPlaytestBtn.addEventListener('click', () => switchRightTab('playtest'));
     document.getElementById('close-quest-btn').addEventListener('click', openProjectManagerModal);
-    document.getElementById('close-explorer-modal-btn').addEventListener('click', () => {
-      if (state.activeProjectId && state.activeQuestId) startupModal.classList.add('hidden');
-    });
-
-    const snapToggleBtn = document.getElementById('snap-toggle-btn');
-    snapToggleBtn.addEventListener('click', () => {
-      state.snapToGrid = !state.snapToGrid;
-      snapToggleBtn.querySelector('span').textContent = `Snap: ${state.snapToGrid ? 'ON' : 'OFF'}`;
-      showToast(`Grid snapping ${state.snapToGrid ? 'enabled' : 'disabled'}`, 'sky');
-    });
-
-    deleteSelectedBtn.addEventListener('click', () => {
-      if (state.selectedNodeIds.size > 0) deleteSelectedNodes();
-      else if (state.selectedEdgeId) deleteEdge(state.selectedEdgeId);
-    });
-
-    document.getElementById('zoom-in-btn').addEventListener('click', () => {
-      state.viewport.zoom = Math.min(2.2, state.viewport.zoom + 0.15);
-      applyViewportTransform();
-    });
-    document.getElementById('zoom-out-btn').addEventListener('click', () => {
-      state.viewport.zoom = Math.max(0.35, state.viewport.zoom - 0.15);
-      applyViewportTransform();
-    });
-    document.getElementById('fit-view-btn').addEventListener('click', fitCanvasView);
-
-    window.addEventListener('resize', () => renderEdges());
+    document.getElementById('close-explorer-modal-btn').addEventListener('click', () => startupModal.classList.add('hidden'));
+    deleteSelectedBtn.addEventListener('click', deleteSelectedNodes);
+    paletteSearch.addEventListener('input', e => renderPalette(e.target.value));
+    explorerSearch.addEventListener('input', e => renderProjectManager(e.target.value));
 
     window.addEventListener('DOMContentLoaded', () => {
-      loadProjectsFromStorage();
-      renderPalette();
-
-      if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
-        loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
-      }
-
-      openProjectManagerModal();
+      initGoogleAuth();
       lucide.createIcons();
     });
   </script>
