@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Quest Flow Studio — Google Drive & Cloud Sync</title>
+  <title>Quest Flow Studio — Google Drive Cloud Sync</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Inter & JetBrains Mono Fonts -->
@@ -301,7 +301,7 @@
       </div>
     </div>
 
-    <!-- Center: Playtest, Save ZIP, Google Drive, Project Manager, Snap & JSON Actions -->
+    <!-- Center: Playtest, Save ZIP, Sync To Drive, Sync From Drive, Project Manager, Snap -->
     <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1">
       <button id="playtest-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition shadow-sm shrink-0">
         <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
@@ -313,9 +313,14 @@
         <span class="hidden sm:inline">Save ZIP</span>
       </button>
 
-      <button id="gdrive-sync-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-semibold transition shrink-0" title="Sync Project to Google Drive">
+      <button id="sync-to-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-semibold transition shrink-0" title="Upload & Backup Projects TO Google Drive">
         <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">Drive Sync</span>
+        <span class="hidden sm:inline">Sync To Drive</span>
+      </button>
+
+      <button id="sync-from-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold transition shrink-0" title="Download & Restore Projects FROM Google Drive">
+        <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
+        <span class="hidden sm:inline">Sync From Drive</span>
       </button>
 
       <button id="close-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-surface-700 hover:border-amber-500/40 text-xs font-medium transition shrink-0" title="Open Project Manager">
@@ -500,16 +505,20 @@
       </div>
 
       <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div class="relative flex-1 min-w-[200px]">
+        <div class="relative flex-1 min-w-[180px]">
           <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
-          <input id="explorer-search" type="text" placeholder="Search projects and quests..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition" />
+          <input id="explorer-search" type="text" placeholder="Search projects..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition" />
         </div>
-        <div class="flex items-center gap-2">
-          <button id="modal-gdrive-sync-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-xs font-semibold text-blue-300 transition shrink-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <button id="modal-sync-to-drive-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-xs font-semibold text-blue-300 transition shrink-0" title="Upload Projects TO Google Drive">
             <i data-lucide="cloud-upload" class="w-4 h-4"></i>
-            <span>Google Drive Sync</span>
+            <span>Sync To Drive</span>
           </button>
-          <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0">
+          <button id="modal-sync-from-drive-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0" title="Restore Projects FROM Google Drive">
+            <i data-lucide="cloud-download" class="w-4 h-4"></i>
+            <span>Sync From Drive</span>
+          </button>
+          <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-semibold text-emerald-300 transition shrink-0">
             <i data-lucide="file-plus" class="w-4 h-4"></i>
             <span>Blank Project</span>
           </button>
@@ -558,7 +567,7 @@
 
   <script>
     /**
-     * Quest Flow Studio — Google Login, Auto-Load Cloud Drive Backup, Logout & Playtest Simulator
+     * Quest Flow Studio — Google Login, Sync To/From Google Drive, Logout & Playtest
      */
 
     // Google API Client & Auth Configuration
@@ -750,7 +759,7 @@
     }
 
     // =========================================================================
-    // 2. GOOGLE LOGIN, AUTO-LOAD FROM DRIVE & LOGOUT INTEGRATION
+    // 2. GOOGLE LOGIN, SYNC TO/FROM DRIVE & LOGOUT INTEGRATION
     // =========================================================================
     function initGoogleAuth() {
       try {
@@ -764,7 +773,8 @@
               document.getElementById('auth-gate-modal').classList.add('hidden');
               showToast('Successfully signed in with Google!', 'emerald');
               
-              await loadProjectsFromGoogleDrive();
+              // Automatically sync FROM Google Drive on login
+              await syncFromGoogleDrive(true);
             }
           }
         });
@@ -801,10 +811,17 @@
       }
     });
 
-    async function loadProjectsFromGoogleDrive() {
-      if (!googleAuthToken) return;
+    // SYNC FROM GOOGLE DRIVE (Download / Restore Backup FROM cloud)
+    async function syncFromGoogleDrive(isAutomatic = false) {
+      if (!googleAuthToken) {
+        if (!isAutomatic) {
+          showToast('Please sign in with Google first!', 'amber');
+          handleGoogleLogin();
+        }
+        return;
+      }
       try {
-        showToast('Checking Google Drive for existing cloud backup...', 'sky');
+        showToast('Syncing FROM Google Drive (Downloading cloud backup)...', 'sky');
         const query = encodeURIComponent("name = 'QuestFlowStudio_Backup.zip' and trashed = false");
         const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, {
           headers: { 'Authorization': 'Bearer ' + googleAuthToken }
@@ -826,16 +843,22 @@
               loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
             }
             renderProjectManager();
-            showToast('Successfully loaded projects from Google Drive!', 'emerald');
+            showToast('Successfully synced FROM Google Drive!', 'emerald');
           }
         } else {
-          showToast('No prior cloud backup found. Using local workspace.', 'amber');
+          if (!isAutomatic) {
+            showToast('No prior backup found in Google Drive.', 'amber');
+          }
         }
       } catch (err) {
-        console.log('Auto-load from Drive note:', err);
+        console.log('Sync From Drive note:', err);
+        if (!isAutomatic) {
+          showToast(`Sync From Drive Error: ${err.message}`, 'rose');
+        }
       }
     }
 
+    // SYNC TO GOOGLE DRIVE (Upload & Backup TO cloud)
     async function syncToGoogleDrive() {
       if (!googleAuthToken) {
         showToast('Please sign in with Google first!', 'amber');
@@ -843,7 +866,7 @@
         return;
       }
 
-      showToast('Packaging project archive for Google Drive...', 'amber');
+      showToast('Syncing TO Google Drive (Uploading backup)...', 'amber');
       
       const zip = new JSZip();
       const projectData = JSON.stringify(PROJECTS, null, 2);
@@ -867,18 +890,20 @@
         });
 
         if (response.ok) {
-          showToast('Successfully synced backup to Google Drive!', 'emerald');
+          showToast('Successfully synced TO Google Drive!', 'emerald');
         } else {
           throw new Error('Drive API upload failed.');
         }
       } catch (err) {
-        showToast(`Google Drive Sync Error: ${err.message}`, 'rose');
+        showToast(`Sync To Drive Error: ${err.message}`, 'rose');
       }
     }
 
     document.getElementById('gate-google-login-btn').addEventListener('click', handleGoogleLogin);
-    document.getElementById('gdrive-sync-btn').addEventListener('click', syncToGoogleDrive);
-    document.getElementById('modal-gdrive-sync-btn').addEventListener('click', syncToGoogleDrive);
+    document.getElementById('sync-to-drive-btn').addEventListener('click', syncToGoogleDrive);
+    document.getElementById('sync-from-drive-btn').addEventListener('click', () => syncFromGoogleDrive(false));
+    document.getElementById('modal-sync-to-drive-btn').addEventListener('click', syncToGoogleDrive);
+    document.getElementById('modal-sync-from-drive-btn').addEventListener('click', () => syncFromGoogleDrive(false));
 
     // =========================================================================
     // 3. APPLICATION STATE
