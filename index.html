@@ -14,6 +14,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- JSZip for ZIP Archive Export & Import -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Google Identity Services (GIS) & API client -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
 
   <script>
     tailwind.config = {
@@ -82,6 +85,15 @@
       cursor: grabbing;
     }
 
+    /* Blur background effect when playtesting */
+    #canvas-world.playtest-blur,
+    #palette-sidebar.playtest-blur,
+    #inspector-sidebar.playtest-blur {
+      filter: blur(6px) brightness(0.7);
+      transition: filter 0.3s ease;
+      pointer-events: none;
+    }
+
     /* World transform container */
     #canvas-world {
       position: absolute;
@@ -89,6 +101,7 @@
       left: 0;
       transform-origin: 0 0;
       will-change: transform;
+      transition: filter 0.3s ease;
     }
 
     /* Selection Marquee Box */
@@ -280,7 +293,7 @@
       transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1),
                   transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
                   opacity 0.2s ease;
-      will-change: width, transform;
+      will-change: width, transform, filter;
     }
 
     #palette-sidebar.collapsed {
@@ -310,6 +323,24 @@
 </head>
 <body class="h-screen w-screen flex flex-col overflow-hidden bg-surface-950 text-slate-200">
 
+  <!-- Google Login Lock Screen Overlay -->
+  <div id="login-lock-overlay" class="fixed inset-0 z-100 bg-surface-950/95 backdrop-blur-xl flex items-center justify-center p-4">
+    <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-md w-full p-8 shadow-2xl flex flex-col items-center text-center space-y-6">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-xl shadow-amber-500/30 text-white">
+        <i data-lucide="compass" class="w-8 h-8"></i>
+      </div>
+      <div class="space-y-2">
+        <h1 class="text-xl font-bold text-white tracking-tight">Quest Flow Studio</h1>
+        <p class="text-xs text-slate-400">Please sign in with your Google account to access your projects and sync with Google Drive.</p>
+      </div>
+      <button id="google-signin-btn" class="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold transition shadow-lg">
+        <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.95H1.2v3.15C3.16 21.35 7.23 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.25c-.25-.72-.38-1.49-.38-2.25s.13-1.53.38-2.25V6.6H1.2C.44 8.13 0 9.87 0 12s.44 3.87 1.2 5.4l4.08-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.16 2.65 1.2 6.6l4.08 3.15c.95-2.84 3.6-4.95 6.72-4.95z"/></svg>
+        <span>Sign in with Google</span>
+      </button>
+      <p class="text-[10px] text-slate-500 font-mono">OAuth Client ID: 516362450222-e4q4g28906gst4qok4qstk260jo4jne1</p>
+    </div>
+  </div>
+
   <!-- Top Toolbar -->
   <header class="h-14 bg-surface-900 border-b border-surface-700/80 px-3 sm:px-4 flex items-center justify-between z-50 shrink-0 gap-2">
     <!-- Left: Brand & Palette Collapse/Expand Toggle -->
@@ -332,7 +363,7 @@
       </div>
     </div>
 
-    <!-- Center: Playtest, Save ZIP, Project Manager, Snap & JSON Actions -->
+    <!-- Center: Playtest, Save ZIP, Google Drive Sync, Project Manager, Snap & JSON Actions -->
     <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1">
       <button id="playtest-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition shadow-sm shrink-0">
         <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
@@ -344,6 +375,17 @@
         <span class="hidden sm:inline">Save ZIP</span>
       </button>
 
+      <!-- Google Drive Sync Buttons -->
+      <button id="sync-to-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-semibold transition shrink-0" title="Sync All Projects To Google Drive">
+        <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
+        <span class="hidden md:inline">Sync To Drive</span>
+      </button>
+
+      <button id="sync-from-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition shrink-0" title="Sync Projects From Google Drive">
+        <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
+        <span class="hidden md:inline">Sync From Drive</span>
+      </button>
+
       <button id="close-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-surface-700 hover:border-amber-500/40 text-xs font-medium transition shrink-0" title="Open Project Manager">
         <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-amber-400"></i>
         <span class="hidden sm:inline">Project Manager</span>
@@ -353,25 +395,13 @@
         <i data-lucide="magnet" class="w-3.5 h-3.5"></i>
         <span class="hidden md:inline">Snap: ON</span>
       </button>
-
-      <div class="h-4 w-px bg-surface-700 mx-0.5 hidden sm:block"></div>
-
-      <button id="export-json-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition shrink-0" title="Export Quest JSON">
-        <i data-lucide="download" class="w-3.5 h-3.5 text-cyan-400"></i>
-        <span class="hidden lg:inline">Export JSON</span>
-      </button>
-
-      <button id="import-json-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 border border-surface-700 text-xs font-medium transition shrink-0" title="Import Quest ZIP or JSON File">
-        <i data-lucide="upload" class="w-3.5 h-3.5 text-indigo-400"></i>
-        <span class="hidden lg:inline">Open File</span>
-      </button>
     </div>
 
-    <!-- Right: Delete Selected & Inspector Collapse/Expand Toggle -->
+    <!-- Right: Logout & Inspector Toggle -->
     <div class="flex items-center gap-2 shrink-0">
-      <button id="delete-selected-btn" disabled class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 disabled:opacity-40 disabled:pointer-events-none hover:bg-rose-500/20 text-rose-400 border border-surface-700 text-xs font-medium transition" title="Delete Selected (Del / Backspace)">
-        <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
-        <span class="hidden xl:inline">Delete</span>
+      <button id="logout-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition" title="Logout & Lock App">
+        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+        <span class="hidden xl:inline">Logout</span>
       </button>
 
       <button id="toggle-inspector-btn" class="p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 border border-surface-700 transition" title="Toggle Inspector / Playtest Sidebar (])">
@@ -411,8 +441,8 @@
       <!-- Quick Tips Footer -->
       <div class="p-3 border-t border-surface-800 bg-surface-950/70 text-[11px] text-slate-400 space-y-1">
         <div class="flex items-center justify-between">
-          <span>Multiple Choices</span>
-          <span class="text-amber-400">Min 2, Unlimited</span>
+          <span>Google Drive Sync</span>
+          <span class="text-blue-400">Connected</span>
         </div>
         <div class="flex items-center justify-between">
           <span>Custom Types</span>
@@ -497,6 +527,13 @@
         <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
         <span id="status-text">Ready</span>
       </div>
+
+      <!-- Centered Floating Playtest Modal Overlay -->
+      <div id="centered-playtest-overlay" class="hidden absolute inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div id="centered-playtest-card" class="bg-surface-900/95 backdrop-blur-xl border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl shadow-amber-500/10 flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
     </main>
 
     <!-- Right Sidebar: Inspector & Playtest Quest Drawer -->
@@ -538,7 +575,7 @@
   </div>
 
   <!-- Project Manager & Quest Selector Modal -->
-  <div id="startup-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+  <div id="startup-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl flex flex-col max-h-[88vh]">
       <!-- Modal Header -->
       <div class="flex items-center justify-between mb-4 pb-3 border-b border-surface-800">
@@ -664,7 +701,7 @@
   </div>
 
   <!-- Hidden File Input for Importing ZIP / JSON -->
-  <input type="file" id="hidden-file-input" accept=".zip,.json" class="hidden" />
+  <input type="file" id="hidden-file-input" accept=".zip,.json,.adpqst" class="hidden" />
 
   <!-- Export / Import JSON Modal -->
   <div id="json-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
@@ -694,11 +731,17 @@
 
   <script>
     /**
-     * QuestForge — Game Quest Flow & Narrative Node Editor with Custom Types & Header Cleanups
+     * QuestForge — Game Quest Flow & Narrative Node Editor with Google Login & Drive Sync
      */
 
+    // Google OAuth 2.0 Credentials & GIS setup
+    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com';
+    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+    let tokenClient = null;
+    let accessToken = null;
+
     // =========================================================================
-    // 1. NODE TEMPLATES CONFIGURATION (WITH CUSTOM OPTIONS)
+    // 1. NODE TEMPLATES CONFIGURATION
     // =========================================================================
     const NODE_TYPES = {
       questStart: {
@@ -760,8 +803,7 @@
         badgeText: 'text-amber-400',
         borderAccent: 'border-amber-500/40',
         inputs: [{ id: 'in_prev', label: 'In' }],
-        // Dynamic outputs handled by choices array in config
-        fieldSchema: [], // Skill check removed per request
+        fieldSchema: [],
         defaultConfig: {
           choices: [
             { id: 'choice_0', label: 'Accept the quest' },
@@ -879,7 +921,7 @@
     ];
 
     // =========================================================================
-    // 3. PERSISTENT STORAGE ENGINE (LOCALSTORAGE)
+    // 3. PERSISTENT STORAGE ENGINE
     // =========================================================================
     let PROJECTS = [];
     const LOCAL_STORAGE_KEY = 'questforge_projects_v4';
@@ -927,7 +969,107 @@
     }
 
     // =========================================================================
-    // 4. APPLICATION STATE
+    // 4. GOOGLE DRIVE SYNC ENGINE
+    // =========================================================================
+    const DRIVE_FILE_NAME = 'QuestForge_Projects.json';
+
+    async function syncToGoogleDrive() {
+      if (!accessToken) {
+        showToast('Please sign in with Google first', 'rose');
+        return;
+      }
+      showToast('Syncing projects to Google Drive...', 'amber');
+      saveProjectsToStorage();
+
+      const fileContent = JSON.stringify(PROJECTS, null, 2);
+      const metadata = {
+        name: DRIVE_FILE_NAME,
+        mimeType: 'application/json'
+      };
+
+      try {
+        // Search if file already exists on Drive
+        const query = encodeURIComponent(`name = '${DRIVE_FILE_NAME}' and trashed = false`);
+        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const searchData = await searchRes.json();
+        let fileId = searchData.files?.[0]?.id;
+
+        if (fileId) {
+          // Update existing file
+          await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: fileContent
+          });
+        } else {
+          // Create new file
+          const form = new FormData();
+          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+          form.append('file', new Blob([fileContent], { type: 'application/json' }));
+
+          await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${accessToken}` },
+            body: form
+          });
+        }
+        showToast('Successfully synced to Google Drive!', 'emerald');
+      } catch (err) {
+        console.error('Drive sync upload error:', err);
+        showToast('Failed to sync to Google Drive', 'rose');
+      }
+    }
+
+    async function syncFromGoogleDrive() {
+      if (!accessToken) {
+        showToast('Please sign in with Google first', 'rose');
+        return;
+      }
+      showToast('Fetching projects from Google Drive...', 'amber');
+
+      try {
+        const query = encodeURIComponent(`name = '${DRIVE_FILE_NAME}' and trashed = false`);
+        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const searchData = await searchRes.json();
+        const fileId = searchData.files?.[0]?.id;
+
+        if (!fileId) {
+          showToast('No backup file found in Google Drive', 'amber');
+          return;
+        }
+
+        const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const cloudProjects = await fileRes.json();
+
+        if (Array.isArray(cloudProjects) && cloudProjects.length > 0) {
+          PROJECTS = cloudProjects;
+          saveProjectsToStorage();
+          const firstProj = PROJECTS[0];
+          if (firstProj.quests.length > 0) {
+            loadQuestIntoWorkspace(firstProj.id, firstProj.quests[0].id);
+          }
+          renderProjectManager();
+          showToast('Successfully synced from Google Drive!', 'emerald');
+        } else {
+          showToast('Cloud file was empty or invalid', 'rose');
+        }
+      } catch (err) {
+        console.error('Drive sync download error:', err);
+        showToast('Failed to sync from Google Drive', 'rose');
+      }
+    }
+
+    // =========================================================================
+    // 5. APPLICATION STATE
     // =========================================================================
     const GRID_SIZE = 24;
 
@@ -976,7 +1118,7 @@
     };
 
     // =========================================================================
-    // 5. DOM REFERENCES
+    // 6. DOM REFERENCES
     // =========================================================================
     const canvasContainer = document.getElementById('canvas-container');
     const canvasWorld = document.getElementById('canvas-world');
@@ -988,6 +1130,8 @@
     const paletteSearch = document.getElementById('palette-search');
     const inspectorPanel = document.getElementById('inspector-panel');
     const playtestPanel = document.getElementById('playtest-panel');
+    const centeredPlaytestOverlay = document.getElementById('centered-playtest-overlay');
+    const centeredPlaytestCard = document.getElementById('centered-playtest-card');
     const tabInspectorBtn = document.getElementById('tab-inspector-btn');
     const tabPlaytestBtn = document.getElementById('tab-playtest-btn');
     const zoomLevelLabel = document.getElementById('zoom-level-label');
@@ -1030,8 +1174,64 @@
     const viewerFileType = document.getElementById('viewer-file-type');
     const viewerContentContainer = document.getElementById('viewer-content-container');
 
+    const loginLockOverlay = document.getElementById('login-lock-overlay');
+    const googleSigninBtn = document.getElementById('google-signin-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const syncToDriveBtn = document.getElementById('sync-to-drive-btn');
+    const syncFromDriveBtn = document.getElementById('sync-from-drive-btn');
+
     // =========================================================================
-    // 6. TOOL SWITCHING
+    // 7. GOOGLE AUTH & LOCK / LOGOUT ENGINE
+    // =========================================================================
+    googleSigninBtn.addEventListener('click', () => {
+      if (tokenClient) {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+      } else {
+        showToast('Google Auth client not initialized yet', 'rose');
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      accessToken = null;
+      loginLockOverlay.classList.remove('hidden');
+      showToast('Logged out successfully. App locked.', 'amber');
+    });
+
+    syncToDriveBtn.addEventListener('click', syncToGoogleDrive);
+    syncFromDriveBtn.addEventListener('click', syncFromGoogleDrive);
+
+    function initGoogleAuth() {
+      try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: (response) => {
+            if (response && response.access_token) {
+              accessToken = response.access_token;
+              loginLockOverlay.classList.add('hidden');
+              showToast('Successfully logged in with Google!', 'emerald');
+              
+              // Load projects & open manager
+              loadProjectsFromStorage();
+              renderPalette();
+              if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
+                loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+              }
+              openProjectManagerModal();
+            }
+          }
+        });
+      } catch (err) {
+        console.error('GIS init error:', err);
+      }
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(initGoogleAuth, 800);
+    });
+
+    // =========================================================================
+    // 8. TOOL SWITCHING
     // =========================================================================
     function setCanvasTool(tool) {
       state.currentTool = tool;
@@ -1052,7 +1252,7 @@
     toolPanBtn.addEventListener('click', () => setCanvasTool('pan'));
 
     // =========================================================================
-    // 7. SIDEBAR COLLAPSE / EXPAND ENGINE
+    // 9. SIDEBAR COLLAPSE / EXPAND ENGINE
     // =========================================================================
     function setLeftSidebarOpen(isOpen) {
       state.sidebars.leftOpen = isOpen;
@@ -1091,7 +1291,7 @@
     expandInspectorTab.addEventListener('click', () => setRightSidebarOpen(true));
 
     // =========================================================================
-    // 8. UTILITY FUNCTIONS
+    // 10. UTILITY FUNCTIONS
     // =========================================================================
     function generateId(prefix = 'id') {
       return `${prefix}_${Math.random().toString(36).substring(2, 8)}`;
@@ -1208,7 +1408,7 @@
     });
 
     // =========================================================================
-    // 9. PROJECT MANAGER & QUEST/PROJECT DELETION ENGINE
+    // 11. PROJECT MANAGER & QUEST/PROJECT DELETION ENGINE
     // =========================================================================
     function renderProjectManager(filterQuery = '') {
       projectManagerList.innerHTML = '';
@@ -1611,7 +1811,7 @@
     document.getElementById('clear-persistence-btn').addEventListener('click', clearPersistentStorage);
 
     // =========================================================================
-    // 10. ZIP ARCHIVE EXPORT & IMPORT (JSZip)
+    // 12. ZIP ARCHIVE EXPORT & IMPORT
     // =========================================================================
     async function saveQuestAsZip() {
       const project = PROJECTS.find((p) => p.id === state.activeProjectId);
@@ -1688,16 +1888,16 @@
       try {
         showToast('Packaging ZIP archive with media assets...', 'amber');
         const content = await zip.generateAsync({ type: "blob" });
-        const fileName = `${quest.id}.zip`;
+        const fileName = `${quest.id}.adpqst`;
         const url = URL.createObjectURL(content);
         const a = document.createElement('a');
         a.href = url;
         a.download = fileName;
         a.click();
         URL.revokeObjectURL(url);
-        showToast(`Successfully saved ZIP archive "${fileName}"`, 'emerald');
+        showToast(`Successfully saved archive "${fileName}"`, 'emerald');
       } catch (err) {
-        showToast(`Failed to create ZIP: ${err.message}`, 'rose');
+        showToast(`Failed to create archive: ${err.message}`, 'rose');
       }
     }
 
@@ -1707,14 +1907,14 @@
       if (!file) return;
       const fileName = file.name.toLowerCase();
 
-      if (fileName.endsWith('.zip')) {
+      if (fileName.endsWith('.zip') || fileName.endsWith('.adpqst')) {
         try {
-          showToast('Extracting ZIP archive...', 'amber');
+          showToast('Extracting archive...', 'amber');
           const zip = new JSZip();
           const zipContent = await zip.loadAsync(file);
 
           if (!zipContent.files['quest.json']) {
-            throw new Error('Missing quest.json in ZIP archive.');
+            throw new Error('Missing quest.json in archive.');
           }
 
           const jsonString = await zipContent.files['quest.json'].async('text');
@@ -1737,9 +1937,9 @@
 
           loadQuestDataIntoApp(parsed);
           startupModal.classList.add('hidden');
-          showToast(`Successfully imported ZIP: ${file.name}`, 'emerald');
+          showToast(`Successfully imported: ${file.name}`, 'emerald');
         } catch (err) {
-          showToast(`ZIP Import Error: ${err.message}`, 'rose');
+          showToast(`Import Error: ${err.message}`, 'rose');
         }
       } else if (fileName.endsWith('.json')) {
         const reader = new FileReader();
@@ -1755,7 +1955,7 @@
         };
         reader.readAsText(file);
       } else {
-        showToast('Please select a valid .zip or .json quest file', 'rose');
+        showToast('Please select a valid .adpqst, .zip or .json quest file', 'rose');
       }
     }
 
@@ -1822,7 +2022,6 @@
     }
 
     document.getElementById('explorer-import-btn').addEventListener('click', () => hiddenFileInput.click());
-    document.getElementById('import-json-btn').addEventListener('click', () => hiddenFileInput.click());
     hiddenFileInput.addEventListener('change', (e) => {
       if (e.target.files[0]) {
         handleFileImport(e.target.files[0]);
@@ -1831,7 +2030,7 @@
     });
 
     // =========================================================================
-    // 11. QUEST PALETTE & DRAG-AND-DROP
+    // 13. QUEST PALETTE & DRAG-AND-DROP
     // =========================================================================
     function renderPalette(filterText = '') {
       paletteList.innerHTML = '';
@@ -1900,7 +2099,7 @@
     });
 
     // =========================================================================
-    // 12. NODE MANAGEMENT & CARD RENDERING (HEADER CLOSE BUTTON REMOVED)
+    // 14. NODE MANAGEMENT & RENDERING
     // =========================================================================
     function addNode(type, x, y, customData = null) {
       const template = NODE_TYPES[type];
@@ -2188,7 +2387,7 @@
           <!-- Color-Coded Top Accent Bar -->
           <div class="h-1.5 w-full rounded-t-[10px]" style="background-color: ${tpl.accent}"></div>
 
-          <!-- Node Header (Close X button removed per request) -->
+          <!-- Node Header -->
           <div class="node-header px-3 py-2.5 border-b border-surface-800 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing">
             <div class="flex items-center gap-2 min-w-0">
               <div class="w-6 h-6 rounded-md ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center shrink-0">
@@ -2213,7 +2412,7 @@
         `;
 
         el.addEventListener('pointerdown', (e) => {
-          if (state.currentTool === 'pan') return;
+          if (state.currentTool === 'pan' || state.playtest.active) return;
           e.stopPropagation();
           const isAdditive = e.shiftKey || e.metaKey || e.ctrlKey;
           if (!state.selectedNodeIds.has(node.id)) {
@@ -2242,6 +2441,7 @@
 
         el.querySelectorAll('.output-port').forEach((portEl) => {
           portEl.addEventListener('pointerdown', (e) => {
+            if (state.playtest.active) return;
             e.stopPropagation();
             const portCenter = getPortWorldPosition(node.id, portEl.dataset.portId, 'output');
             state.interaction.connecting = {
@@ -2266,7 +2466,7 @@
     }
 
     // =========================================================================
-    // 13. CUBIC BEZIER WIRES & CONNECTOR POINT ALIGNMENT
+    // 15. CUBIC BEZIER WIRES & CONNECTOR POINT ALIGNMENT
     // =========================================================================
     function getPortWorldPosition(nodeId, portId, portType) {
       const selector = `.port-socket[data-node-id="${nodeId}"][data-port-id="${portId}"][data-port-type="${portType}"]`;
@@ -2347,6 +2547,7 @@
         }
 
         hitPath.addEventListener('pointerdown', (e) => {
+          if (state.playtest.active) return;
           e.stopPropagation();
           selectEdge(edge.id);
         });
@@ -2393,9 +2594,10 @@
     }
 
     // =========================================================================
-    // 14. CANVAS PAN, ZOOM & SELECTION
+    // 16. CANVAS PAN, ZOOM & SELECTION
     // =========================================================================
     canvasContainer.addEventListener('pointerdown', (e) => {
+      if (state.playtest.active) return;
       const isBackground = e.target === canvasContainer || e.target === canvasWorld || e.target.id === 'connections-svg';
       const isPanMode = state.currentTool === 'pan' || e.button === 1 || e.altKey;
 
@@ -2429,6 +2631,7 @@
     });
 
     window.addEventListener('pointermove', (e) => {
+      if (state.playtest.active) return;
       if (state.interaction.isPanning) {
         state.viewport.x = e.clientX - state.interaction.panStartX;
         state.viewport.y = e.clientY - state.interaction.panStartY;
@@ -2577,7 +2780,7 @@
     );
 
     // =========================================================================
-    // 15. INSPECTOR PANEL (WITH CUSTOM FIELD LOGIC & CHOICES)
+    // 17. INSPECTOR PANEL
     // =========================================================================
     function openResourceViewer(res) {
       viewerFileTitle.textContent = res.name;
@@ -3055,7 +3258,7 @@
     }
 
     // =========================================================================
-    // 16. PLAYTEST SIMULATOR (WITH CUSTOM TYPES SUPPORT)
+    // 18. PLAYTEST SIMULATOR
     // =========================================================================
     function startPlaytest() {
       if (state.nodes.length === 0) {
@@ -3079,7 +3282,14 @@
       };
 
       recordPlaytestVisit(startNode);
-      switchRightTab('playtest');
+      
+      canvasWorld.classList.add('playtest-blur');
+      paletteSidebar.classList.add('playtest-blur');
+      inspectorSidebar.classList.add('playtest-blur');
+
+      centeredPlaytestOverlay.classList.remove('hidden');
+      renderPlaytestPanel();
+
       updateSelectionVisuals();
       renderEdges();
       centerOnNode(startNode);
@@ -3090,6 +3300,13 @@
       state.playtest.active = false;
       state.playtest.currentNodeId = null;
       state.playtest.lastEdgeId = null;
+
+      canvasWorld.classList.remove('playtest-blur');
+      paletteSidebar.classList.remove('playtest-blur');
+      inspectorSidebar.classList.remove('playtest-blur');
+
+      centeredPlaytestOverlay.classList.add('hidden');
+
       updateSelectionVisuals();
       renderEdges();
       if (state.rightTab === 'playtest') renderPlaytestPanel();
@@ -3149,6 +3366,8 @@
     }
 
     function renderPlaytestPanel() {
+      const targetContainer = state.playtest.active ? centeredPlaytestCard : playtestPanel;
+
       if (!state.playtest.active) {
         playtestPanel.innerHTML = `
           <div class="h-full flex flex-col items-center justify-center text-center py-10 px-3">
@@ -3181,10 +3400,10 @@
       if (currentNode.resources && currentNode.resources.length > 0) {
         const mediaItems = currentNode.resources.map((res) => {
           if (res.type === 'image') {
-            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><img src="${res.data}" alt="${escapeHtml(res.name)}" class="w-full max-h-40 object-cover" /><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
+            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><img src="${res.data}" alt="${escapeHtml(res.name)}" class="w-full max-h-48 object-cover" /><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
           }
           if (res.type === 'video') {
-            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><video controls src="${res.data}" class="w-full max-h-40 object-cover"></video><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
+            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><video controls src="${res.data}" class="w-full max-h-48 object-cover"></video><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
           }
           if (res.type === 'audio') {
             return `<div class="p-2 rounded-lg border border-surface-700 bg-surface-950 space-y-1"><audio controls src="${res.data}" class="w-full h-8"></audio><span class="block text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
@@ -3201,16 +3420,16 @@
         interactiveStepHtml = `
           <div class="space-y-3">
             <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5">
-              <div class="flex items-center justify-between text-[11px] font-mono">
+              <div class="flex items-center justify-between text-xs font-mono">
                 <span class="text-emerald-400 font-semibold">${escapeHtml(qType)}</span>
                 <span class="text-slate-300">Req Level ${escapeHtml(c.minLevel)}</span>
               </div>
               <p class="text-xs font-mono text-white">${escapeHtml(c.questId)}</p>
             </div>
             ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition">
+            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-500/20">
               <span>Begin Quest</span>
-              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
           </div>
         `;
@@ -3218,34 +3437,34 @@
         const reaction = c.reaction === 'Custom...' ? (c.customReaction || 'Custom') : c.reaction;
         interactiveStepHtml = `
           <div class="space-y-3">
-            <div class="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-2">
+            <div class="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-2">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-indigo-300">${escapeHtml(c.npcName)}</span>
-                <span class="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-200 text-[10px] font-mono">${escapeHtml(reaction)}</span>
+                <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-200 text-[10px] font-mono">${escapeHtml(reaction)}</span>
               </div>
-              <p class="text-xs text-slate-100 leading-relaxed">"${escapeHtml(c.dialogueText)}"</p>
+              <p class="text-sm text-slate-100 leading-relaxed italic">"${escapeHtml(c.dialogueText)}"</p>
             </div>
             ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/20">
               <span>Continue Dialogue</span>
-              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
           </div>
         `;
       } else if (currentNode.type === 'playerChoice') {
         const choices = c.choices || [];
         const choiceButtonsHtml = choices.map((ch, idx) => `
-          <button data-choice-id="${ch.id}" data-choice-label="${escapeHtml(ch.label)}" class="pt-choice-btn w-full text-left p-2.5 rounded-xl bg-surface-850 hover:bg-amber-500/15 border border-surface-700 hover:border-amber-500/50 transition group">
-            <span class="text-[10px] font-mono uppercase text-amber-400 block">Choice ${idx + 1}</span>
+          <button data-choice-id="${ch.id}" data-choice-label="${escapeHtml(ch.label)}" class="pt-choice-btn w-full text-left p-3 rounded-xl bg-surface-850 hover:bg-amber-500/15 border border-surface-700 hover:border-amber-500/50 transition group shadow-sm">
+            <span class="text-[10px] font-mono uppercase text-amber-400 block mb-0.5">Choice ${idx + 1}</span>
             <span class="text-xs font-medium text-white group-hover:text-amber-200">${escapeHtml(ch.label)}</span>
           </button>
         `).join('');
 
         interactiveStepHtml = `
-          <div class="space-y-2.5">
+          <div class="space-y-3">
             ${mediaPreviewHtml}
-            <p class="text-[11px] text-slate-400">Choose player response (${choices.length} options available):</p>
-            <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <p class="text-xs text-slate-400 font-medium">Choose player response (${choices.length} options available):</p>
+            <div class="space-y-2.5 max-h-56 overflow-y-auto pr-1">
               ${choiceButtonsHtml}
             </div>
           </div>
@@ -3254,7 +3473,7 @@
         const objType = c.objectiveType === 'Custom...' ? (c.customObjectiveType || 'Custom') : c.objectiveType;
         interactiveStepHtml = `
           <div class="space-y-3">
-            <div class="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-1.5">
+            <div class="p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-2">
               <span class="text-[10px] font-mono uppercase tracking-wider text-cyan-400">${escapeHtml(objType)}</span>
               <div class="flex items-center justify-between text-xs">
                 <span class="font-semibold text-white">${escapeHtml(c.targetName)}</span>
@@ -3262,8 +3481,8 @@
               </div>
             </div>
             ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition">
-              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-lg shadow-cyan-500/20">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
               <span>Simulate Objective Complete</span>
             </button>
           </div>
@@ -3271,15 +3490,15 @@
       } else if (currentNode.type === 'condition') {
         const condType = c.conditionType === 'Custom...' ? (c.customConditionType || 'Custom') : c.conditionType;
         interactiveStepHtml = `
-          <div class="space-y-2.5">
-            <div class="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1">
+          <div class="space-y-3">
+            <div class="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1.5">
               <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400">Evaluate ${escapeHtml(condType)}</span>
               <p class="text-xs font-mono text-white">${escapeHtml(c.conditionValue)}</p>
             </div>
             ${mediaPreviewHtml}
-            <div class="grid grid-cols-2 gap-2 pt-1">
-              <button id="pt-cond-true-btn" class="py-2 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">True ✓</button>
-              <button id="pt-cond-false-btn" class="py-2 px-3 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold transition">False ✕</button>
+            <div class="grid grid-cols-2 gap-2.5 pt-1">
+              <button id="pt-cond-true-btn" class="py-2.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">True ✓</button>
+              <button id="pt-cond-false-btn" class="py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold transition">False ✕</button>
             </div>
           </div>
         `;
@@ -3287,10 +3506,10 @@
         const outcomeType = c.outcome === 'Custom...' ? (c.customOutcome || 'Custom') : c.outcome;
         interactiveStepHtml = `
           <div class="space-y-3">
-            <div class="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 space-y-2">
+            <div class="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/40 space-y-2.5">
               <div class="flex items-center gap-2">
-                <i data-lucide="trophy" class="w-4 h-4 text-amber-400"></i>
-                <span class="text-xs font-bold text-white">${escapeHtml(outcomeType)}</span>
+                <i data-lucide="trophy" class="w-5 h-5 text-amber-400"></i>
+                <span class="text-sm font-bold text-white">${escapeHtml(outcomeType)}</span>
               </div>
               <div class="grid grid-cols-2 gap-2 pt-1 text-xs font-mono">
                 <div class="bg-surface-950/90 rounded p-2 text-emerald-400">+${escapeHtml(c.xpReward)} XP</div>
@@ -3302,29 +3521,25 @@
         `;
       }
 
-      playtestPanel.innerHTML = `
+      targetContainer.innerHTML = `
         <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <span class="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-amber-400">
-              <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-              Active Step
-            </span>
-            <div class="flex items-center gap-1.5">
-              <button id="pt-restart-btn" class="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[11px] text-slate-300 transition">Restart</button>
-              <button id="pt-stop-btn" class="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-[11px] text-rose-400 transition">Stop</button>
-            </div>
-          </div>
-
-          <div class="p-3 rounded-xl bg-surface-950 border border-amber-500/40 space-y-3">
-            <div class="flex items-center gap-2 border-b border-surface-800 pb-2">
-              <div class="w-6 h-6 rounded ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center">
-                <i data-lucide="${tpl.icon}" class="w-3.5 h-3.5"></i>
+          <div class="flex items-center justify-between pb-3 border-b border-surface-800">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center">
+                <i data-lucide="${tpl.icon}" class="w-4 h-4"></i>
               </div>
-              <div class="min-w-0">
-                <span class="text-xs font-bold text-white block truncate">${escapeHtml(currentNode.title)}</span>
+              <div>
+                <span class="text-xs font-bold text-white block">${escapeHtml(currentNode.title)}</span>
                 <span class="text-[10px] font-mono ${tpl.badgeText}">${tpl.category}</span>
               </div>
             </div>
+            <div class="flex items-center gap-2">
+              <button id="pt-restart-btn" class="px-2.5 py-1 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-300 transition">Restart</button>
+              <button id="pt-stop-btn" class="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-xs font-medium text-rose-400 transition">End Playtest</button>
+            </div>
+          </div>
+
+          <div class="space-y-3">
             ${interactiveStepHtml}
           </div>
         </div>
@@ -3337,7 +3552,7 @@
         if (outPort) advancePlaytestPort(currentNode.id, outPort, 'Continued');
       });
 
-      playtestPanel.querySelectorAll('.pt-choice-btn').forEach((btn) => {
+      targetContainer.querySelectorAll('.pt-choice-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           const choiceId = btn.dataset.choiceId;
           const choiceLabel = btn.dataset.choiceLabel;
@@ -3389,7 +3604,7 @@
     }
 
     // =========================================================================
-    // 17. JSON EXPORT & INITIALIZATION
+    // 19. JSON EXPORT & INITIALIZATION
     // =========================================================================
     const jsonModal = document.getElementById('json-modal');
     const jsonTextarea = document.getElementById('json-textarea');
@@ -3464,14 +3679,6 @@
     window.addEventListener('resize', () => renderEdges());
 
     window.addEventListener('DOMContentLoaded', () => {
-      loadProjectsFromStorage();
-      renderPalette();
-
-      if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
-        loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
-      }
-
-      openProjectManagerModal();
       lucide.createIcons();
     });
   </script>
