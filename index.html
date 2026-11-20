@@ -558,7 +558,7 @@
 
   <script>
     /**
-     * Quest Flow Studio — Google Login, Auto-Load Cloud Drive Backup, Logout & Touch Support
+     * Quest Flow Studio — Google Login, Auto-Load Cloud Drive Backup, Logout & Playtest Simulator
      */
 
     // Google API Client & Auth Configuration
@@ -761,11 +761,9 @@
             if (response && response.access_token) {
               googleAuthToken = response.access_token;
               document.getElementById('google-login-label').textContent = 'Connected (Logout)';
-              // Hide authentication gate modal and unlock main app
               document.getElementById('auth-gate-modal').classList.add('hidden');
               showToast('Successfully signed in with Google!', 'emerald');
               
-              // Automatically check Google Drive for existing backups and load across devices
               await loadProjectsFromGoogleDrive();
             }
           }
@@ -789,7 +787,6 @@
     function handleGoogleLogout() {
       googleAuthToken = null;
       document.getElementById('google-login-label').textContent = 'Google Login';
-      // Show authentication gate modal again
       document.getElementById('auth-gate-modal').classList.remove('hidden');
       showToast('Signed out successfully.', 'amber');
     }
@@ -904,7 +901,7 @@
         isBoxSelecting: false, boxStartX: 0, boxStartY: 0, boxCurrentX: 0, boxCurrentY: 0,
         draggingNodeId: null, dragOffsets: new Map(), connecting: null
       },
-      playtest: { active: false, currentNodeId: null, lastEdgeId: null, history: [], finished: false },
+      playtest: { active: false, currentNodeId: null, history: [] },
       pendingDelete: null
     };
 
@@ -1763,16 +1760,25 @@
     // 11. PLAYTEST SIMULATOR
     // =========================================================================
     function startPlaytest() {
-      if (state.nodes.length === 0) { showToast('Add quest nodes first', 'amber'); return; }
-      const start = state.nodes.find(n => n.type === 'questStart') || state.nodes[0];
-      state.playtest = { active: true, currentNodeId: start.id, lastEdgeId: null, history: [], finished: false };
+      if (state.nodes.length === 0) {
+        showToast('Add quest nodes first to playtest', 'amber');
+        return;
+      }
+      const startNode = state.nodes.find(n => n.type === 'questStart') || state.nodes[0];
+      
+      state.playtest = {
+        active: true,
+        currentNodeId: startNode.id,
+        history: []
+      };
 
       canvasWorld.classList.add('playtest-blur');
       paletteSidebar.classList.add('playtest-blur');
       inspectorSidebar.classList.add('playtest-blur');
       centeredPlaytestOverlay.classList.remove('hidden');
+      
       renderPlaytestPanel();
-      showToast('Playtest started (Canvas blurred)', 'amber');
+      showToast('Playtest started', 'sky');
     }
 
     function stopPlaytest() {
@@ -1785,34 +1791,160 @@
 
     function renderPlaytestPanel() {
       const node = state.nodes.find(n => n.id === state.playtest.currentNodeId);
-      if (!node) { stopPlaytest(); return; }
-      const tpl = NODE_TYPES[node.type];
-      const c = node.config;
+      if (!node) {
+        stopPlaytest();
+        showToast('Playtest finished: Reached end of path.', 'emerald');
+        return;
+      }
+
+      const c = node.config || {};
+      let bodyContent = '';
+
+      if (node.type === 'questStart') {
+        bodyContent = `
+          <div class="space-y-1">
+            <span class="text-xs font-mono uppercase text-emerald-400">Quest Start: ${escapeHtml(c.questType || 'Main Story')}</span>
+            <p class="text-sm font-semibold text-white">${escapeHtml(node.title)}</p>
+            <p class="text-xs text-slate-400">Minimum Level Required: ${escapeHtml(c.minLevel || '1')}</p>
+          </div>
+        `;
+      } else if (node.type === 'dialogue') {
+        bodyContent = `
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-indigo-400">${escapeHtml(c.npcName || 'NPC')}</span>
+              <span class="px-1.5 py-0.5 rounded bg-indigo-500/20 text-[10px] text-indigo-300 font-mono">${escapeHtml(c.reaction || 'Neutral')}</span>
+            </div>
+            <p class="text-sm text-slate-200 italic">"${escapeHtml(c.dialogueText || '...')}"</p>
+          </div>
+        `;
+      } else if (node.type === 'playerChoice') {
+        const choices = c.choices || [];
+        const choicesHtml = choices.map((ch, idx) => `
+          <button data-choice-index="${idx}" class="w-full text-left p-3 rounded-xl bg-surface-850 hover:bg-amber-500/20 border border-surface-700 hover:border-amber-500/50 text-xs font-medium text-slate-200 hover:text-amber-300 transition flex items-center justify-between group cursor-pointer">
+            <span>${escapeHtml(ch.label)}</span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-amber-400"></i>
+          </button>
+        `).join('');
+
+        bodyContent = `
+          <div class="space-y-3">
+            <span class="text-xs font-bold text-amber-400">Player Choice Required</span>
+            <div class="space-y-2">${choicesHtml}</div>
+          </div>
+        `;
+      } else if (node.type === 'objective') {
+        bodyContent = `
+          <div class="space-y-1">
+            <span class="text-xs font-mono text-cyan-400">Objective (${escapeHtml(c.objectiveType)})</span>
+            <p class="text-sm font-semibold text-white">${escapeHtml(c.targetName)}</p>
+            <p class="text-xs text-slate-400">Required: ${escapeHtml(c.requiredCount)}</p>
+          </div>
+        `;
+      } else if (node.type === 'condition') {
+        bodyContent = `
+          <div class="space-y-1">
+            <span class="text-xs font-mono text-purple-400">Condition Check (${escapeHtml(c.conditionType)})</span>
+            <p class="text-sm font-semibold text-white">Value: ${escapeHtml(c.conditionValue)}</p>
+          </div>
+        `;
+      } else if (node.type === 'questReward') {
+        bodyContent = `
+          <div class="space-y-2 text-center py-2">
+            <div class="w-10 h-10 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center mx-auto mb-2">
+              <i data-lucide="trophy" class="w-5 h-5"></i>
+            </div>
+            <h4 class="text-sm font-bold text-white">${escapeHtml(c.outcome || 'Quest Complete')}</h4>
+            <p class="text-xs text-amber-300 font-mono">+${escapeHtml(c.xpReward)} XP • +${escapeHtml(c.goldReward)} Gold</p>
+            <p class="text-xs text-slate-300">Reward Item: ${escapeHtml(c.itemReward)}</p>
+          </div>
+        `;
+      }
+
+      let mediaHtml = '';
+      if (node.resources && node.resources.length > 0) {
+        const resItems = node.resources.map(res => {
+          if (res.type === 'image') {
+            return `<div class="mt-2 rounded-lg overflow-hidden border border-surface-700"><img src="${res.data}" class="w-full max-h-48 object-cover" /></div>`;
+          } else if (res.type === 'video') {
+            return `<div class="mt-2 rounded-lg overflow-hidden border border-surface-700"><video src="${res.data}" controls class="w-full max-h-48"></video></div>`;
+          } else if (res.type === 'audio') {
+            return `<div class="mt-2 p-2 rounded-lg bg-surface-950 border border-surface-700"><audio src="${res.data}" controls class="w-full"></audio></div>`;
+          }
+          return '';
+        }).join('');
+        mediaHtml = `<div class="pt-2 border-t border-surface-800 space-y-2">${resItems}</div>`;
+      }
+
+      let actionFooter = '';
+      if (node.type === 'playerChoice') {
+        actionFooter = `<button id="pt-exit" class="w-full py-2.5 rounded-xl bg-surface-800 hover:bg-surface-700 text-slate-300 font-semibold text-xs transition cursor-pointer">End Playtest</button>`;
+      } else {
+        actionFooter = `
+          <div class="flex items-center gap-2">
+            <button id="pt-exit" class="flex-1 py-2.5 rounded-xl bg-surface-800 hover:bg-surface-700 text-slate-300 font-semibold text-xs transition cursor-pointer">Exit</button>
+            <button id="pt-next" class="flex-2 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <span>Continue</span>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+      }
 
       centeredPlaytestCard.innerHTML = `
-        <div class="space-y-4">
-          <div class="flex items-center justify-between pb-3 border-b border-surface-800">
-            <span class="text-xs font-bold text-amber-400">Playtest: ${escapeHtml(node.title)}</span>
-            <button id="pt-stop" class="text-xs text-rose-400">Exit</button>
+        <div class="flex items-center justify-between pb-3 border-b border-surface-800">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-md bg-amber-500/20 text-amber-400 flex items-center justify-center">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            </div>
+            <span class="text-xs font-bold text-white">Playtest Simulation</span>
           </div>
+          <button id="pt-close-x" class="p-1 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="py-4 space-y-3 flex-1 overflow-y-auto">
           <div class="p-4 rounded-xl bg-surface-950 border border-surface-800 space-y-3">
-            <p class="text-sm text-slate-200">${escapeHtml(c.dialogueText || c.targetName || c.questId || 'Active Node Step')}</p>
+            ${bodyContent}
+            ${mediaHtml}
           </div>
-          <button id="pt-next" class="w-full py-2.5 rounded-lg bg-amber-500 text-slate-950 font-semibold text-xs">Continue</button>
+        </div>
+        <div class="pt-3 border-t border-surface-800">
+          ${actionFooter}
         </div>
       `;
 
-      document.getElementById('pt-stop').addEventListener('click', stopPlaytest);
-      document.getElementById('pt-next').addEventListener('click', () => {
-        const edge = state.edges.find(e => e.sourceNodeId === node.id);
-        if (edge) {
-          state.playtest.currentNodeId = edge.targetNodeId;
-          renderPlaytestPanel();
-        } else {
-          showToast('Quest reached end!', 'emerald');
-          stopPlaytest();
-        }
-      });
+      lucide.createIcons();
+
+      document.getElementById('pt-close-x').addEventListener('click', stopPlaytest);
+      document.getElementById('pt-exit')?.addEventListener('click', stopPlaytest);
+
+      if (node.type === 'playerChoice') {
+        centeredPlaytestCard.querySelectorAll('[data-choice-index]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const choiceIdx = parseInt(e.currentTarget.dataset.choiceIndex);
+            const choice = c.choices[choiceIdx];
+            const edge = state.edges.find(ed => ed.sourceNodeId === node.id && ed.sourcePortId === choice.id);
+            if (edge) {
+              state.playtest.currentNodeId = edge.targetNodeId;
+              renderPlaytestPanel();
+            } else {
+              showToast('No path connected to this choice!', 'amber');
+            }
+          });
+        });
+      } else {
+        document.getElementById('pt-next')?.addEventListener('click', () => {
+          const edge = state.edges.find(ed => ed.sourceNodeId === node.id);
+          if (edge) {
+            state.playtest.currentNodeId = edge.targetNodeId;
+            renderPlaytestPanel();
+          } else {
+            showToast('Reached end of quest branch!', 'emerald');
+            stopPlaytest();
+          }
+        });
+      }
     }
 
     function fitCanvasView() {
