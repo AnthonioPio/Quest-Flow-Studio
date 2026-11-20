@@ -42,28 +42,9 @@
   </script>
 
   <style>
-    * {
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    input, textarea, select {
-      user-select: text;
-      -webkit-user-select: text;
-    }
-
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background-color: #0b0f19;
-      color: #e2e8f0;
-      font-family: 'Inter', sans-serif;
-      touch-action: none;
-    }
-
-    /* Infinite-style Dot Grid Background */
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    input, textarea, select { user-select: text; -webkit-user-select: text; }
+    body { margin: 0; padding: 0; overflow: hidden; background-color: #0b0f19; color: #e2e8f0; font-family: 'Inter', sans-serif; touch-action: none; }
     #canvas-container {
       background-color: #0b0f19;
       background-image: radial-gradient(#243047 1.3px, transparent 1.3px);
@@ -71,152 +52,50 @@
       background-position: 0px 0px;
       touch-action: none;
     }
-
     #canvas-container.tool-select { cursor: default; }
     #canvas-container.tool-pan { cursor: grab; }
     #canvas-container.tool-pan.is-panning { cursor: grabbing; }
 
-    /* Blur background effect when playtesting */
-    #canvas-world.playtest-blur,
-    #palette-sidebar.playtest-blur,
-    #inspector-sidebar.playtest-blur {
+    #canvas-world.playtest-blur, #palette-sidebar.playtest-blur, #inspector-sidebar.playtest-blur {
       filter: blur(6px) brightness(0.7);
       transition: filter 0.3s ease;
       pointer-events: none;
     }
 
-    /* World transform container */
-    #canvas-world {
-      position: absolute;
-      top: 0;
-      left: 0;
-      transform-origin: 0 0;
-      will-change: transform;
-      transition: filter 0.3s ease;
-    }
+    #canvas-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; transition: filter 0.3s ease; }
+    #connections-svg { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; z-index: 10; }
+    .edge-hit-area { fill: none; stroke: transparent; stroke-width: 18px; cursor: pointer; pointer-events: stroke; }
+    .edge-path { fill: none; stroke: #475569; stroke-width: 2.5px; stroke-linecap: round; transition: stroke 0.15s ease; pointer-events: none; }
+    .edge-group:hover .edge-path { stroke: #94a3b8; stroke-width: 3px; }
+    .edge-group.selected .edge-path { stroke: #38bdf8 !important; stroke-width: 3.5px; filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6)); }
+    .edge-draft { fill: none; stroke: #38bdf8; stroke-width: 2.5px; stroke-dasharray: 6 6; stroke-linecap: round; animation: dashFlow 0.6s linear infinite; pointer-events: none; }
+    @keyframes dashFlow { to { stroke-dashoffset: -14; } }
 
-    /* SVG Connection Layer */
-    #connections-svg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 1px;
-      height: 1px;
-      overflow: visible;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .edge-hit-area {
-      fill: none;
-      stroke: transparent;
-      stroke-width: 18px;
-      cursor: pointer;
-      pointer-events: stroke;
-    }
-
-    .edge-path {
-      fill: none;
-      stroke: #475569;
-      stroke-width: 2.5px;
-      stroke-linecap: round;
-      transition: stroke 0.15s ease, stroke-width 0.15s ease;
-      pointer-events: none;
-    }
-
-    .edge-group:hover .edge-path {
-      stroke: #94a3b8;
-      stroke-width: 3px;
-    }
-
-    .edge-group.selected .edge-path {
-      stroke: #38bdf8 !important;
-      stroke-width: 3.5px;
-      filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6));
-    }
-
-    .edge-draft {
-      fill: none;
-      stroke: #38bdf8;
-      stroke-width: 2.5px;
-      stroke-dasharray: 6 6;
-      stroke-linecap: round;
-      animation: dashFlow 0.6s linear infinite;
-      pointer-events: none;
-    }
-
-    @keyframes dashFlow {
-      to { stroke-dashoffset: -14; }
-    }
-
-    /* Node Styling */
     .flow-node {
-      position: absolute;
-      width: 290px;
-      border-radius: 12px;
-      background: rgba(19, 26, 42, 0.95);
-      backdrop-filter: blur(12px);
-      border: 1.5px solid #29354f;
-      box-shadow: 0 14px 32px -6px rgba(0, 0, 0, 0.7), 0 4px 12px -2px rgba(0, 0, 0, 0.45);
-      z-index: 20;
-      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+      position: absolute; width: 290px; border-radius: 12px;
+      background: rgba(19, 26, 42, 0.95); backdrop-filter: blur(12px);
+      border: 1.5px solid #29354f; box-shadow: 0 14px 32px -6px rgba(0, 0, 0, 0.7);
+      z-index: 20; transition: box-shadow 0.15s ease, border-color 0.15s ease;
     }
-
     .flow-node:hover { border-color: #3d4f73; }
-    .flow-node.selected {
-      border-color: #38bdf8;
-      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25), 0 18px 36px -6px rgba(0, 0, 0, 0.85);
-      z-index: 30;
-    }
+    .flow-node.selected { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25), 0 18px 36px -6px rgba(0, 0, 0, 0.85); z-index: 30; }
 
-    /* Ports / Sockets */
     .port-socket {
-      width: 14px;
-      height: 14px;
-      border-radius: 9999px;
-      background-color: #131a2a;
-      border: 2.5px solid #64748b;
-      cursor: crosshair;
-      transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease;
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 40;
+      width: 14px; height: 14px; border-radius: 9999px; background-color: #131a2a;
+      border: 2.5px solid #64748b; cursor: crosshair; transition: transform 0.12s ease, background-color 0.12s ease;
+      position: absolute; top: 50%; transform: translateY(-50%); z-index: 40;
     }
-
     .port-socket.input-port { left: -8px; }
     .port-socket.output-port { right: -8px; }
+    .port-socket:hover { transform: translateY(-50%) scale(1.35); background-color: #38bdf8; border-color: #e0f2fe; }
 
-    .port-socket:hover,
-    .port-socket.port-highlight {
-      transform: translateY(-50%) scale(1.35);
-      background-color: #38bdf8;
-      border-color: #e0f2fe;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
-    }
-
-    /* Custom scrollbars */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #29354f; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #394869; }
 
-    .sidebar-panel {
-      transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1), transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
-      will-change: width, transform;
-    }
-
-    #palette-sidebar.collapsed,
-    #inspector-sidebar.collapsed {
-      width: 0 !important;
-      min-width: 0 !important;
-      max-width: 0 !important;
-      padding-left: 0 !important;
-      padding-right: 0 !important;
-      border-width: 0 !important;
-      opacity: 0;
-      overflow: hidden;
-      pointer-events: none;
+    .sidebar-panel { transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; will-change: width; }
+    #palette-sidebar.collapsed, #inspector-sidebar.collapsed {
+      width: 0 !important; min-width: 0 !important; max-width: 0 !important; padding: 0 !important; border-width: 0 !important; opacity: 0; overflow: hidden; pointer-events: none;
     }
   </style>
 </head>
@@ -240,11 +119,11 @@
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
         </svg>
-        <span>Sign in with Google</span>
+        <span id="login-btn-text">Sign in with Google</span>
       </button>
 
-      <div class="text-[11px] text-slate-500 font-mono">
-        OAuth Client ID: 516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com[cite: 2]
+      <div id="login-status-indicator" class="text-[11px] text-amber-400 font-mono">
+        Initializing Google Services...
       </div>
     </div>
   </div>
@@ -252,7 +131,7 @@
   <!-- Top Toolbar -->
   <header class="h-14 bg-surface-900 border-b border-surface-700/80 px-3 sm:px-4 flex items-center justify-between z-50 shrink-0 gap-2">
     <div class="flex items-center gap-2.5 shrink-0">
-      <button id="toggle-palette-btn" class="p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 border border-surface-700 transition" title="Toggle Quest Nodes Sidebar ([)">
+      <button id="toggle-palette-btn" class="p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 border border-surface-700 transition" title="Toggle Quest Nodes Sidebar">
         <i data-lucide="panel-left" class="w-4 h-4"></i>
       </button>
 
@@ -262,7 +141,7 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition" title="Click to Rename Quest">QuestFlow Studio</h1>
+            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition">QuestFlow Studio</h1>
             <span id="top-project-badge" class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-800 text-amber-400 border border-surface-700">No Project</span>
           </div>
           <p id="top-project-subtitle" class="text-[11px] text-slate-400 hidden xl:block">Google Drive & Media Manager Active</p>
@@ -277,7 +156,7 @@
         <span>Playtest</span>
       </button>
 
-      <button id="save-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition shrink-0" title="Save Quest & Media as ZIP Archive">
+      <button id="save-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition shrink-0" title="Save ZIP">
         <i data-lucide="file-archive" class="w-3.5 h-3.5"></i>
         <span class="hidden sm:inline">Save ZIP</span>
       </button>
@@ -285,17 +164,17 @@
       <div class="h-4 w-px bg-surface-700 mx-0.5 hidden sm:block"></div>
 
       <!-- Google Drive Sync Buttons -->
-      <button id="sync-to-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold transition shrink-0" title="Sync Projects to Google Drive">
+      <button id="sync-to-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold transition shrink-0" title="Sync to Drive">
         <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
         <span class="hidden md:inline">Sync to Drive</span>
       </button>
 
-      <button id="sync-from-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition shrink-0" title="Sync Projects from Google Drive">
+      <button id="sync-from-drive-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition shrink-0" title="Sync from Drive">
         <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
         <span class="hidden md:inline">Sync from Drive</span>
       </button>
 
-      <button id="close-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-surface-700 hover:border-amber-500/40 text-xs font-medium transition shrink-0" title="Open Project Manager">
+      <button id="close-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-surface-700 text-xs font-medium transition shrink-0" title="Project Manager">
         <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-amber-400"></i>
         <span class="hidden sm:inline">Project Manager</span>
       </button>
@@ -303,16 +182,16 @@
 
     <!-- Right Controls -->
     <div class="flex items-center gap-2 shrink-0">
-      <button id="logout-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition" title="Logout & Lock App">
+      <button id="logout-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition" title="Logout">
         <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
         <span class="hidden xl:inline">Logout</span>
       </button>
 
-      <button id="delete-selected-btn" disabled class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 disabled:opacity-40 disabled:pointer-events-none hover:bg-rose-500/20 text-rose-400 border border-surface-700 text-xs font-medium transition" title="Delete Selected">
+      <button id="delete-selected-btn" disabled class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 disabled:opacity-40 disabled:pointer-events-none hover:bg-rose-500/20 text-rose-400 border border-surface-700 text-xs font-medium transition">
         <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
       </button>
 
-      <button id="toggle-inspector-btn" class="p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 border border-surface-700 transition" title="Toggle Inspector / Playtest Sidebar (])">
+      <button id="toggle-inspector-btn" class="p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 border border-surface-700 transition" title="Toggle Inspector">
         <i data-lucide="panel-right" class="w-4 h-4"></i>
       </button>
     </div>
@@ -320,43 +199,28 @@
 
   <!-- Main Workspace -->
   <div class="flex-1 flex relative overflow-hidden">
-
-    <!-- Left Sidebar: Quest Node Palette -->
+    <!-- Left Sidebar: Palette -->
     <aside id="palette-sidebar" class="sidebar-panel collapsed w-64 min-w-[260px] bg-surface-900/95 backdrop-blur-md border-r border-surface-700/80 flex flex-col z-40 shrink-0">
       <div class="p-3.5 border-b border-surface-800 flex items-center justify-between gap-2">
         <div class="min-w-0">
           <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-200 truncate">Quest Nodes</h2>
-          <p class="text-[11px] text-slate-400 mt-0.5 truncate">Drag to canvas or click to add</p>
         </div>
-        <button id="close-palette-btn" class="p-1.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-700/80 text-slate-400 hover:text-white transition shrink-0" title="Collapse Left Sidebar">
-          <i data-lucide="panel-left-close" class="w-4 h-4"></i>
-        </button>
+        <button id="close-palette-btn" class="p-1.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-700 text-slate-400 hover:text-white transition"><i data-lucide="panel-left-close" class="w-4 h-4"></i></button>
       </div>
-
       <div class="px-3 pt-3">
         <div class="relative">
           <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
-          <input id="palette-search" type="text" placeholder="Filter quest nodes..." class="w-full bg-surface-950 border border-surface-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition" />
+          <input id="palette-search" type="text" placeholder="Filter quest nodes..." class="w-full bg-surface-950 border border-surface-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition" />
         </div>
       </div>
-
       <div id="palette-list" class="flex-1 overflow-y-auto p-3 space-y-2.5"></div>
     </aside>
 
     <!-- Center Canvas -->
     <main id="canvas-container" class="flex-1 relative overflow-hidden tool-select">
-      <!-- Floating Edge Expand Tabs -->
-      <button id="expand-palette-tab" class="absolute top-3.5 left-0 z-30 flex items-center gap-1.5 pl-2.5 pr-3 py-2 rounded-r-xl bg-surface-900/95 hover:bg-surface-800 backdrop-blur-md border border-l-0 border-surface-700 hover:border-amber-500/50 text-slate-200 hover:text-amber-300 shadow-xl transition" title="Expand Quest Nodes Palette">
-        <i data-lucide="panel-left-open" class="w-4 h-4 text-amber-400"></i>
-        <span class="text-xs font-semibold tracking-tight">Nodes</span>
-      </button>
+      <button id="expand-palette-tab" class="absolute top-3.5 left-0 z-30 flex items-center gap-1.5 pl-2.5 pr-3 py-2 rounded-r-xl bg-surface-900/95 hover:bg-surface-800 backdrop-blur-md border border-l-0 border-surface-700 text-slate-200 shadow-xl transition"><i data-lucide="panel-left-open" class="w-4 h-4 text-amber-400"></i><span class="text-xs font-semibold">Nodes</span></button>
+      <button id="expand-inspector-tab" class="absolute top-3.5 right-0 z-30 flex items-center gap-1.5 pl-3 pr-2.5 py-2 rounded-l-xl bg-surface-900/95 hover:bg-surface-800 backdrop-blur-md border border-r-0 border-surface-700 text-slate-200 shadow-xl transition"><span class="text-xs font-semibold">Inspector</span><i data-lucide="panel-right-open" class="w-4 h-4 text-sky-400"></i></button>
 
-      <button id="expand-inspector-tab" class="absolute top-3.5 right-0 z-30 flex items-center gap-1.5 pl-3 pr-2.5 py-2 rounded-l-xl bg-surface-900/95 hover:bg-surface-800 backdrop-blur-md border border-r-0 border-surface-700 hover:border-sky-500/50 text-slate-200 hover:text-sky-300 shadow-xl transition" title="Expand Inspector & Playtest">
-        <span class="text-xs font-semibold tracking-tight">Inspector</span>
-        <i data-lucide="panel-right-open" class="w-4 h-4 text-sky-400"></i>
-      </button>
-
-      <!-- Transformed World Layer -->
       <div id="canvas-world">
         <svg id="connections-svg">
           <defs>
@@ -371,62 +235,38 @@
       </div>
 
       <div id="empty-hint" class="hidden pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-        <div class="w-12 h-12 rounded-2xl bg-surface-800/90 border border-surface-700 flex items-center justify-center mb-3 text-amber-400">
-          <i data-lucide="map" class="w-6 h-6"></i>
-        </div>
+        <div class="w-12 h-12 rounded-2xl bg-surface-800 border border-surface-700 flex items-center justify-center mb-3 text-amber-400"><i data-lucide="map" class="w-6 h-6"></i></div>
         <p class="text-sm font-medium text-slate-200">Active Quest is Empty</p>
-        <p class="text-xs text-slate-400 max-w-xs mt-1">Drag a quest node from the left palette or switch to another quest in the Project Manager.</p>
       </div>
 
-      <!-- Canvas Floating Toolbar -->
       <div class="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
-        <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition flex items-center justify-center" title="Select Tool">
-          <i data-lucide="mouse-pointer" class="w-4 h-4"></i>
-        </button>
-        <button id="tool-pan-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center" title="Pan Tool">
-          <i data-lucide="hand" class="w-4 h-4"></i>
-        </button>
+        <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition"><i data-lucide="mouse-pointer" class="w-4 h-4"></i></button>
+        <button id="tool-pan-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition"><i data-lucide="hand" class="w-4 h-4"></i></button>
         <div class="w-px h-5 bg-surface-700 mx-0.5"></div>
-        <button id="zoom-out-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center" title="Zoom Out">
-          <i data-lucide="minus" class="w-4 h-4"></i>
-        </button>
+        <button id="zoom-out-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition"><i data-lucide="minus" class="w-4 h-4"></i></button>
         <span id="zoom-level-label" class="px-2 text-xs font-mono text-slate-300 min-w-[52px] text-center">100%</span>
-        <button id="zoom-in-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center" title="Zoom In">
-          <i data-lucide="plus" class="w-4 h-4"></i>
-        </button>
+        <button id="zoom-in-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition"><i data-lucide="plus" class="w-4 h-4"></i></button>
         <div class="w-px h-5 bg-surface-700 mx-0.5"></div>
-        <button id="fit-view-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center" title="Fit Graph">
-          <i data-lucide="maximize-2" class="w-4 h-4"></i>
-        </button>
+        <button id="fit-view-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition"><i data-lucide="maximize-2" class="w-4 h-4"></i></button>
       </div>
 
-      <!-- Toast Notification -->
       <div id="status-toast" class="pointer-events-none opacity-0 transition-opacity duration-200 absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-surface-900/95 border border-surface-700 px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 text-xs text-slate-200">
         <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
         <span id="status-text">Ready</span>
       </div>
 
-      <!-- Centered Floating Playtest Modal Overlay -->
       <div id="centered-playtest-overlay" class="hidden absolute inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div id="centered-playtest-card" class="bg-surface-900/95 backdrop-blur-xl border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl shadow-amber-500/10 flex flex-col max-h-[85vh]"></div>
+        <div id="centered-playtest-card" class="bg-surface-900/95 backdrop-blur-xl border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl flex flex-col max-h-[85vh]"></div>
       </div>
     </main>
 
     <!-- Right Sidebar -->
     <aside id="inspector-sidebar" class="sidebar-panel collapsed w-80 min-w-[320px] bg-surface-900/95 backdrop-blur-md border-l border-surface-700/80 flex flex-col z-40 shrink-0">
       <div class="p-2.5 border-b border-surface-800 flex items-center justify-between gap-2 bg-surface-950/40">
-        <button id="close-inspector-btn" class="p-1.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-700/80 text-slate-400 hover:text-white transition shrink-0" title="Collapse Right Sidebar">
-          <i data-lucide="panel-right-close" class="w-4 h-4"></i>
-        </button>
+        <button id="close-inspector-btn" class="p-1.5 rounded-lg bg-surface-850 hover:bg-surface-800 border border-surface-700 text-slate-400 hover:text-white transition"><i data-lucide="panel-right-close" class="w-4 h-4"></i></button>
         <div class="flex-1 grid grid-cols-2 gap-1 bg-surface-950 p-1 rounded-lg border border-surface-800">
-          <button id="tab-inspector-btn" class="flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold bg-surface-800 text-white transition">
-            <i data-lucide="sliders" class="w-3.5 h-3.5 text-sky-400"></i>
-            <span>Inspector</span>
-          </button>
-          <button id="tab-playtest-btn" class="flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 transition">
-            <i data-lucide="gamepad-2" class="w-3.5 h-3.5 text-amber-400"></i>
-            <span>Playtest</span>
-          </button>
+          <button id="tab-inspector-btn" class="flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold bg-surface-800 text-white transition"><i data-lucide="sliders" class="w-3.5 h-3.5 text-sky-400"></i><span>Inspector</span></button>
+          <button id="tab-playtest-btn" class="flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 transition"><i data-lucide="gamepad-2" class="w-3.5 h-3.5 text-amber-400"></i><span>Playtest</span></button>
         </div>
       </div>
       <div id="inspector-panel" class="flex-1 overflow-y-auto p-4"></div>
@@ -436,55 +276,38 @@
         <span id="stats-edges">Connections: 0</span>
       </div>
     </aside>
-
   </div>
 
-  <!-- Project Manager & Google Drive Modal -->
+  <!-- Project Manager Modal -->
   <div id="startup-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl flex flex-col max-h-[88vh]">
       <div class="flex items-center justify-between mb-4 pb-3 border-b border-surface-800">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-lg shadow-amber-500/30 text-white shrink-0">
-            <i data-lucide="folder-kanban" class="w-5 h-5"></i>
-          </div>
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-lg shadow-amber-500/30 text-white shrink-0"><i data-lucide="folder-kanban" class="w-5 h-5"></i></div>
           <div>
             <h2 class="text-base font-bold text-white tracking-tight">Project Manager & Google Drive</h2>
-            <p class="text-xs text-slate-400">Manage campaigns, quests, and sync directly with Google Drive</p>
+            <p class="text-xs text-slate-400">Manage campaigns and sync with Google Drive</p>
           </div>
         </div>
-        <button id="close-explorer-modal-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+        <button id="close-explorer-modal-btn" class="p-1.5 rounded-lg hover:bg-surface-800 text-slate-400 hover:text-white transition"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
 
       <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div class="relative flex-1 min-w-[200px]">
           <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
-          <input id="explorer-search" type="text" placeholder="Search projects and quests..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition" />
+          <input id="explorer-search" type="text" placeholder="Search projects and quests..." class="w-full bg-surface-950 border border-surface-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition" />
         </div>
         <div class="flex items-center gap-2">
-          <button id="modal-sync-to-drive-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0">
-            <i data-lucide="cloud-upload" class="w-4 h-4"></i>
-            <span>Sync to Drive</span>
-          </button>
-          <button id="modal-sync-from-drive-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition shrink-0">
-            <i data-lucide="cloud-download" class="w-4 h-4"></i>
-            <span>Sync from Drive</span>
-          </button>
-          <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
-            <i data-lucide="file-plus" class="w-4 h-4 text-amber-400"></i>
-            <span>Blank Project</span>
-          </button>
+          <button id="modal-sync-to-drive-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0"><i data-lucide="cloud-upload" class="w-4 h-4"></i><span>Sync to Drive</span></button>
+          <button id="modal-sync-from-drive-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition shrink-0"><i data-lucide="cloud-download" class="w-4 h-4"></i><span>Sync from Drive</span></button>
+          <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0"><i data-lucide="file-plus" class="w-4 h-4 text-amber-400"></i><span>Blank Project</span></button>
         </div>
       </div>
 
       <div id="project-manager-list" class="flex-1 overflow-y-auto space-y-4 pr-1"></div>
 
       <div class="pt-3 mt-4 border-t border-surface-800 flex items-center justify-between text-xs">
-        <button id="clear-persistence-btn" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 font-medium transition">
-          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-          <span>Clear Local Data</span>
-        </button>
+        <button id="clear-persistence-btn" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30 font-medium transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span>Clear Local Data</span></button>
         <span id="project-count-summary" class="text-slate-500">Projects Available</span>
       </div>
     </div>
@@ -494,100 +317,54 @@
   <div id="delete-confirm-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-sm w-full p-5 shadow-2xl">
       <div class="flex items-center gap-3 mb-3">
-        <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
-          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
-        </div>
+        <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div>
         <div>
           <h3 id="delete-modal-title" class="text-sm font-semibold text-white">Delete Quest</h3>
-          <p id="delete-modal-desc" class="text-xs text-slate-400 mt-0.5">Are you sure you want to delete this item? This action cannot be undone.</p>
+          <p class="text-xs text-slate-400 mt-0.5">Are you sure? This action cannot be undone.</p>
         </div>
       </div>
       <div class="flex justify-end gap-2 mt-5">
-        <button id="cancel-delete-btn" class="px-3.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-300 transition">Cancel</button>
-        <button id="confirm-delete-btn" class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white transition">Delete</button>
+        <button id="cancel-delete-btn" class="px-3.5 py-1.5 rounded-lg bg-surface-800 text-xs text-slate-300">Cancel</button>
+        <button id="confirm-delete-btn" class="px-3.5 py-1.5 rounded-lg bg-rose-600 text-xs text-white">Delete</button>
       </div>
     </div>
   </div>
 
   <script>
-    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com'; //[cite: 2]
+    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com';[cite: 2]
     const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
     let tokenClient = null;
     let accessToken = localStorage.getItem('questforge_oauth_token') || null;
 
     const NODE_TYPES = {
-      questStart: {
-        type: 'questStart', category: 'Entry', title: 'Quest Start', description: 'Entry point defining quest ID, type, and level requirement', icon: 'flag', accent: '#10b981', badgeBg: 'bg-emerald-500/15', badgeText: 'text-emerald-400', borderAccent: 'border-emerald-500/40',
-        inputs: [], outputs: [{ id: 'out_start', label: 'Start' }],
-        defaultConfig: { questId: 'qst_01_new', questType: 'Main Story', minLevel: '1' }
-      },
-      dialogue: {
-        type: 'dialogue', category: 'Narrative', title: 'Dialogue / NPC', description: 'NPC spoken line, character name, and reaction tone', icon: 'message-square-quote', accent: '#6366f1', badgeBg: 'bg-indigo-500/15', badgeText: 'text-indigo-400', borderAccent: 'border-indigo-500/40',
-        inputs: [{ id: 'in_prev', label: 'In' }], outputs: [{ id: 'out_next', label: 'Next' }],
-        defaultConfig: { npcName: 'Guard Captain', reaction: 'Neutral', dialogueText: 'Halt, adventurer!' }
-      },
-      playerChoice: {
-        type: 'playerChoice', category: 'Branching', title: 'Player Choice', description: 'Interactive dialogue fork supporting multiple choices', icon: 'git-fork', accent: '#f59e0b', badgeBg: 'bg-amber-500/15', badgeText: 'text-amber-400', borderAccent: 'border-amber-500/40',
-        inputs: [{ id: 'in_prev', label: 'In' }], outputs: [],
-        defaultConfig: { choices: [{ id: 'choice_0', label: 'Accept' }, { id: 'choice_1', label: 'Decline' }] }
-      },
-      objective: {
-        type: 'objective', category: 'Gameplay', title: 'Objective / Task', description: 'Trackable gameplay goal with custom objective types', icon: 'target', accent: '#06b6d4', badgeBg: 'bg-cyan-500/15', badgeText: 'text-cyan-400', borderAccent: 'border-cyan-500/40',
-        inputs: [{ id: 'in_prev', label: 'In' }], outputs: [{ id: 'out_complete', label: 'Complete' }],
-        defaultConfig: { objectiveType: 'Kill Target', targetName: 'Bandit Scout', requiredCount: '5' }
-      },
-      condition: {
-        type: 'condition', category: 'Logic', title: 'Condition / Check', description: 'Evaluates world state with condition types', icon: 'shield-question', accent: '#a855f7', badgeBg: 'bg-purple-500/15', badgeText: 'text-purple-400', borderAccent: 'border-purple-500/40',
-        inputs: [{ id: 'in_prev', label: 'In' }], outputs: [{ id: 'out_true', label: 'True' }, { id: 'out_false', label: 'False' }],
-        defaultConfig: { conditionType: 'Has Item', conditionValue: 'item_key' }
-      },
-      questReward: {
-        type: 'questReward', category: 'Outcome', title: 'Quest Reward / End', description: 'Concludes quest branch with rewards', icon: 'trophy', accent: '#f43f5e', badgeBg: 'bg-rose-500/15', badgeText: 'text-rose-400', borderAccent: 'border-rose-500/40',
-        inputs: [{ id: 'in_prev', label: 'In' }], outputs: [],
-        defaultConfig: { outcome: 'Quest Complete', xpReward: '300', goldReward: '150', itemReward: 'Steel Shield' }
-      }
+      questStart: { type: 'questStart', title: 'Quest Start', description: 'Entry point defining quest ID and level', icon: 'flag', accent: '#10b981', badgeBg: 'bg-emerald-500/15', badgeText: 'text-emerald-400', borderAccent: 'border-emerald-500/40', inputs: [], outputs: [{ id: 'out_start', label: 'Start' }], defaultConfig: { questId: 'qst_01_new', questType: 'Main Story', minLevel: '1' } },
+      dialogue: { type: 'dialogue', title: 'Dialogue / NPC', description: 'NPC spoken line and reaction tone', icon: 'message-square-quote', accent: '#6366f1', badgeBg: 'bg-indigo-500/15', badgeText: 'text-indigo-400', borderAccent: 'border-indigo-500/40', inputs: [{ id: 'in_prev', label: 'In' }], outputs: [{ id: 'out_next', label: 'Next' }], defaultConfig: { npcName: 'Guard Captain', reaction: 'Neutral', dialogueText: 'Halt, adventurer!' } },
+      playerChoice: { type: 'playerChoice', title: 'Player Choice', description: 'Interactive dialogue fork', icon: 'git-fork', accent: '#f59e0b', badgeBg: 'bg-amber-500/15', badgeText: 'text-amber-400', borderAccent: 'border-amber-500/40', inputs: [{ id: 'in_prev', label: 'In' }], outputs: [], defaultConfig: { choices: [{ id: 'choice_0', label: 'Accept' }, { id: 'choice_1', label: 'Decline' }] } },
+      objective: { type: 'objective', title: 'Objective / Task', description: 'Trackable gameplay goal', icon: 'target', accent: '#06b6d4', badgeBg: 'bg-cyan-500/15', badgeText: 'text-cyan-400', borderAccent: 'border-cyan-500/40', inputs: [{ id: 'in_prev', label: 'In' }], outputs: [{ id: 'out_complete', label: 'Complete' }], defaultConfig: { objectiveType: 'Kill Target', targetName: 'Bandit', requiredCount: '5' } },
+      condition: { type: 'condition', title: 'Condition / Check', description: 'Evaluates world state', icon: 'shield-question', accent: '#a855f7', badgeBg: 'bg-purple-500/15', badgeText: 'text-purple-400', borderAccent: 'border-purple-500/40', inputs: [{ id: 'in_prev', label: 'In' }], outputs: [{ id: 'out_true', label: 'True' }, { id: 'out_false', label: 'False' }], defaultConfig: { conditionType: 'Has Item', conditionValue: 'item_key' } },
+      questReward: { type: 'questReward', title: 'Quest Reward / End', description: 'Concludes quest branch', icon: 'trophy', accent: '#f43f5e', badgeBg: 'bg-rose-500/15', badgeText: 'text-rose-400', borderAccent: 'border-rose-500/40', inputs: [{ id: 'in_prev', label: 'In' }], outputs: [], defaultConfig: { outcome: 'Quest Complete', xpReward: '300', goldReward: '150', itemReward: 'Shield' } }
     };
 
-    const DEFAULT_PROJECTS = [
-      {
-        id: 'proj_sample',
-        title: 'Chronicles of Aethelgard [Sample Campaign]',
-        description: 'Sample campaign project showcasing primary storylines.',
-        isSample: true,
-        quests: [
-          {
-            id: 'qst_04_shrine',
-            title: 'The Sunken Shrine',
-            type: 'Main Story',
-            minLevel: 5,
-            description: 'Enter the Sunken Shrine.',
-            nodes: [
-              { id: 'node_start', type: 'questStart', title: 'The Sunken Shrine', x: 64, y: 200, notes: '', resources: [], config: { questId: 'qst_04_shrine', questType: 'Main Story', minLevel: '5' } },
-              { id: 'node_npc', type: 'dialogue', title: 'High Priestess Lyra', x: 380, y: 200, notes: '', resources: [], config: { npcName: 'Lyra', reaction: 'Urgent', dialogueText: 'Enter the Sunken Shrine!' } }
-            ],
-            edges: [
-              { id: 'edge_1', sourceNodeId: 'node_start', sourcePortId: 'out_start', targetNodeId: 'node_npc', targetPortId: 'in_prev' }
-            ]
-          }
-        ]
-      }
-    ];
+    const DEFAULT_PROJECTS = [{
+      id: 'proj_sample', title: 'Chronicles of Aethelgard [Sample Campaign]', description: 'Sample campaign project.', isSample: true,
+      quests: [{
+        id: 'qst_04_shrine', title: 'The Sunken Shrine', type: 'Main Story', minLevel: 5, description: 'Enter the Sunken Shrine.',
+        nodes: [
+          { id: 'node_start', type: 'questStart', title: 'The Sunken Shrine', x: 64, y: 200, notes: '', resources: [], config: { questId: 'qst_04_shrine', questType: 'Main Story', minLevel: '5' } },
+          { id: 'node_npc', type: 'dialogue', title: 'High Priestess Lyra', x: 380, y: 200, notes: '', resources: [], config: { npcName: 'Lyra', reaction: 'Urgent', dialogueText: 'Enter the Sunken Shrine!' } }
+        ],
+        edges: [{ id: 'edge_1', sourceNodeId: 'node_start', sourcePortId: 'out_start', targetNodeId: 'node_npc', targetPortId: 'in_prev' }]
+      }]
+    }];
 
     let PROJECTS = [];
-    const LOCAL_STORAGE_KEY = 'questforge_projects_v6';
+    const LOCAL_STORAGE_KEY = 'questforge_projects_v7';
 
     function loadProjectsFromStorage() {
       try {
         const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (stored) {
-          PROJECTS = JSON.parse(stored);
-        } else {
-          PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
-          saveProjectsToStorage();
-        }
-      } catch (err) {
-        PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
-      }
+        PROJECTS = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
+      } catch (err) { PROJECTS = JSON.parse(JSON.stringify(DEFAULT_PROJECTS)); }
     }
 
     function saveProjectsToStorage() {
@@ -595,36 +372,43 @@
         if (state.activeProjectId && state.activeQuestId) {
           const project = PROJECTS.find(p => p.id === state.activeProjectId);
           const quest = project?.quests.find(q => q.id === state.activeQuestId);
-          if (quest) {
-            quest.nodes = JSON.parse(JSON.stringify(state.nodes));
-            quest.edges = JSON.parse(JSON.stringify(state.edges));
-          }
+          if (quest) { quest.nodes = JSON.parse(JSON.stringify(state.nodes)); quest.edges = JSON.parse(JSON.stringify(state.edges)); }
         }
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(PROJECTS));
       } catch (err) {}
     }
 
-    // Google Auth & Drive Sync
+    // Google Auth Initialization & Handlers
     const loginLockScreen = document.getElementById('login-lock-screen');
     const googleLoginBtn = document.getElementById('google-login-btn');
     const logoutBtn = document.getElementById('logout-btn');
+    const loginStatusIndicator = document.getElementById('login-status-indicator');
 
     function initGoogleAuth() {
-      if (typeof google === 'undefined' || !google.accounts) {
-        setTimeout(initGoogleAuth, 400);
+      if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+        loginStatusIndicator.textContent = 'Waiting for Google Services SDK...';
+        setTimeout(initGoogleAuth, 300);
         return;
       }
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: (response) => {
-          if (response.access_token) {
-            accessToken = response.access_token;
-            localStorage.setItem('questforge_oauth_token', accessToken);
-            unlockApp();
+
+      try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: (response) => {
+            if (response.access_token) {
+              accessToken = response.access_token;
+              localStorage.setItem('questforge_oauth_token', accessToken);
+              unlockApp();
+            }
           }
-        }
-      });
+        });
+        loginStatusIndicator.textContent = 'Ready to Sign In';
+        loginStatusIndicator.className = 'text-[11px] text-emerald-400 font-mono';
+      } catch (err) {
+        loginStatusIndicator.textContent = 'Google Auth Init Error';
+        loginStatusIndicator.className = 'text-[11px] text-rose-400 font-mono';
+      }
 
       if (accessToken) {
         unlockApp();
@@ -652,7 +436,7 @@
       if (tokenClient) {
         tokenClient.requestAccessToken({ prompt: 'consent' });
       } else {
-        showToast('Google API initializing...', 'amber');
+        alert('Google SDK is still loading or blocked. Please check your network connection or ad-blocker.');
       }
     });
 
@@ -669,6 +453,7 @@
       }
     });
 
+    // Google Drive Sync API Methods
     async function syncToGoogleDrive() {
       if (!accessToken) { showToast('Not authenticated with Google', 'rose'); return; }
       showToast('Syncing projects to Google Drive...', 'amber');
@@ -700,7 +485,7 @@
             body: form
           });
         }
-        showToast('Successfully synced projects to Google Drive!', 'emerald');
+        showToast('Successfully synced to Google Drive!', 'emerald');
       } catch (err) {
         showToast(`Drive Sync Error: ${err.message}`, 'rose');
       }
@@ -708,7 +493,7 @@
 
     async function syncFromGoogleDrive() {
       if (!accessToken) { showToast('Not authenticated with Google', 'rose'); return; }
-      showToast('Fetching projects from Google Drive...', 'amber');
+      showToast('Fetching from Google Drive...', 'amber');
       try {
         const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='questforge_projects_backup.json' and trashed=false`, {
           headers: { Authorization: `Bearer ${accessToken}` }
@@ -729,7 +514,7 @@
               loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
             }
             renderProjectManager();
-            showToast('Successfully synced projects from Google Drive!', 'emerald');
+            showToast('Successfully synced from Google Drive!', 'emerald');
           }
         }
       } catch (err) {
@@ -742,7 +527,7 @@
     document.getElementById('modal-sync-to-drive-btn').addEventListener('click', syncToGoogleDrive);
     document.getElementById('modal-sync-from-drive-btn').addEventListener('click', syncFromGoogleDrive);
 
-    // App State & Workspace
+    // App State
     const GRID_SIZE = 24;
     const state = {
       activeProjectId: null, activeQuestId: null,
@@ -797,12 +582,12 @@
       state.currentTool = tool;
       if (tool === 'select') {
         canvasContainer.className = 'flex-1 relative overflow-hidden tool-select';
-        toolSelectBtn.className = 'p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition flex items-center justify-center';
-        toolPanBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center';
+        toolSelectBtn.className = 'p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition';
+        toolPanBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition';
       } else {
         canvasContainer.className = 'flex-1 relative overflow-hidden tool-pan';
-        toolPanBtn.className = 'p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 transition flex items-center justify-center';
-        toolSelectBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center';
+        toolPanBtn.className = 'p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 transition';
+        toolSelectBtn.className = 'p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition';
       }
     }
 
@@ -1062,7 +847,7 @@
       showToast('Saved ZIP archive successfully', 'emerald');
     });
 
-    // Node Palette & Rendering
+    // Palette & Nodes
     function renderPalette(filterText = '') {
       paletteList.innerHTML = '';
       const query = filterText.trim().toLowerCase();
@@ -1101,10 +886,7 @@
       };
       state.nodes.push(node);
       selectNode(node.id);
-      renderNodes();
-      renderEdges();
-      updateStats();
-      saveProjectsToStorage();
+      renderNodes(); renderEdges(); updateStats(); saveProjectsToStorage();
       return node;
     }
 
@@ -1318,7 +1100,7 @@
       renderEdges();
     }
 
-    // Inspector & Centered Playtest Simulator
+    // Inspector & Playtest
     function renderInspector() {
       if (state.selectedNodeIds.size === 1) {
         const nodeId = Array.from(state.selectedNodeIds)[0];
