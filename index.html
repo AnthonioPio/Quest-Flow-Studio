@@ -3692,53 +3692,53 @@
       const projectData = {
         app: 'Quest Flow Studio',
         savedAt: new Date().toISOString(),
-        projects: PROJECTS // Uses your global app state/projects array
+        projects: PROJECTS
       };
     
       const fileName = 'quest_flow_studio_backup.json';
+      const fileContent = JSON.stringify(projectData, null, 2);
       
       try {
         // 1. Search if file already exists on Drive
-        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name%3D'${fileName}'%20and%20trashed%3Dfalse`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
+        const searchRes = await fetch(
+          `https://www.googleapis.com/drive/v3/files?q=name%3D'${fileName}'%20and%20trashed%3Dfalse&orderBy=modifiedTime%20desc`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
         const searchJson = await searchRes.json();
         
         let fileId = null;
         if (searchJson.files && searchJson.files.length > 0) {
-          fileId = searchJson.files[0].id;
+          fileId = searchJson.files[0].id; // Grab the newest existing file
         }
     
-        const fileContent = JSON.stringify(projectData, null, 2);
-    
-        if (fileId) {
-          // 2. Update existing file
-          await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-            method: 'PATCH',
+        // 2. If file doesn't exist, create file metadata first (Step 1 of Two-Step Upload)
+        if (!fileId) {
+          const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+            method: 'POST',
             headers: {
               Authorization: `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
             },
-            body: fileContent
+            body: JSON.stringify({ name: fileName, mimeType: 'application/json' })
           });
-          showToast('Successfully updated backup on Google Drive!', 'emerald');
+          const newFile = await createRes.json();
+          fileId = newFile.id;
+        }
+    
+        // 3. Upload content to the file ID (Step 2: Media Patch)
+        const uploadRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: fileContent
+        });
+    
+        if (uploadRes.ok) {
+          showToast('Successfully synced to Google Drive!', 'emerald');
         } else {
-          // 3. Create new file on Drive
-          const metadata = {
-            name: fileName,
-            mimeType: 'application/json',
-          };
-    
-          const form = new FormData();
-          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-          form.append('file', new Blob([fileContent], { type: 'application/json' }));
-    
-          await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${accessToken}` },
-            body: form
-          });
-          showToast('Successfully created new backup file on Google Drive!', 'emerald');
+          throw new Error('Drive upload responded with status ' + uploadRes.status);
         }
       } catch (err) {
         console.error('Drive Sync Error:', err);
