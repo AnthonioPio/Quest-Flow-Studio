@@ -3815,7 +3815,7 @@
       const fileName = 'quest_flow_studio_backup.zip';
     
       try {
-        // Search for the backup ZIP file on Google Drive
+        // 1. Search for the backup ZIP file on Google Drive
         const searchRes = await fetch(
           `https://www.googleapis.com/drive/v3/files?q=name%3D'${fileName}'%20and%20trashed%3Dfalse&orderBy=modifiedTime%20desc`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -3827,7 +3827,7 @@
           return;
         }
     
-        // Download the ZIP file blob
+        // 2. Download the ZIP file blob from Google Drive
         const fileId = searchJson.files[0].id;
         const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
           headers: { Authorization: `Bearer ${accessToken}` }
@@ -3841,7 +3841,12 @@
           throw new Error('Invalid backup archive: missing projects_backup.json');
         }
     
-        // Read the project manifest JSON
+        // 3. CLEAR EXISTING LOCAL DATA FIRST
+        PROJECTS = [];
+        localStorage.removeItem('quest_flow_studio_projects'); // Clears local project storage
+        // If you use any other local cache keys, clear them here as well
+    
+        // 4. Read the project manifest JSON from the ZIP
         const jsonString = await zipContent.files['projects_backup.json'].async('text');
         const backupData = JSON.parse(jsonString);
     
@@ -3849,7 +3854,7 @@
           throw new Error('Invalid backup file structure.');
         }
     
-        // Unpack media files from the ZIP and restore data URLs for every node
+        // 5. Unpack media files from the ZIP and restore data URLs for every node
         for (let proj of backupData.projects) {
           for (let quest of proj.quests) {
             for (let node of (quest.nodes || [])) {
@@ -3869,7 +3874,7 @@
           }
         }
     
-        // Update global projects state, local storage, and UI
+        // 6. Populate application with fresh cloud data and save to local storage
         PROJECTS = backupData.projects;
         saveProjectsToStorage();
         renderProjectManager(explorerSearch.value);
@@ -3878,7 +3883,7 @@
           loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
         }
     
-        showToast('Successfully synced projects, positions & media from Drive!', 'emerald');
+        showToast('Successfully cleared local data and synced from Google Drive!', 'emerald');
         startupModal.classList.add('hidden');
       } catch (err) {
         console.error('Drive ZIP Sync From Error:', err);
