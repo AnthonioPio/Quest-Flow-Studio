@@ -3687,19 +3687,56 @@
         return;
       }
     
-      showToast('Syncing project to Google Drive...', 'amber');
+      showToast('Packaging projects & media into ZIP for Google Drive...', 'amber');
     
-      const projectData = {
-        app: 'Quest Flow Studio',
-        savedAt: new Date().toISOString(),
-        projects: PROJECTS
-      };
-    
-      const fileName = 'quest_flow_studio_backup.json';
-      const fileContent = JSON.stringify(projectData, null, 2);
-      
       try {
-        // 1. Search if file already exists on Drive
+        const zip = new JSZip();
+        const mediaFolder = zip.folder("resources");
+    
+        // Deep clone projects so we can strip or reference media cleanly
+        const exportProjects = JSON.parse(JSON.stringify(PROJECTS));
+    
+        // Process all projects, quests, and nodes to pack media into the ZIP
+        for (let proj of exportProjects) {
+          for (let quest of proj.quests) {
+            for (let node of (quest.nodes || [])) {
+              if (node.resources && Array.isArray(node.resources)) {
+                node.resources = node.resources.map((res) => {
+                  const ext = res.name.substring(res.name.lastIndexOf('.')) || '.bin';
+                  const fileName = `${node.id}_${res.id}${ext}`;
+                  
+                  if (res.data && res.data.startsWith('data:')) {
+                    const base64Data = res.data.split(',')[1];
+                    mediaFolder.file(fileName, base64Data, { base64: true });
+                  }
+    
+                  return {
+                    id: res.id,
+                    name: res.name,
+                    type: res.type,
+                    file: `resources/${fileName}`
+                  };
+                });
+              }
+            }
+          }
+        }
+    
+        // Add master JSON file containing all projects, node positions, arrangements, and metadata
+        const backupManifest = {
+          app: 'Quest Flow Studio',
+          schemaVersion: '2.5.0',
+          savedAt: new Date().toISOString(),
+          projects: exportProjects
+        };
+    
+        zip.file("projects_backup.json", JSON.stringify(backupManifest, null, 2));
+    
+        // Generate the ZIP blob
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const fileName = 'quest_flow_studio_backup.zip';
+    
+        // Search Google Drive for an existing backup zip file
         const searchRes = await fetch(
           `https://www.googleapis.com/drive/v3/files?q=name%3D'${fileName}'%20and%20trashed%3Dfalse&orderBy=modifiedTime%20desc`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -3708,10 +3745,10 @@
         
         let fileId = null;
         if (searchJson.files && searchJson.files.length > 0) {
-          fileId = searchJson.files[0].id; // Grab the newest existing file
+          fileId = searchJson.files[0].id;
         }
     
-        // 2. If file doesn't exist, create file metadata first (Step 1 of Two-Step Upload)
+        // If file doesn't exist on Drive, create file metadata first
         if (!fileId) {
           const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
             method: 'POST',
@@ -3719,29 +3756,29 @@
               Authorization: `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ name: fileName, mimeType: 'application/json' })
+            body: JSON.stringify({ name: fileName, mimeType: 'application/zip' })
           });
           const newFile = await createRes.json();
           fileId = newFile.id;
         }
     
-        // 3. Upload content to the file ID (Step 2: Media Patch)
+        // Upload the ZIP blob via media patch
         const uploadRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
           method: 'PATCH',
           headers: {
             Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/zip',
           },
-          body: fileContent
+          body: zipBlob
         });
     
         if (uploadRes.ok) {
-          showToast('Successfully synced to Google Drive!', 'emerald');
+          showToast('Successfully synced ZIP backup to Google Drive!', 'emerald');
         } else {
-          throw new Error('Drive upload responded with status ' + uploadRes.status);
+          throw new Error('Drive upload failed with status ' + uploadRes.status);
         }
       } catch (err) {
-        console.error('Drive Sync Error:', err);
+        console.error('Drive ZIP Sync Error:', err);
         showToast('Drive sync failed. Check console.', 'rose');
       }
     }
@@ -3774,46 +3811,78 @@
         return;
       }
     
-      showToast('Fetching latest projects from Google Drive...', 'amber');
-      const fileName = 'quest_flow_studio_backup.json';
+      showToast('Fetching latest ZIP backup from Google Drive...', 'amber');
+      const fileName = 'quest_flow_studio_backup.zip';
     
       try {
-        // Search for the backup file and sort by newest modified time first
+        // Search for the backup ZIP file on Google Drive
         const searchRes = await fetch(
           `https://www.googleapis.com/drive/v3/files?q=name%3D'${fileName}'%20and%20trashed%3Dfalse&orderBy=modifiedTime%20desc`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         const searchJson = await searchRes.json();
     
-        if (!searchJson.files || searchJson.files.length === 0) {
-          showToast('No cloud backup found on Google Drive.', 'amber');
+        if (!searchJson.files || !searchJson.files.length) {
+          showToast('No cloud ZIP backup found on Google Drive.', 'amber');
           return;
         }
     
-        // Because of orderBy=modifiedTime desc, files[0] is guaranteed to be the freshest file!
+        // Download the ZIP file blob
         const fileId = searchJson.files[0].id;
         const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
     
-        const backupData = await fileRes.json();
-        if (backupData && backupData.projects && Array.isArray(backupData.projects)) {
-          PROJECTS = backupData.projects;
-          saveProjectsToStorage();
-          renderProjectManager(explorerSearch.value);
+        const zipBlob = await fileRes.blob();
+        const zip = new JSZip();
+        const zipContent = await zip.loadAsync(zipBlob);
     
-          if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
-            loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
-          }
-    
-          showToast('Successfully synced latest version from Google Drive!', 'emerald');
-          startupModal.classList.add('hidden');
-        } else {
-          showToast('Invalid backup file format on Drive.', 'rose');
+        if (!zipContent.files['projects_backup.json']) {
+          throw new Error('Invalid backup archive: missing projects_backup.json');
         }
+    
+        // Read the project manifest JSON
+        const jsonString = await zipContent.files['projects_backup.json'].async('text');
+        const backupData = JSON.parse(jsonString);
+    
+        if (!backupData || !backupData.projects || !Array.isArray(backupData.projects)) {
+          throw new Error('Invalid backup file structure.');
+        }
+    
+        // Unpack media files from the ZIP and restore data URLs for every node
+        for (let proj of backupData.projects) {
+          for (let quest of proj.quests) {
+            for (let node of (quest.nodes || [])) {
+              if (node.resources && Array.isArray(node.resources)) {
+                for (let res of node.resources) {
+                  if (res.file && zipContent.files[res.file]) {
+                    const blob = await zipContent.files[res.file].async('blob');
+                    const reader = new FileReader();
+                    res.data = await new Promise((resolve) => {
+                      reader.onload = (e) => resolve(e.target.result);
+                      reader.readAsDataURL(blob);
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+    
+        // Update global projects state, local storage, and UI
+        PROJECTS = backupData.projects;
+        saveProjectsToStorage();
+        renderProjectManager(explorerSearch.value);
+    
+        if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
+          loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
+        }
+    
+        showToast('Successfully synced projects, positions & media from Drive!', 'emerald');
+        startupModal.classList.add('hidden');
       } catch (err) {
-        console.error('Drive Sync From Error:', err);
-        showToast('Sync from Drive failed. Check console.', 'rose');
+        console.error('Drive ZIP Sync From Error:', err);
+        showToast(`Sync from Drive failed: ${err.message}`, 'rose');
       }
     }
 
