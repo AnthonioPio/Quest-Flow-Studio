@@ -100,21 +100,7 @@
       filter: blur(6px) brightness(0.7);
       transition: filter 0.3s ease;
       pointer-events: none;
-    }
-    
-    /* Force the playtest overlay to be completely immune to blur and capture clicks */
-    #centeredPlaytestOverlay {
-      position: fixed !important;
-      inset: 0 !important;
-      z-index: 9999 !important; /* Higher than anything else */
-      pointer-events: auto !important; /* Re-enable pointer events for the modal */
-      filter: none !important; /* Ensure the modal content is crisp */
-    }
-    
-    /* Ensure the inner card of the modal is also fully interactive */
-    #centered > div {
-      pointer-events: auto !important;
-      filter: none !important;
+      z-index: 49;
     }
 
     /* World transform container */
@@ -133,7 +119,7 @@
       border: 1.5px dashed #38bdf8;
       background: rgba(56, 189, 248, 0.1);
       pointer-events: none;
-      z-index: 50;
+      z-index: 45;
       display: none;
     }
 
@@ -345,14 +331,12 @@
 
     /* --- LOGIN GATE & PLAYTEST SHARED BLUR EFFECT --- */
     .app-blurred header,
-    .app-blurred .flex-1.flex,
-    .playtest-blur {
+    .app-blurred .flex-1.flex {
       filter: blur(8px) brightness(0.6);
       pointer-events: none;
       user-select: none;
       transition: filter 0.3s ease;
     }
-
 
   </style>
 </head>
@@ -3194,9 +3178,10 @@
       recordPlaytestVisit(startNode);
       
       // Apply blur to canvas and sidebars
-      canvasWorld.classList.add('playtest-blur');
-      paletteSidebar.classList.add('playtest-blur');
-      inspectorSidebar.classList.add('playtest-blur');
+      //canvasWorld.classList.add('playtest-blur');
+      //paletteSidebar.classList.add('playtest-blur');
+      //inspectorSidebar.classList.add('playtest-blur');
+      document.body.classList.add('app-blurred');
       
       // Show centered playtest modal overlay
       centeredPlaytestOverlay.classList.remove('hidden');
@@ -3214,9 +3199,10 @@
       state.playtest.lastEdgeId = null;
       
       // Remove blur from canvas and sidebars
-      canvasWorld.classList.remove('playtest-blur');
-      paletteSidebar.classList.remove('playtest-blur');
-      inspectorSidebar.classList.remove('playtest-blur');
+      //canvasWorld.classList.remove('playtest-blur');
+      //paletteSidebar.classList.remove('playtest-blur');
+      //inspectorSidebar.classList.remove('playtest-blur');
+      document.body.classList.remove('app-blurred');
       
       // Hide centered modal overlay
       centeredPlaytestOverlay.classList.add('hidden');
