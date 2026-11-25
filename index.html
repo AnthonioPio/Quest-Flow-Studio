@@ -92,6 +92,27 @@
       width: 32px;
       height: 32px;
     }
+    
+    /* --- PLAYTEST MODAL & BACKDROP BLUR --- */
+    /* The background layer that blurs everything behind the modal */
+    body.playtest-active header,
+    body.playtest-active main,
+    body.playtest-active .canvas-controls,
+    body.playtest-active .sidebar {
+      filter: blur(6px) brightness(0.5);
+      pointer-events: none; /* Disable interaction with background elements */
+      user-select: none;
+      transition: filter 0.25s ease;
+    }
+    
+    /* Ensure the playtest modal itself remains sharp, unblurred, and interactive */
+    #playtest-modal, 
+    .playtest-modal-container {
+      position: fixed;
+      z-index: 100; /* Must be higher than the rest of the UI */
+      filter: none !important;
+    }
+
 
     /* Blur background effect when playtesting */
     #canvas-world.playtest-blur,
