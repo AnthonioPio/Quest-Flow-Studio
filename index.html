@@ -82,6 +82,15 @@
       cursor: grabbing;
     }
 
+    /* Blur background effect when playtesting */
+    #canvas-world.playtest-blur,
+    #palette-sidebar.playtest-blur,
+    #inspector-sidebar.playtest-blur {
+      filter: blur(6px) brightness(0.7);
+      transition: filter 0.3s ease;
+      pointer-events: none;
+    }
+
     /* World transform container */
     #canvas-world {
       position: absolute;
@@ -89,6 +98,7 @@
       left: 0;
       transform-origin: 0 0;
       will-change: transform;
+      transition: filter 0.3s ease;
     }
 
     /* Selection Marquee Box */
@@ -280,7 +290,7 @@
       transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1),
                   transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
                   opacity 0.2s ease;
-      will-change: width, transform;
+      will-change: width, transform, filter;
     }
 
     #palette-sidebar.collapsed {
@@ -497,6 +507,13 @@
         <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
         <span id="status-text">Ready</span>
       </div>
+
+      <!-- Centered Floating Playtest Modal Overlay -->
+      <div id="centered-playtest-overlay" class="hidden absolute inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div id="centered-playtest-card" class="bg-surface-900/95 backdrop-blur-xl border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl shadow-amber-500/10 flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+          <!-- Populated dynamically via renderPlaytestPanel() -->
+        </div>
+      </div>
     </main>
 
     <!-- Right Sidebar: Inspector & Playtest Quest Drawer -->
@@ -523,7 +540,7 @@
         <!-- Populated dynamically -->
       </div>
 
-      <!-- Tab 2: Interactive RPG Quest Playtest Simulator -->
+      <!-- Tab 2: Interactive RPG Quest Playtest Simulator (Sidebar view fallback) -->
       <div id="playtest-panel" class="hidden flex-1 overflow-y-auto p-4 flex-col">
         <!-- Populated dynamically -->
       </div>
@@ -694,7 +711,7 @@
 
   <script>
     /**
-     * QuestForge — Game Quest Flow & Narrative Node Editor with Custom Types & Header Cleanups
+     * QuestForge — Game Quest Flow & Narrative Node Editor with Blurred Playtest & Centered Modal
      */
 
     // =========================================================================
@@ -760,8 +777,7 @@
         badgeText: 'text-amber-400',
         borderAccent: 'border-amber-500/40',
         inputs: [{ id: 'in_prev', label: 'In' }],
-        // Dynamic outputs handled by choices array in config
-        fieldSchema: [], // Skill check removed per request
+        fieldSchema: [],
         defaultConfig: {
           choices: [
             { id: 'choice_0', label: 'Accept the quest' },
@@ -988,6 +1004,8 @@
     const paletteSearch = document.getElementById('palette-search');
     const inspectorPanel = document.getElementById('inspector-panel');
     const playtestPanel = document.getElementById('playtest-panel');
+    const centeredPlaytestOverlay = document.getElementById('centered-playtest-overlay');
+    const centeredPlaytestCard = document.getElementById('centered-playtest-card');
     const tabInspectorBtn = document.getElementById('tab-inspector-btn');
     const tabPlaytestBtn = document.getElementById('tab-playtest-btn');
     const zoomLevelLabel = document.getElementById('zoom-level-label');
@@ -2188,7 +2206,7 @@
           <!-- Color-Coded Top Accent Bar -->
           <div class="h-1.5 w-full rounded-t-[10px]" style="background-color: ${tpl.accent}"></div>
 
-          <!-- Node Header (Close X button removed per request) -->
+          <!-- Node Header (Close X button removed) -->
           <div class="node-header px-3 py-2.5 border-b border-surface-800 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing">
             <div class="flex items-center gap-2 min-w-0">
               <div class="w-6 h-6 rounded-md ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center shrink-0">
@@ -2213,7 +2231,7 @@
         `;
 
         el.addEventListener('pointerdown', (e) => {
-          if (state.currentTool === 'pan') return;
+          if (state.currentTool === 'pan' || state.playtest.active) return;
           e.stopPropagation();
           const isAdditive = e.shiftKey || e.metaKey || e.ctrlKey;
           if (!state.selectedNodeIds.has(node.id)) {
@@ -2242,6 +2260,7 @@
 
         el.querySelectorAll('.output-port').forEach((portEl) => {
           portEl.addEventListener('pointerdown', (e) => {
+            if (state.playtest.active) return;
             e.stopPropagation();
             const portCenter = getPortWorldPosition(node.id, portEl.dataset.portId, 'output');
             state.interaction.connecting = {
@@ -2347,6 +2366,7 @@
         }
 
         hitPath.addEventListener('pointerdown', (e) => {
+          if (state.playtest.active) return;
           e.stopPropagation();
           selectEdge(edge.id);
         });
@@ -2396,6 +2416,7 @@
     // 14. CANVAS PAN, ZOOM & SELECTION
     // =========================================================================
     canvasContainer.addEventListener('pointerdown', (e) => {
+      if (state.playtest.active) return;
       const isBackground = e.target === canvasContainer || e.target === canvasWorld || e.target.id === 'connections-svg';
       const isPanMode = state.currentTool === 'pan' || e.button === 1 || e.altKey;
 
@@ -2429,6 +2450,7 @@
     });
 
     window.addEventListener('pointermove', (e) => {
+      if (state.playtest.active) return;
       if (state.interaction.isPanning) {
         state.viewport.x = e.clientX - state.interaction.panStartX;
         state.viewport.y = e.clientY - state.interaction.panStartY;
@@ -2577,7 +2599,7 @@
     );
 
     // =========================================================================
-    // 15. INSPECTOR PANEL (WITH CUSTOM FIELD LOGIC & CHOICES)
+    // 15. INSPECTOR PANEL
     // =========================================================================
     function openResourceViewer(res) {
       viewerFileTitle.textContent = res.name;
@@ -3055,7 +3077,7 @@
     }
 
     // =========================================================================
-    // 16. PLAYTEST SIMULATOR (WITH CUSTOM TYPES SUPPORT)
+    // 16. PLAYTEST SIMULATOR (BLURRED CANVAS & CENTERED MODAL OVERLAY)
     // =========================================================================
     function startPlaytest() {
       if (state.nodes.length === 0) {
@@ -3079,17 +3101,35 @@
       };
 
       recordPlaytestVisit(startNode);
-      switchRightTab('playtest');
+      
+      // Apply blur to canvas and sidebars
+      canvasWorld.classList.add('playtest-blur');
+      paletteSidebar.classList.add('playtest-blur');
+      inspectorSidebar.classList.add('playtest-blur');
+
+      // Show centered playtest modal overlay
+      centeredPlaytestOverlay.classList.remove('hidden');
+      renderPlaytestPanel();
+
       updateSelectionVisuals();
       renderEdges();
       centerOnNode(startNode);
-      showToast('Quest Playtest Started', 'amber');
+      showToast('Quest Playtest Started (Canvas Blurred)', 'amber');
     }
 
     function stopPlaytest() {
       state.playtest.active = false;
       state.playtest.currentNodeId = null;
       state.playtest.lastEdgeId = null;
+
+      // Remove blur from canvas and sidebars
+      canvasWorld.classList.remove('playtest-blur');
+      paletteSidebar.classList.remove('playtest-blur');
+      inspectorSidebar.classList.remove('playtest-blur');
+
+      // Hide centered modal overlay
+      centeredPlaytestOverlay.classList.add('hidden');
+
       updateSelectionVisuals();
       renderEdges();
       if (state.rightTab === 'playtest') renderPlaytestPanel();
@@ -3149,6 +3189,8 @@
     }
 
     function renderPlaytestPanel() {
+      const targetContainer = state.playtest.active ? centeredPlaytestCard : playtestPanel;
+
       if (!state.playtest.active) {
         playtestPanel.innerHTML = `
           <div class="h-full flex flex-col items-center justify-center text-center py-10 px-3">
@@ -3156,7 +3198,7 @@
               <i data-lucide="gamepad-2" class="w-5 h-5"></i>
             </div>
             <p class="text-xs font-semibold text-slate-200">Quest Playtest Simulator</p>
-            <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">Step through your quest narrative, test dialogue choices, and experience attached media assets.</p>
+            <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">Step through your quest narrative, test dialogue choices, and experience attached media assets with a blurred background canvas.</p>
             <button id="panel-start-playtest-btn" class="mt-5 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shadow-lg shadow-amber-500/20">
               <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
               <span>Start Playtest</span>
@@ -3181,10 +3223,10 @@
       if (currentNode.resources && currentNode.resources.length > 0) {
         const mediaItems = currentNode.resources.map((res) => {
           if (res.type === 'image') {
-            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><img src="${res.data}" alt="${escapeHtml(res.name)}" class="w-full max-h-40 object-cover" /><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
+            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><img src="${res.data}" alt="${escapeHtml(res.name)}" class="w-full max-h-48 object-cover" /><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
           }
           if (res.type === 'video') {
-            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><video controls src="${res.data}" class="w-full max-h-40 object-cover"></video><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
+            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><video controls src="${res.data}" class="w-full max-h-48 object-cover"></video><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
           }
           if (res.type === 'audio') {
             return `<div class="p-2 rounded-lg border border-surface-700 bg-surface-950 space-y-1"><audio controls src="${res.data}" class="w-full h-8"></audio><span class="block text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
@@ -3201,16 +3243,16 @@
         interactiveStepHtml = `
           <div class="space-y-3">
             <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5">
-              <div class="flex items-center justify-between text-[11px] font-mono">
+              <div class="flex items-center justify-between text-xs font-mono">
                 <span class="text-emerald-400 font-semibold">${escapeHtml(qType)}</span>
                 <span class="text-slate-300">Req Level ${escapeHtml(c.minLevel)}</span>
               </div>
               <p class="text-xs font-mono text-white">${escapeHtml(c.questId)}</p>
             </div>
             ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition">
+            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-500/20">
               <span>Begin Quest</span>
-              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
           </div>
         `;
@@ -3218,34 +3260,34 @@
         const reaction = c.reaction === 'Custom...' ? (c.customReaction || 'Custom') : c.reaction;
         interactiveStepHtml = `
           <div class="space-y-3">
-            <div class="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-2">
+            <div class="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-2">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-indigo-300">${escapeHtml(c.npcName)}</span>
-                <span class="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-200 text-[10px] font-mono">${escapeHtml(reaction)}</span>
+                <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-200 text-[10px] font-mono">${escapeHtml(reaction)}</span>
               </div>
-              <p class="text-xs text-slate-100 leading-relaxed">"${escapeHtml(c.dialogueText)}"</p>
+              <p class="text-sm text-slate-100 leading-relaxed italic">"${escapeHtml(c.dialogueText)}"</p>
             </div>
             ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/20">
               <span>Continue Dialogue</span>
-              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
           </div>
         `;
       } else if (currentNode.type === 'playerChoice') {
         const choices = c.choices || [];
         const choiceButtonsHtml = choices.map((ch, idx) => `
-          <button data-choice-id="${ch.id}" data-choice-label="${escapeHtml(ch.label)}" class="pt-choice-btn w-full text-left p-2.5 rounded-xl bg-surface-850 hover:bg-amber-500/15 border border-surface-700 hover:border-amber-500/50 transition group">
-            <span class="text-[10px] font-mono uppercase text-amber-400 block">Choice ${idx + 1}</span>
+          <button data-choice-id="${ch.id}" data-choice-label="${escapeHtml(ch.label)}" class="pt-choice-btn w-full text-left p-3 rounded-xl bg-surface-850 hover:bg-amber-500/15 border border-surface-700 hover:border-amber-500/50 transition group shadow-sm">
+            <span class="text-[10px] font-mono uppercase text-amber-400 block mb-0.5">Choice ${idx + 1}</span>
             <span class="text-xs font-medium text-white group-hover:text-amber-200">${escapeHtml(ch.label)}</span>
           </button>
         `).join('');
 
         interactiveStepHtml = `
-          <div class="space-y-2.5">
+          <div class="space-y-3">
             ${mediaPreviewHtml}
-            <p class="text-[11px] text-slate-400">Choose player response (${choices.length} options available):</p>
-            <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <p class="text-xs text-slate-400 font-medium">Choose player response (${choices.length} options available):</p>
+            <div class="space-y-2.5 max-h-56 overflow-y-auto pr-1">
               ${choiceButtonsHtml}
             </div>
           </div>
@@ -3254,7 +3296,7 @@
         const objType = c.objectiveType === 'Custom...' ? (c.customObjectiveType || 'Custom') : c.objectiveType;
         interactiveStepHtml = `
           <div class="space-y-3">
-            <div class="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-1.5">
+            <div class="p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-2">
               <span class="text-[10px] font-mono uppercase tracking-wider text-cyan-400">${escapeHtml(objType)}</span>
               <div class="flex items-center justify-between text-xs">
                 <span class="font-semibold text-white">${escapeHtml(c.targetName)}</span>
@@ -3262,8 +3304,8 @@
               </div>
             </div>
             ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition">
-              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-lg shadow-cyan-500/20">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
               <span>Simulate Objective Complete</span>
             </button>
           </div>
@@ -3271,15 +3313,15 @@
       } else if (currentNode.type === 'condition') {
         const condType = c.conditionType === 'Custom...' ? (c.customConditionType || 'Custom') : c.conditionType;
         interactiveStepHtml = `
-          <div class="space-y-2.5">
-            <div class="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1">
+          <div class="space-y-3">
+            <div class="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1.5">
               <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400">Evaluate ${escapeHtml(condType)}</span>
               <p class="text-xs font-mono text-white">${escapeHtml(c.conditionValue)}</p>
             </div>
             ${mediaPreviewHtml}
-            <div class="grid grid-cols-2 gap-2 pt-1">
-              <button id="pt-cond-true-btn" class="py-2 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">True ✓</button>
-              <button id="pt-cond-false-btn" class="py-2 px-3 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold transition">False ✕</button>
+            <div class="grid grid-cols-2 gap-2.5 pt-1">
+              <button id="pt-cond-true-btn" class="py-2.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">True ✓</button>
+              <button id="pt-cond-false-btn" class="py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold transition">False ✕</button>
             </div>
           </div>
         `;
@@ -3287,10 +3329,10 @@
         const outcomeType = c.outcome === 'Custom...' ? (c.customOutcome || 'Custom') : c.outcome;
         interactiveStepHtml = `
           <div class="space-y-3">
-            <div class="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 space-y-2">
+            <div class="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/40 space-y-2.5">
               <div class="flex items-center gap-2">
-                <i data-lucide="trophy" class="w-4 h-4 text-amber-400"></i>
-                <span class="text-xs font-bold text-white">${escapeHtml(outcomeType)}</span>
+                <i data-lucide="trophy" class="w-5 h-5 text-amber-400"></i>
+                <span class="text-sm font-bold text-white">${escapeHtml(outcomeType)}</span>
               </div>
               <div class="grid grid-cols-2 gap-2 pt-1 text-xs font-mono">
                 <div class="bg-surface-950/90 rounded p-2 text-emerald-400">+${escapeHtml(c.xpReward)} XP</div>
@@ -3302,29 +3344,25 @@
         `;
       }
 
-      playtestPanel.innerHTML = `
+      targetContainer.innerHTML = `
         <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <span class="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-amber-400">
-              <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-              Active Step
-            </span>
-            <div class="flex items-center gap-1.5">
-              <button id="pt-restart-btn" class="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[11px] text-slate-300 transition">Restart</button>
-              <button id="pt-stop-btn" class="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-[11px] text-rose-400 transition">Stop</button>
-            </div>
-          </div>
-
-          <div class="p-3 rounded-xl bg-surface-950 border border-amber-500/40 space-y-3">
-            <div class="flex items-center gap-2 border-b border-surface-800 pb-2">
-              <div class="w-6 h-6 rounded ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center">
-                <i data-lucide="${tpl.icon}" class="w-3.5 h-3.5"></i>
+          <div class="flex items-center justify-between pb-3 border-b border-surface-800">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center">
+                <i data-lucide="${tpl.icon}" class="w-4 h-4"></i>
               </div>
-              <div class="min-w-0">
-                <span class="text-xs font-bold text-white block truncate">${escapeHtml(currentNode.title)}</span>
+              <div>
+                <span class="text-xs font-bold text-white block">${escapeHtml(currentNode.title)}</span>
                 <span class="text-[10px] font-mono ${tpl.badgeText}">${tpl.category}</span>
               </div>
             </div>
+            <div class="flex items-center gap-2">
+              <button id="pt-restart-btn" class="px-2.5 py-1 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-300 transition">Restart</button>
+              <button id="pt-stop-btn" class="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-xs font-medium text-rose-400 transition">End Playtest</button>
+            </div>
+          </div>
+
+          <div class="space-y-3">
             ${interactiveStepHtml}
           </div>
         </div>
@@ -3337,7 +3375,7 @@
         if (outPort) advancePlaytestPort(currentNode.id, outPort, 'Continued');
       });
 
-      playtestPanel.querySelectorAll('.pt-choice-btn').forEach((btn) => {
+      targetContainer.querySelectorAll('.pt-choice-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           const choiceId = btn.dataset.choiceId;
           const choiceLabel = btn.dataset.choiceLabel;
