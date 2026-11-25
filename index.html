@@ -3208,10 +3208,6 @@
       renderEdges();
       centerOnNode(startNode);
       showToast('Quest Playtest Started (Canvas Blurred)', 'amber');
-      
-      const playtestModal = document.getElementById('playtest-modal'); // Adjust ID to match your code
-      if (playtestModal) playtestModal.classList.remove('hidden');
-      document.body.classList.add('playtest-blurred');
     }
 
     function stopPlaytest() {
@@ -3230,10 +3226,6 @@
       updateSelectionVisuals();
       renderEdges();
       if (state.rightTab === 'playtest') renderPlaytestPanel();
-      
-      const playtestModal = document.getElementById('playtest-modal'); // Adjust ID to match your code
-      if (playtestModal) playtestModal.classList.add('hidden');
-      document.body.classList.remove('playtest-blurred');
     }
 
     function recordPlaytestVisit(node, actionTaken = null) {
