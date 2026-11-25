@@ -92,25 +92,6 @@
       width: 32px;
       height: 32px;
     }
-    
-    /* --- PLAYTEST FOCUS MODE BLUR --- */
-    .playtest-blurred header,
-    .playtest-blurred main,
-    .playtest-blurred .canvas-controls,
-    .playtest-blurred aside {
-      filter: blur(8px) brightness(0.5);
-      pointer-events: none;
-      user-select: none;
-      transition: filter 0.3s ease;
-    }
-    
-    /* Ensure the playtest modal itself stays completely sharp and interactive */
-    .playtest-blurred #playtest-modal {
-      filter: none !important;
-      pointer-events: auto !important;
-      z-index: 60;
-      /* Make sure it sits cleanly above the blur */
-    }
 
     /* Blur background effect when playtesting */
     #canvas-world.playtest-blur,
@@ -3196,9 +3177,9 @@
       recordPlaytestVisit(startNode);
       
       // Apply blur to canvas and sidebars
-      canvasWorld.classList.add('playtest-blurred');
-      paletteSidebar.classList.add('playtest-blurred');
-      inspectorSidebar.classList.add('playtest-blurred');
+      canvasWorld.classList.add('playtest-blur');
+      paletteSidebar.classList.add('playtest-blur');
+      inspectorSidebar.classList.add('playtest-blur');
 
       // Show centered playtest modal overlay
       centeredPlaytestOverlay.classList.remove('hidden');
@@ -3216,9 +3197,9 @@
       state.playtest.lastEdgeId = null;
 
       // Remove blur from canvas and sidebars
-      canvasWorld.classList.remove('playtest-blurred');
-      paletteSidebar.classList.remove('playtest-blurred');
-      inspectorSidebar.classList.remove('playtest-blurred');
+      canvasWorld.classList.remove('playtest-blur');
+      paletteSidebar.classList.remove('playtest-blur');
+      inspectorSidebar.classList.remove('playtest-blur');
 
       // Hide centered modal overlay
       centeredPlaytestOverlay.classList.add('hidden');
