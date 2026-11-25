@@ -3896,18 +3896,20 @@
       }
     }
 
-    // 1. Clipboard Storage (Step 1)
+    // --- DEBUGGABLE GROUP COPY & PASTE ---
     window.questClipboard = window.questClipboard || { nodes: [], connections: [] };
     
-    // 2. Copy Function
     function copySelectedGroup() {
+        console.log('--- COPY TRIGGERED ---');
+        console.log('Current state.selectedIds:', state.selectedIds);
+    
         if (typeof state === 'undefined' || !state.selectedIds || state.selectedIds.size === 0) {
+            console.warn('Copy aborted: No nodes selected!');
+            if (typeof showToast === 'function') showToast('Select nodes to copy first!', 'amber');
             return;
         }
     
         const selectedNodeIds = Array.from(state.selectedIds);
-        if (selectedNodeIds.length === 0) return;
-    
         window.questClipboard.nodes = state.nodes
             .filter(n => selectedNodeIds.includes(n.id))
             .map(n => JSON.parse(JSON.stringify(n)));
@@ -3916,14 +3918,21 @@
             .filter(c => selectedNodeIds.includes(c.fromNode) && selectedNodeIds.includes(c.toNode))
             .map(c => JSON.parse(JSON.stringify(c)));
     
+        console.log('Successfully copied:', window.questClipboard.nodes.length, 'nodes and', window.questClipboard.connections.length, 'connections.');
         if (typeof showToast === 'function') {
             showToast(`Copied ${window.questClipboard.nodes.length} node(s)`, 'indigo');
         }
     }
     
-    // 3. Paste Function
     function pasteGroup() {
-        if (!window.questClipboard.nodes || window.questClipboard.nodes.length === 0) return;
+        console.log('--- PASTE TRIGGERED ---');
+        console.log('Clipboard contents:', window.questClipboard);
+    
+        if (!window.questClipboard.nodes || window.questClipboard.nodes.length === 0) {
+            console.warn('Paste aborted: Clipboard is empty!');
+            if (typeof showToast === 'function') showToast('Clipboard is empty!', 'amber');
+            return;
+        }
     
         const idMap = {};
         const newSelectedIds = new Set();
@@ -3959,12 +3968,13 @@
         if (typeof renderInspector === 'function') renderInspector();
         if (typeof updateFooterStats === 'function') updateFooterStats();
     
+        console.log('Successfully pasted:', pastedNodes.length, 'nodes.');
         if (typeof showToast === 'function') {
             showToast(`Pasted ${pastedNodes.length} node(s)`, 'emerald');
         }
     }
     
-    // 4. Keyboard Shortcut Listener
+    // Keyboard Shortcut Listener
     window.addEventListener('keydown', (e) => {
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
     
