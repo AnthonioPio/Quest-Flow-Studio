@@ -14,10 +14,6 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- JSZip for ZIP Archive Export & Import -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <!-- Google Identity Services & API Client -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://apis.google.com/js/api.js" async defer></script>
-
 
   <script>
     tailwind.config = {
@@ -338,7 +334,7 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition" title="Click to Rename Quest">Quest Flow Studio</h1>
+            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition" title="Click to Rename Quest">QuestForge</h1>
             <span id="top-project-badge" class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-800 text-amber-400 border border-surface-700">No Project</span>
           </div>
           <p id="top-project-subtitle" class="text-[11px] text-slate-400 hidden xl:block">Media & Project Manager Active</p>
@@ -379,12 +375,6 @@
         <i data-lucide="upload" class="w-3.5 h-3.5 text-indigo-400"></i>
         <span class="hidden lg:inline">Open File</span>
       </button>
-       
-      <!-- Google Logout Button in Toolbar -->
-      <button id="toolbar-logout-btn" onclick="handleGoogleLogout()" class="hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-rose-500/20 text-rose-400 border border-surface-700 text-xs font-semibold transition shrink-0" title="Sign Out of Google">
-        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">Logout</span>
-      </button>
     </div>
 
     <!-- Right: Delete Selected & Inspector Collapse/Expand Toggle -->
@@ -399,47 +389,6 @@
       </button>
     </div>
   </header>
-      
-    <!-- App Google Login Lock Screen Overlay (Project Manager Theme & Project Title) -->
-    <div id="auth-lock-screen" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col font-sans">
-        
-        <!-- Modal Header (Matching Project Manager Style with Project Title) -->
-        <div class="flex items-center justify-between mb-4 pb-3 border-b border-surface-800">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-lg shadow-amber-500/30 text-white shrink-0">
-              <i data-lucide="compass" class="w-5 h-5"></i>
-            </div>
-            <div class="min-w-0">
-              <!-- Project Title Displayed Here -->
-              <h2 id="lock-screen-project-title" class="text-base font-bold text-white tracking-tight truncate">Quest Flow Studio</h2>
-              <p class="text-xs text-slate-400 font-mono">Authentication Required • Cloud Workspace</p>
-            </div>
-          </div>
-        </div>
-    
-        <!-- Modal Body Content -->
-        <div class="py-2 space-y-3">
-          <div class="p-4 rounded-xl bg-surface-850/80 border border-surface-700/80 space-y-2 shadow-md">
-            <div class="flex items-center gap-2 text-amber-400 text-xs font-bold font-sans">
-              <i data-lucide="shield-check" class="w-4 h-4"></i>
-              <span>Google Account & Drive Sync</span>
-            </div>
-            <p class="text-xs text-slate-300 leading-relaxed font-sans">
-              Sign in with your Google account to unlock your campaigns, edit quest graphs, and sync backups directly to Google Drive.
-            </p>
-          </div>
-        </div>
-    
-        <!-- Modal Footer Actions (Project Manager Amber Action Style) -->
-        <div class="pt-3 mt-4 border-t border-surface-800 flex items-center justify-end">
-          <button id="lock-screen-login-btn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition shadow-sm font-sans">
-            <i data-lucide="log-in" class="w-4 h-4"></i>
-            <span>Sign in with Google</span>
-          </button>
-        </div>
-      </div>
-    </div>
 
   <!-- Main Workspace -->
   <div class="flex-1 flex relative overflow-hidden">
@@ -470,18 +419,15 @@
       </div>
 
       <!-- Quick Tips Footer -->
-      <!--<div class="p-3 border-t border-surface-800 bg-surface-950/70 text-[11px] text-slate-400 space-y-1">-->
-      <!--  <div class="flex items-center justify-between">-->
-      <!--    <span>Multiple Choices</span>-->
-      <!--    <span class="text-amber-400">Min 2, Unlimited</span>-->
-      <!--  </div>-->
-      <!--  <div class="flex items-center justify-between">-->
-      <!--    <span>Custom Types</span>-->
-      <!--    <span class="text-emerald-400">Fully Supported</span>-->
-      <!--  </div>-->
-      <!--</div>-->
-      <div class="p-3 border-t border-dark-700 bg-dark-900/50">
-        <div class="text-xs text-gray-400 font-medium">Created By: Anthonio Pio</div>
+      <div class="p-3 border-t border-surface-800 bg-surface-950/70 text-[11px] text-slate-400 space-y-1">
+        <div class="flex items-center justify-between">
+          <span>Multiple Choices</span>
+          <span class="text-amber-400">Min 2, Unlimited</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>Custom Types</span>
+          <span class="text-emerald-400">Fully Supported</span>
+        </div>
       </div>
     </aside>
 
@@ -535,7 +481,7 @@
       </div>
 
       <!-- Floating Center-Top Toolbar -->
-      <div class="absolute top-3.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
+      <div class="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
         <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition flex items-center justify-center" title="Select / Move Tool (V)">
           <i data-lucide="mouse-pointer" class="w-4 h-4"></i>
         </button>
@@ -563,7 +509,7 @@
       </div>
 
       <!-- Centered Floating Playtest Modal Overlay -->
-      <div id="centered-playtest-overlay" class="hidden absolute inset-0 z-40 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+      <div id="centered-playtest-overlay" class="hidden absolute inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
         <div id="centered-playtest-card" class="bg-surface-900/95 backdrop-blur-xl border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl shadow-amber-500/10 flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
           <!-- Populated dynamically via renderPlaytestPanel() -->
         </div>
@@ -609,7 +555,7 @@
   </div>
 
   <!-- Project Manager & Quest Selector Modal -->
-  <div id="startup-modal" class="fixed inset-0 z-49 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+  <div id="startup-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl flex flex-col max-h-[88vh]">
       <!-- Modal Header -->
       <div class="flex items-center justify-between mb-4 pb-3 border-b border-surface-800">
@@ -626,39 +572,25 @@
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
-      
+
       <!-- Project & Quest Actions Bar -->
-      <div class="flex flex-col gap-2 mb-4">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="relative flex-1 min-w-[200px]">
-            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
-            <input id="explorer-search" type="text" placeholder="Search projects and quests..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition" />
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0" title="Load Blank Project">
-              <i data-lucide="file-plus" class="w-4 h-4"></i>
-              <span>Blank Project</span>
-            </button>
-            <button id="new-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
-              <i data-lucide="folder-plus" class="w-4 h-4 text-amber-400"></i>
-              <span>New Project</span>
-            </button>
-            <button id="explorer-import-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
-              <i data-lucide="folder-open" class="w-4 h-4 text-indigo-400"></i>
-              <span>Import</span>
-            </button>
-          </div>
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div class="relative flex-1 min-w-[200px]">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input id="explorer-search" type="text" placeholder="Search projects and quests..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition" />
         </div>
-      
-        <!-- Drive Sync Action Row (Just below) -->
-        <div class="flex items-center justify-end gap-2 pt-1 border-t border-surface-800/60">
-          <button id="manager-sync-to-btn" onclick="syncToGoogleDrive()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition shrink-0">
-            <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
-            <span>Sync to Drive</span>
+        <div class="flex items-center gap-2">
+          <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0" title="Load Blank Project">
+            <i data-lucide="file-plus" class="w-4 h-4"></i>
+            <span>Blank Project</span>
           </button>
-          <button id="manager-sync-from-btn" onclick="syncFromGoogleDrive()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold transition shrink-0">
-            <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
-            <span>Sync from Drive</span>
+          <button id="new-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
+            <i data-lucide="folder-plus" class="w-4 h-4 text-amber-400"></i>
+            <span>New Project</span>
+          </button>
+          <button id="explorer-import-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
+            <i data-lucide="folder-open" class="w-4 h-4 text-indigo-400"></i>
+            <span>Import</span>
           </button>
         </div>
       </div>
@@ -779,7 +711,7 @@
 
   <script>
     /**
-     * Quest Flow Studio — Game Quest Flow & Narrative Node Editor with Blurred Playtest & Centered Modal
+     * QuestForge — Game Quest Flow & Narrative Node Editor with Blurred Playtest & Centered Modal
      */
 
     // =========================================================================
@@ -966,7 +898,7 @@
     // 3. PERSISTENT STORAGE ENGINE (LOCALSTORAGE)
     // =========================================================================
     let PROJECTS = [];
-    const LOCAL_STORAGE_KEY = 'questflowstudio_projects_v4';
+    const LOCAL_STORAGE_KEY = 'questforge_projects_v4';
 
     function loadProjectsFromStorage() {
       try {
@@ -1258,12 +1190,11 @@
     }
 
     function updateHeaderProjectInfo() {
-      document.getElementById('lock-screen-project-title').textContent = project ? project.title : 'Quest Flow Studio';
       const project = PROJECTS.find((p) => p.id === state.activeProjectId);
       if (!project) {
         topProjectBadge.textContent = 'No Project';
         topProjectSubtitle.textContent = 'Select a project in Project Manager';
-        topQuestTitle.textContent = 'Quest Flow Studio';
+        topQuestTitle.textContent = 'QuestForge';
         return;
       }
 
@@ -1749,7 +1680,7 @@
 
       const questPayload = {
         schemaVersion: '2.1.0',
-        engine: 'Quest Flow Studio',
+        engine: 'QuestForge',
         projectId: project.id,
         projectTitle: project.title,
         questMetadata: {
@@ -3512,7 +3443,7 @@
       const startNode = state.nodes.find((n) => n.type === 'questStart');
       const payload = {
         schemaVersion: '2.1.0',
-        engine: 'Quest Flow Studio',
+        engine: 'QuestForge',
         questMetadata: startNode ? { questId: startNode.config.questId, title: startNode.title } : {},
         nodes: state.nodes,
         connections: state.edges
@@ -3581,413 +3512,6 @@
       openProjectManagerModal();
       lucide.createIcons();
     });
-    
-    // Check auth status on app load and lock/unlock accordingly
-    function checkAppLockState() {
-      const lockScreen = document.getElementById('auth-lock-screen');
-      if (accessToken) {
-        // User is logged in -> Unlock app
-        lockScreen.classList.add('hidden');
-      } else {
-        // User is logged out -> Lock app
-        lockScreen.classList.remove('hidden');
-      }
-    }
-    
-    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com';
-    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-    
-    let tokenClient;
-    let accessToken = null;
-    
-    // Initialize Google Identity Services token client
-    window.addEventListener('load', () => {
-      if (typeof google !== 'undefined') {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPES,
-          callback: (response) => {
-            if (response.error !== undefined) {
-              console.error(response);
-              showToast('Google Authentication Failed', 'rose');
-              return;
-            }
-            
-            accessToken = response.access_token;
-            
-            // Save token and expiry timestamp (Google access tokens last 3600 seconds / 1 hour)
-            const expiresAt = new Date().getTime() + (response.expires_in || 3600) * 1000;
-            localStorage.setItem('google_access_token', accessToken);
-            localStorage.setItem('google_token_expires_at', expiresAt);
-
-            updateAuthUI(true);
-            showToast('Successfully signed in with Google!', 'emerald');
-          },
-        });
-
-        // Check for an existing valid token on page load
-        checkStoredToken();
-      }
-    });
-    
-    function handleGoogleLogin() {
-      if (tokenClient) {
-        // Prompt the user for OAuth consent
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-      } else {
-        showToast('Google services still loading, please try again.', 'amber');
-      }
-    }
-
-    function checkStoredToken() {
-      const savedToken = localStorage.getItem('google_access_token');
-      const expiresAt = localStorage.getItem('google_token_expires_at');
-      
-      if (savedToken && expiresAt) {
-        if (new Date().getTime() < parseInt(expiresAt, 10)) {
-          // Token is still valid — restore session automatically
-          accessToken = savedToken;
-          updateAuthUI(true);
-        } else {
-          // Token has expired — clear storage and require re-login
-          handleGoogleLogout();
-        }
-      } else {
-        updateAuthUI(false);
-      }
-    }
-    
-    function handleGoogleLogout() {
-      if (accessToken) {
-        google.accounts.oauth2.revoke(accessToken, () => {
-          clearTokenStorage();
-          showToast('Signed out successfully', 'sky');
-        });
-      } else {
-        clearTokenStorage();
-      }
-    }
-
-    function clearTokenStorage() {
-      accessToken = null;
-      localStorage.removeItem('google_access_token');
-      localStorage.removeItem('google_token_expires_at');
-      updateAuthUI(false);
-    }
-    
-    function updateAuthUI(isSignedIn) {
-      document.getElementById('google-login-btn').classList.toggle('hidden', isSignedIn);
-      document.getElementById('google-logout-btn').classList.toggle('hidden', !isSignedIn);
-      document.getElementById('drive-sync-btn').classList.toggle('hidden', !isSignedIn);
-    }
-    
-    // ==========================================
-    // Google Drive Sync Functions
-    // ==========================================
-    async function syncToGoogleDrive() {
-      if (!accessToken) {
-        showToast('Please sign in with Google first.', 'rose');
-        return;
-      }
-    
-      showToast('Packaging projects & media into ZIP for Google Drive...', 'amber');
-    
-      try {
-        const zip = new JSZip();
-        const mediaFolder = zip.folder("resources");
-    
-        // Deep clone projects so we can strip or reference media cleanly
-        const exportProjects = JSON.parse(JSON.stringify(PROJECTS));
-    
-        // Process all projects, quests, and nodes to pack media into the ZIP
-        for (let proj of exportProjects) {
-          for (let quest of proj.quests) {
-            for (let node of (quest.nodes || [])) {
-              if (node.resources && Array.isArray(node.resources)) {
-                node.resources = node.resources.map((res) => {
-                  const ext = res.name.substring(res.name.lastIndexOf('.')) || '.bin';
-                  const fileName = `${node.id}_${res.id}${ext}`;
-                  
-                  if (res.data && res.data.startsWith('data:')) {
-                    const base64Data = res.data.split(',')[1];
-                    mediaFolder.file(fileName, base64Data, { base64: true });
-                  }
-    
-                  return {
-                    id: res.id,
-                    name: res.name,
-                    type: res.type,
-                    file: `resources/${fileName}`
-                  };
-                });
-              }
-            }
-          }
-        }
-    
-        // Add master JSON file containing all projects, node positions, arrangements, and metadata
-        const backupManifest = {
-          app: 'Quest Flow Studio',
-          schemaVersion: '2.5.0',
-          savedAt: new Date().toISOString(),
-          projects: exportProjects
-        };
-    
-        zip.file("projects_backup.json", JSON.stringify(backupManifest, null, 2));
-    
-        // Generate the ZIP blob
-        const zipBlob = await zip.generateAsync({ type: "blob" });
-        const fileName = 'quest_flow_studio_backup.zip';
-    
-        // Search Google Drive for an existing backup zip file
-        const searchRes = await fetch(
-          `https://www.googleapis.com/drive/v3/files?q=name%3D'${fileName}'%20and%20trashed%3Dfalse&orderBy=modifiedTime%20desc`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        const searchJson = await searchRes.json();
-        
-        let fileId = null;
-        if (searchJson.files && searchJson.files.length > 0) {
-          fileId = searchJson.files[0].id;
-        }
-    
-        // If file doesn't exist on Drive, create file metadata first
-        if (!fileId) {
-          const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ name: fileName, mimeType: 'application/zip' })
-          });
-          const newFile = await createRes.json();
-          fileId = newFile.id;
-        }
-    
-        // Upload the ZIP blob via media patch
-        const uploadRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/zip',
-          },
-          body: zipBlob
-        });
-    
-        if (uploadRes.ok) {
-          showToast('Successfully synced ZIP backup to Google Drive!', 'emerald');
-        } else {
-          throw new Error('Drive upload failed with status ' + uploadRes.status);
-        }
-      } catch (err) {
-        console.error('Drive ZIP Sync Error:', err);
-        showToast('Drive sync failed. Check console.', 'rose');
-      }
-    }
-    
-    // Bind lock screen login button
-    document.getElementById('lock-screen-login-btn').addEventListener('click', () => {
-      handleGoogleLogin(); // Calls your existing GIS token client request function
-    });
-    
-    // Update your existing updateAuthUI function to also control the lock screen
-    
-    function updateAuthUI(isSignedIn) {
-      const lockScreen = document.getElementById('auth-lock-screen');
-      const toolbarLogoutBtn = document.getElementById('toolbar-logout-btn');
-      
-      if (isSignedIn) {
-        lockScreen.classList.add('hidden');
-        toolbarLogoutBtn?.classList.remove('hidden'); // Show Logout button in toolbar
-      } else {
-        lockScreen.classList.remove('hidden');
-        toolbarLogoutBtn?.classList.add('hidden'); // Hide Logout button in toolbar
-      }
-    }
-    
-    async function syncFromGoogleDrive() {
-      if (!accessToken) {
-        showToast('Please sign in with Google first.', 'rose');
-        return;
-      }
-    
-      showToast('Fetching latest ZIP backup from Google Drive...', 'amber');
-      const fileName = 'quest_flow_studio_backup.zip';
-    
-      try {
-        // 1. Search for the backup ZIP file on Google Drive
-        const searchRes = await fetch(
-          `https://www.googleapis.com/drive/v3/files?q=name%3D'${fileName}'%20and%20trashed%3Dfalse&orderBy=modifiedTime%20desc`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        const searchJson = await searchRes.json();
-    
-        if (!searchJson.files || !searchJson.files.length) {
-          showToast('No cloud ZIP backup found on Google Drive.', 'amber');
-          return;
-        }
-    
-        // 2. Download the ZIP file blob from Google Drive
-        const fileId = searchJson.files[0].id;
-        const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-    
-        const zipBlob = await fileRes.blob();
-        const zip = new JSZip();
-        const zipContent = await zip.loadAsync(zipBlob);
-    
-        if (!zipContent.files['projects_backup.json']) {
-          throw new Error('Invalid backup archive: missing projects_backup.json');
-        }
-    
-        // 3. CLEAR EXISTING LOCAL DATA FIRST
-        PROJECTS = [];
-        localStorage.removeItem('quest_flow_studio_projects'); // Clears local project storage
-        // If you use any other local cache keys, clear them here as well
-    
-        // 4. Read the project manifest JSON from the ZIP
-        const jsonString = await zipContent.files['projects_backup.json'].async('text');
-        const backupData = JSON.parse(jsonString);
-    
-        if (!backupData || !backupData.projects || !Array.isArray(backupData.projects)) {
-          throw new Error('Invalid backup file structure.');
-        }
-    
-        // 5. Unpack media files from the ZIP and restore data URLs for every node
-        for (let proj of backupData.projects) {
-          for (let quest of proj.quests) {
-            for (let node of (quest.nodes || [])) {
-              if (node.resources && Array.isArray(node.resources)) {
-                for (let res of node.resources) {
-                  if (res.file && zipContent.files[res.file]) {
-                    const blob = await zipContent.files[res.file].async('blob');
-                    const reader = new FileReader();
-                    res.data = await new Promise((resolve) => {
-                      reader.onload = (e) => resolve(e.target.result);
-                      reader.readAsDataURL(blob);
-                    });
-                  }
-                }
-              }
-            }
-          }
-        }
-    
-        // 6. Populate application with fresh cloud data and save to local storage
-        PROJECTS = backupData.projects;
-        saveProjectsToStorage();
-        renderProjectManager(explorerSearch.value);
-    
-        if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
-          loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
-        }
-    
-        showToast('Successfully cleared local data and synced from Google Drive!', 'emerald');
-        startupModal.classList.add('hidden');
-      } catch (err) {
-        console.error('Drive ZIP Sync From Error:', err);
-        showToast(`Sync from Drive failed: ${err.message}`, 'rose');
-      }
-    }
-
-    // Clipboard for copy/paste operations
-    let clipboard = {
-        nodes: [],
-        connections: []
-    };
-
-    // Copy selected nodes and internal wires
-    function copySelectedGroup() {
-        if (!state.selectedIds || state.selectedIds.size === 0) return;
-    
-        clipboard.nodes = [];
-        clipboard.connections = [];
-    
-        // Filter selected nodes
-        const selectedNodeIds = Array.from(state.selectedIds).filter(id => {
-            return state.nodes.some(n => n.id === id);
-        });
-    
-        if (selectedNodeIds.length === 0) return;
-    
-        // Deep clone nodes and offset slightly for visual feedback
-        clipboard.nodes = state.nodes
-            .filter(n => selectedNodeIds.includes(n.id))
-            .map(n => JSON.parse(JSON.stringify(n)));
-    
-        // Copy connections where both source and target nodes are in the selection
-        clipboard.connections = state.connections
-            .filter(c => selectedNodeIds.includes(c.fromNode) && selectedNodeIds.includes(c.toNode))
-            .map(c => JSON.parse(JSON.stringify(c)));
-    
-        showToast(`Copied ${clipboard.nodes.length} node(s) to clipboard`, 'indigo');
-    }
-    
-    // Paste copied nodes and connections with new IDs and coordinate offset
-    function pasteGroup() {
-        if (!clipboard.nodes || clipboard.nodes.length === 0) return;
-    
-        // Create a mapping from old node IDs to new unique IDs
-        const idMap = {};
-        const newSelectedIds = new Set();
-    
-        const pastedNodes = clipboard.nodes.map(node => {
-            const newId = 'node_' + Math.random().toString(36).substr(2, 9);
-            idMap[node.id] = newId;
-            newSelectedIds.add(newId);
-    
-            const cloned = JSON.parse(JSON.stringify(node));
-            cloned.id = newId;
-            // Offset position so pasted nodes don't stack directly over originals
-            cloned.x += 40;
-            cloned.y += 40;
-            return cloned;
-        });
-    
-        // Remap and clone internal connections with new node IDs
-        const pastedConnections = clipboard.connections.map(conn => {
-            const newConnId = 'conn_' + Math.random().toString(36).substr(2, 9);
-            return {
-                ...JSON.parse(JSON.stringify(conn)),
-                id: newConnId,
-                fromNode: idMap[conn.fromNode],
-                toNode: idMap[conn.toNode]
-            };
-        });
-    
-        // Push to active state
-        state.nodes.push(...pastedNodes);
-        state.connections.push(...pastedConnections);
-    
-        // Select the newly pasted group
-        state.selectedIds = newSelectedIds;
-    
-        // Re-render canvas elements
-        renderCanvas();
-        renderInspector();
-        updateFooterStats();
-    
-        showToast(`Pasted ${pastedNodes.length} node(s)`, 'emerald');
-    }
-
-    window.addEventListener('keydown', (e) => {
-        // Ignore shortcuts if user is typing inside an input field or textarea
-        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-    
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        const cmdCtrl = isMac ? e.metaKey : e.ctrlKey;
-    
-        if (cmdCtrl && e.key.toLowerCase() === 'c') {
-            e.preventDefault();
-            copySelectedGroup();
-        } else if (cmdCtrl && e.key.toLowerCase() === 'v') {
-            e.preventDefault();
-            pasteGroup();
-        }
-    });
-    
   </script>
 </body>
 </html>
