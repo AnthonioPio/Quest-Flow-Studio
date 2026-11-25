@@ -112,7 +112,7 @@
     }
     
     /* Ensure the inner card of the modal is also fully interactive */
-    #centeredPlaytestOverlay > div {
+    #centered > div {
       pointer-events: auto !important;
       filter: none !important;
     }
@@ -342,16 +342,7 @@
       overflow: hidden;
       pointer-events: none;
     }
-    
-    /* --- APP BLUR GATE EFFECT --- */
-    .app-blurred header,
-    .app-blurred .flex-1.flex {
-      filter: blur(8px) brightness(0.6);
-      pointer-events: none;
-      user-select: none;
-      transition: filter 0.3s ease;
-    }
-    
+
     /* --- LOGIN GATE & PLAYTEST SHARED BLUR EFFECT --- */
     .app-blurred header,
     .app-blurred .flex-1.flex,
@@ -3202,45 +3193,39 @@
       
       recordPlaytestVisit(startNode);
       
-      // --- USE THE EXACT SAME LOGIN GATE BLUR ON BODY ---
-      document.body.classList.add('app-blurred');
+      // Apply blur to canvas and sidebars
+      canvasWorld.classList.add('playtest-blur');
+      paletteSidebar.classList.add('playtest-blur');
+      inspectorSidebar.classList.add('playtest-blur');
       
       // Show centered playtest modal overlay
-      if (typeof centeredPlaytestOverlay !== 'undefined' && centeredPlaytestOverlay) {
-        centeredPlaytestOverlay.classList.remove('hidden');
-        centeredPlaytestOverlay.style.filter = 'none'; // Ensure modal itself stays unblurred
-        centeredPlaytestOverlay.style.pointerEvents = 'auto';
-      }
+      centeredPlaytestOverlay.classList.remove('hidden');
+      renderPlaytestPanel();
       
-      if (typeof renderPlaytestPanel === 'function') renderPlaytestPanel();
-      if (typeof updateSelectionVisuals === 'function') updateSelectionVisuals();
-      if (typeof renderEdges === 'function') renderEdges();
-      if (typeof centerOnNode === 'function') centerOnNode(startNode);
-      
-      showToast('Quest Playtest Started', 'amber');
+      updateSelectionVisuals();
+      renderEdges();
+      centerOnNode(startNode);
+      showToast('Quest Playtest Started (Canvas Blurred)', 'amber');
     }
-
+    
     function stopPlaytest() {
       state.playtest.active = false;
       state.playtest.currentNodeId = null;
       state.playtest.lastEdgeId = null;
-
-      // --- REMOVE LOGIN-GATE STYLE BLUR FROM BODY ---
-      document.body.classList.remove('app-blurred');
-
+      
+      // Remove blur from canvas and sidebars
+      canvasWorld.classList.remove('playtest-blur');
+      paletteSidebar.classList.remove('playtest-blur');
+      inspectorSidebar.classList.remove('playtest-blur');
+      
       // Hide centered modal overlay
-      if (typeof centeredPlaytestOverlay !== 'undefined' && centeredPlaytestOverlay) {
-        centeredPlaytestOverlay.classList.add('hidden');
-      }
-
+      centeredPlaytestOverlay.classList.add('hidden');
+      
       updateSelectionVisuals();
       renderEdges();
       if (state.rightTab === 'playtest') renderPlaytestPanel();
-      
-      showToast('Playtest Ended', 'slate');
     }
-
-
+    
     function recordPlaytestVisit(node, actionTaken = null) {
       if (actionTaken && state.playtest.history.length > 0) {
         state.playtest.history[state.playtest.history.length - 1].action = actionTaken;
