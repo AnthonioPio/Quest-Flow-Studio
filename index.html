@@ -3825,10 +3825,12 @@
     // GOOGLE LOGIN GATE INITIALIZATION
     // =========================================================================
     const GOOGLE_CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com';
+    let loggedInUserEmail = null;
     
     function handleGoogleCredentialResponse(response) {
       if (response.credential) {
         const tokenPayload = parseJwt(response.credential);
+        loggedInUserEmail = tokenPayload?.email;
         
         localStorage.setItem('questforge_user_session', JSON.stringify({
           email: tokenPayload?.email,
@@ -3982,7 +3984,10 @@
       pendingDriveAction = actionType;
       if (!driveAccessToken) {
         // Prompts user for Drive consent if not yet granted in this session
-        driveTokenClient.requestAccessToken({ prompt: '' });
+        driveTokenClient.requestAccessToken({ 
+          prompt: '',
+          hint: loggedInUserEmail || undefined 
+        });
       } else {
         if (actionType === 'push') executeDrivePush();
         if (actionType === 'pull') executeDrivePull();
