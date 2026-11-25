@@ -2357,6 +2357,31 @@
       updateSelectionVisuals();
     }
 
+    // Ensure node click/mousedown prevents canvas background from clearing selection
+    nodeElement.addEventListener('mousedown', (e) => {
+        e.stopPropagation(); // Stop event from bubbling up to canvas container
+
+        const nodeId = node.id;
+        
+        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+            // Multi-select toggle with Shift/Ctrl
+            if (state.selectedIds.has(nodeId)) {
+                state.selectedIds.delete(nodeId);
+            } else {
+                state.selectedIds.add(nodeId);
+            }
+        } else {
+            // Single select (if not already part of a multi-selection)
+            if (!state.selectedIds.has(nodeId)) {
+                state.selectedIds.clear();
+                state.selectedIds.add(nodeId);
+            }
+        }
+
+        renderCanvas();
+        renderInspector();
+    });
+
     // =========================================================================
     // 13. CUBIC BEZIER WIRES & CONNECTOR POINT ALIGNMENT
     // =========================================================================
