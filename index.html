@@ -4016,45 +4016,46 @@
     // -------------------------------------------------------------------------
     async function executeDrivePush() {
       try {
-        showToast('Syncing projects to Google Drive...', 'sky');
-    
-        // Gather your app data (adjust variable name if your projects array is named differently)
+        showToast('Syncing projects and media assets to Google Drive...', 'sky');
+        
+        // Ensure all project/node media assets (base64 data) are fully captured in the payload
+        const activeProjects = typeof PROJECTS !== 'undefined' ? PROJECTS : JSON.parse(localStorage.getItem('questforge_projects') || '[]');
+        
         const payloadData = JSON.stringify({
-          version: 1,
+          version: 2,
           syncedAt: new Date().toISOString(),
-          projects: typeof PROJECTS !== 'undefined' ? PROJECTS : JSON.parse(localStorage.getItem('questforge_projects') || '[]')
+          projects: activeProjects // Projects already contain node.resources with base64 data URLs
         }, null, 2);
-    
+        
         const existingFile = await findDriveBackupFile();
-    
+        
         const metadata = {
           name: BACKUP_FILENAME,
           mimeType: 'application/json'
         };
-    
+        
         const form = new FormData();
         form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
         form.append('file', new Blob([payloadData], { type: 'application/json' }));
-    
-        // If file already exists on Drive, PATCH it to overwrite; otherwise POST to create new
-        const url = existingFile
-          ? `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart`
-          : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+        
+        const url = existingFile ?
+          `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart` :
+          'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
         
         const method = existingFile ? 'PATCH' : 'POST';
-    
+        
         const uploadRes = await fetch(url, {
           method: method,
           headers: { Authorization: `Bearer ${driveAccessToken}` },
           body: form
         });
-    
+        
         if (!uploadRes.ok) throw new Error('Upload failed');
-    
-        showToast('Successfully synced to Google Drive!', 'emerald');
+        
+        showToast('Successfully synced projects & media to Google Drive!', 'emerald');
       } catch (err) {
         if (err.message === 'TOKEN_EXPIRED') {
-          driveTokenClient.requestAccessToken({ prompt: '' });
+          driveTokenClient.requestAccessToken({ prompt: '', hint: loggedInUserEmail || undefined });
         } else {
           console.error('Drive Push Error:', err);
           showToast('Failed to sync to Google Drive', 'rose');
@@ -4068,49 +4069,47 @@
     async function executeDrivePull() {
       try {
         showToast('Checking Google Drive for backup...', 'sky');
-    
+        
         const existingFile = await findDriveBackupFile();
         if (!existingFile) {
           showToast('No Quest Flow backup found on Google Drive', 'amber');
           return;
         }
-    
-        // Download the JSON file content using alt=media
+        
         const downloadRes = await fetch(`https://www.googleapis.com/drive/v3/files/${existingFile.id}?alt=media`, {
           headers: { Authorization: `Bearer ${driveAccessToken}` }
         });
-    
+        
         if (!downloadRes.ok) throw new Error('Download failed');
-    
+        
         const cloudData = await downloadRes.json();
         if (!cloudData || !Array.isArray(cloudData.projects)) {
           showToast('Invalid backup file format on Drive', 'rose');
           return;
         }
-    
-        // Confirm before overwriting local workspace
-        if (!confirm(`Found cloud backup from ${new Date(cloudData.syncedAt).toLocaleString()}.\nReplace local projects with Google Drive version?`)) {
+        
+        if (!confirm(`Found cloud backup from ${new Date(cloudData.syncedAt).toLocaleString()} (including media assets).\nReplace local projects with Google Drive version?`)) {
           return;
         }
-    
-        // Overwrite local storage and reload workspace state
+        
+        // Save projects including media assets to localStorage
         localStorage.setItem('questforge_projects', JSON.stringify(cloudData.projects));
         
         if (typeof PROJECTS !== 'undefined') {
           PROJECTS.length = 0;
           PROJECTS.push(...cloudData.projects);
         }
-    
-        // Re-render your active project/canvas (adjust function calls to match your app's render pipeline)
+        
+        // Refresh workspace view
         if (typeof loadProjectsFromStorage === 'function') loadProjectsFromStorage();
         if (typeof renderNodes === 'function') renderNodes();
         if (typeof renderEdges === 'function') renderEdges();
         if (typeof updateStats === 'function') updateStats();
-    
-        showToast('Projects restored from Google Drive!', 'emerald');
+        
+        showToast('Projects and media assets restored from Google Drive!', 'emerald');
       } catch (err) {
         if (err.message === 'TOKEN_EXPIRED') {
-          driveTokenClient.requestAccessToken({ prompt: '' });
+          driveTokenClient.requestAccessToken({ prompt: '', hint: loggedInUserEmail || undefined });
         } else {
           console.error('Drive Pull Error:', err);
           showToast('Failed to load from Google Drive', 'rose');
