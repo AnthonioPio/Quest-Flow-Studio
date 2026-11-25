@@ -1260,24 +1260,16 @@
     let project = null; // or let PROJECTS = [];
     
     function updateHeaderProjectInfo() {
-      document.getElementById('lock-screen-project-title').textContent = project ? project.title : 'Quest Flow Studio';
-      const project = PROJECTS.find((p) => p.id === state.activeProjectId);
-      if (!project) {
-        topProjectBadge.textContent = 'No Project';
-        topProjectSubtitle.textContent = 'Select a project in Project Manager';
-        topQuestTitle.textContent = 'Quest Flow Studio';
-        return;
-      }
-
-      topProjectBadge.textContent = project.isSample ? 'Sample Project' : project.title;
-      topProjectSubtitle.textContent = project.description;
-
-      const quest = project.quests.find((q) => q.id === state.activeQuestId);
-      if (quest) {
-        topQuestTitle.textContent = quest.title;
-      } else {
-        topQuestTitle.textContent = project.title;
-      }
+      const titleEl = document.getElementById('header-project-title');
+      const lockTitleEl = document.getElementById('lock-screen-project-title');
+      
+      // Safely check if project exists before accessing its properties
+      const activeTitle = (typeof project !== 'undefined' && project && project.title) 
+        ? project.title 
+        : 'Quest Flow Studio';
+    
+      if (titleEl) titleEl.textContent = activeTitle;
+      if (lockTitleEl) lockTitleEl.textContent = activeTitle;
     }
 
     topQuestTitle.addEventListener('click', () => {
