@@ -3873,8 +3873,6 @@
       }
     });
 
-
-    
     // Helper to decode Google JWT credential token
     function parseJwt(token) {
       try {
@@ -3937,7 +3935,7 @@
         });
         driveAccessToken = null;
       }
-    
+      document.body.classList.add('app-blurred'); // Blur app by default if locked
       showToast('Successfully logged out and session forgotten', 'rose');
     }
     
