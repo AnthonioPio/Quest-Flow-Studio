@@ -954,6 +954,12 @@
       edges: [],
       selectedNodeIds: new Set(),
       selectedEdgeId: null,
+      // --- ADD THIS CLIPBOARD PROPERTY ---
+      clipboard: {
+        nodes: [],
+        edges: []
+      },
+      // -----------------------------------
       snapToGrid: true,
       currentTool: 'select',
       rightTab: 'inspector',
@@ -3512,6 +3518,122 @@
       openProjectManagerModal();
       lucide.createIcons();
     });
+
+    // =========================================================================
+    // COPY & PASTE GROUP SELECTION HANDLER (CTRL+C / CTRL+V)
+    // =========================================================================
+    window.addEventListener('keydown', (e) => {
+      // Check for Ctrl+C or Cmd+C
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        // Prevent copying if user is currently typing in an input or textarea
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+        
+        if (state.selectedNodeIds.size === 0) return;
+
+        e.preventDefault();
+        state.clipboard.nodes = [];
+        state.clipboard.edges = [];
+
+        const selectedIdsArray = Array.from(state.selectedNodeIds);
+        
+        // Find bounds to calculate relative offsets for pasting
+        let minX = Infinity, minY = Infinity;
+        selectedIdsArray.forEach(id => {
+          const node = state.nodes.find(n => n.id === id);
+          if (node) {
+            minX = Math.min(minX, node.x);
+            minY = Math.min(minY, node.y);
+          }
+        });
+
+        // Copy selected nodes with positions relative to the top-left of the selection group
+        const idMapping = new Map(); // Old ID -> New temporary ID mapping for internal edges
+        selectedIdsArray.forEach(id => {
+          const node = state.nodes.find(n => n.id === id);
+          if (node) {
+            const newTempId = generateId('qnode');
+            idMapping.set(node.id, newTempId);
+            
+            state.clipboard.nodes.push({
+              ...JSON.parse(JSON.stringify(node)),
+              id: newTempId,
+              x: node.x - minX, // store relative offset
+              y: node.y - minY
+            });
+          }
+        });
+
+        // Copy only the internal connections (edges whose both source and target are in the selection)
+        state.edges.forEach(edge => {
+          if (selectedIdsArray.includes(edge.sourceNodeId) && selectedIdsArray.includes(edge.targetNodeId)) {
+            state.clipboard.edges.push({
+              id: generateId('qedge'),
+              sourceNodeId: idMapping.get(edge.sourceNodeId),
+              sourcePortId: edge.sourcePortId,
+              targetNodeId: idMapping.get(edge.targetNodeId),
+              targetPortId: edge.targetPortId
+            });
+          }
+        });
+
+        showToast(`Copied ${state.clipboard.nodes.length} nodes to clipboard`, 'sky');
+      }
+
+      // Check for Ctrl+V or Cmd+V
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+        if (!state.clipboard.nodes || state.clipboard.nodes.length === 0) return;
+
+        e.preventDefault();
+
+        // Clear current selection so the newly pasted group becomes selected
+        clearSelection();
+
+        const pasteOffset = 48; // Offset pasted elements slightly down & right so they don't overlap exactly
+        const newIdMapping = new Map();
+        const newlySelectedIds = new Set();
+
+        // 1. Paste nodes with new IDs and offset positions
+        state.clipboard.nodes.forEach(clipNode => {
+          const newRealId = generateId('qnode');
+          newIdMapping.set(clipNode.id, newRealId);
+
+          // Find a clean spawn coordinate based on viewport center or offset from original min
+          const pastedNode = {
+            ...JSON.parse(JSON.stringify(clipNode)),
+            id: newRealId,
+            x: snapCoord(clipNode.x + 100 + pasteOffset),
+            y: snapCoord(clipNode.y + 100 + pasteOffset)
+          };
+
+          state.nodes.push(pastedNode);
+          newlySelectedIds.add(newRealId);
+        });
+
+        // 2. Paste internal edges mapped to new node IDs
+        state.clipboard.edges.forEach(clipEdge => {
+          state.edges.push({
+            id: generateId('qedge'),
+            sourceNodeId: newIdMapping.get(clipEdge.sourceNodeId),
+            sourcePortId: clipEdge.sourcePortId,
+            targetNodeId: newIdMapping.get(clipEdge.targetNodeId),
+            targetPortId: clipEdge.targetPortId
+          });
+        });
+
+        // Select all newly pasted nodes
+        state.selectedNodeIds = newlySelectedIds;
+
+        renderNodes();
+        renderEdges();
+        updateStats();
+        saveProjectsToStorage();
+
+        showToast(`Pasted ${newlySelectedIds.size} nodes`, 'emerald');
+      }
+    });
+
+
   </script>
 </body>
 </html>
