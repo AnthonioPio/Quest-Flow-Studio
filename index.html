@@ -2228,6 +2228,7 @@
         const el = document.createElement('div');
         const isSelected = state.selectedNodeIds.has(node.id);
         const isPlaytestActive = state.playtest.active && state.playtest.currentNodeId === node.id;
+        const nodeElement = document.getElementById(`node-${node.id}`) || document.createElement('div');
 
         el.className = `flow-node ${isSelected ? 'selected' : ''} ${isPlaytestActive ? 'playtest-active' : ''}`;
         el.dataset.nodeId = node.id;
@@ -2351,6 +2352,30 @@
         });
 
         nodesLayer.appendChild(el);
+
+        nodeElement.addEventListener('mousedown', (e) => {
+            e.stopPropagation(); // Stop event from bubbling up to canvas container
+
+            const nodeId = node.id;
+            
+            if (e.shiftKey || e.ctrlKey || e.metaKey) {
+                // Multi-select toggle with Shift/Ctrl
+                if (state.selectedIds.has(nodeId)) {
+                    state.selectedIds.delete(nodeId);
+                } else {
+                    state.selectedIds.add(nodeId);
+                }
+            } else {
+                // Single select
+                if (!state.selectedIds.has(nodeId)) {
+                    state.selectedIds.clear();
+                    state.selectedIds.add(nodeId);
+                }
+            }
+
+            renderCanvas();
+            renderInspector();
+        });
       });
 
       lucide.createIcons();
