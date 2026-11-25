@@ -2220,6 +2220,16 @@
     }
 
     function renderNodes() {
+      // Ensure selectedNodeIds is always a valid Set to prevent .has() crashes
+      if (!state.selectedNodeIds) {
+        state.selectedNodeIds = new Set();
+      }
+
+      nodesLayer.innerHTML = '';
+      if (typeof emptyHint !== 'undefined' && emptyHint) {
+        emptyHint.classList.toggle('hidden', state.nodes.length > 0);
+      }
+
       nodesLayer.innerHTML = '';
       if (typeof emptyHint !== 'undefined' && emptyHint) {
         emptyHint.classList.toggle('hidden', state.nodes.length > 0);
