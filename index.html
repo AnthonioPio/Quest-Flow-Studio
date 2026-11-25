@@ -327,6 +327,16 @@
       overflow: hidden;
       pointer-events: none;
     }
+    
+    /* --- APP BLUR GATE EFFECT --- */
+    .app-blurred header,
+    .app-blurred .flex-1.flex {
+      filter: blur(8px) brightness(0.6);
+      pointer-events: none;
+      user-select: none;
+      transition: filter 0.3s ease;
+    }
+
   </style>
 </head>
 <body class="h-screen w-screen flex flex-col overflow-hidden bg-surface-950 text-slate-200">
@@ -3808,45 +3818,49 @@
       if (response.credential) {
         const tokenPayload = parseJwt(response.credential);
         
-        // Save session state to localStorage so it remembers the login
         localStorage.setItem('questforge_user_session', JSON.stringify({
           email: tokenPayload?.email,
           name: tokenPayload?.name,
           time: Date.now()
         }));
     
+        // Hide the login gate overlay and REMOVE the app blur
         const loginGate = document.getElementById('login-gate-overlay');
         if (loginGate) {
           loginGate.classList.add('hidden');
         }
+        document.body.classList.remove('app-blurred'); // <-- REMOVE BLUR HERE
     
         showToast(`Successfully signed in as ${tokenPayload?.name || 'User'}`, 'emerald');
       }
     }
 
-// On window load, check if active session exists
-window.addEventListener('load', () => {
-  const savedSession = localStorage.getItem('questforge_user_session');
-  if (savedSession) {
-    // Session exists, hide login gate automatically
-    const loginGate = document.getElementById('login-gate-overlay');
-    if (loginGate) {
-      loginGate.classList.add('hidden');
-    }
-  }
-
-  if (window.google && window.google.accounts) {
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleGoogleCredentialResponse
+    // On window load, check if active session exists
+    window.addEventListener('load', () => {
+      const savedSession = localStorage.getItem('questforge_user_session');
+      const loginGate = document.getElementById('login-gate-overlay');
+    
+      if (savedSession) {
+        if (loginGate) loginGate.classList.add('hidden');
+        document.body.classList.remove('app-blurred'); // Keep unblurred if logged in
+      } else {
+        if (loginGate) loginGate.classList.remove('hidden');
+        document.body.classList.add('app-blurred'); // Blur app by default if locked
+      }
+    
+      if (window.google && window.google.accounts) {
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredentialResponse
+        });
+    
+        google.accounts.id.renderButton(
+          document.getElementById('google-signin-btn'),
+          { theme: 'filled_black', size: 'large', width: '300', shape: 'pill' }
+        );
+      }
     });
 
-    google.accounts.id.renderButton(
-      document.getElementById('google-signin-btn'),
-      { theme: 'filled_black', size: 'large', width: '300', shape: 'pill' }
-    );
-  }
-});
 
     
     // Helper to decode Google JWT credential token
