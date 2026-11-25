@@ -3892,10 +3892,10 @@
       }
     }
 
-    // Clipboard state
+    // 1. Clipboard Storage (Step 1)
     window.questClipboard = window.questClipboard || { nodes: [], connections: [] };
     
-    // Copy selected nodes and internal wires
+    // 2. Copy Function
     function copySelectedGroup() {
         if (typeof state === 'undefined' || !state.selectedIds || state.selectedIds.size === 0) {
             return;
@@ -3904,12 +3904,10 @@
         const selectedNodeIds = Array.from(state.selectedIds);
         if (selectedNodeIds.length === 0) return;
     
-        // Deep clone nodes and offset slightly
         window.questClipboard.nodes = state.nodes
             .filter(n => selectedNodeIds.includes(n.id))
             .map(n => JSON.parse(JSON.stringify(n)));
     
-        // Copy connections where both source and target are selected
         window.questClipboard.connections = (state.connections || [])
             .filter(c => selectedNodeIds.includes(c.fromNode) && selectedNodeIds.includes(c.toNode))
             .map(c => JSON.parse(JSON.stringify(c)));
@@ -3919,7 +3917,7 @@
         }
     }
     
-    // Paste copied nodes and connections
+    // 3. Paste Function
     function pasteGroup() {
         if (!window.questClipboard.nodes || window.questClipboard.nodes.length === 0) return;
     
@@ -3947,14 +3945,12 @@
             };
         });
     
-        // Push to state safely
         state.nodes = state.nodes || [];
         state.connections = state.connections || [];
         state.nodes.push(...pastedNodes);
         state.connections.push(...pastedConnections);
         state.selectedIds = newSelectedIds;
     
-        // Trigger re-renders if available
         if (typeof renderCanvas === 'function') renderCanvas();
         if (typeof renderInspector === 'function') renderInspector();
         if (typeof updateFooterStats === 'function') updateFooterStats();
@@ -3964,9 +3960,8 @@
         }
     }
     
-    // Global Keyboard Shortcut Listener
+    // 4. Keyboard Shortcut Listener
     window.addEventListener('keydown', (e) => {
-        // Ignore if typing inside an input/textarea
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
     
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
