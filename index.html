@@ -3849,6 +3849,38 @@
       }
     });
 
+    // =========================================================================
+    // GOOGLE LOGOUT & SESSION FORGET HANDLER
+    // =========================================================================
+    function logoutUser() {
+      // 1. Tell Google accounts to disable auto-select so it forces prompt on next login
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        google.accounts.id.disableAutoSelect();
+      }
+    
+      // 2. Clear any local user session storage or tokens if saved
+      localStorage.removeItem('questforge_user_session');
+    
+      // 3. Show the login gate overlay again to lock the app
+      const loginGate = document.getElementById('login-gate-overlay');
+      if (loginGate) {
+        loginGate.classList.remove('hidden');
+      }
+    
+      // 4. Re-render the Google sign-in button in case it was unmounted
+      if (window.google && window.google.accounts) {
+        google.accounts.id.renderButton(
+          document.getElementById('google-signin-btn'),
+          { theme: 'filled_black', size: 'large', width: '300', shape: 'pill' }
+        );
+      }
+    
+      showToast('Successfully logged out and session forgotten', 'rose');
+    }
+    
+    // Wire up the logout button event listener
+    document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
 
   </script>
 </body>
