@@ -351,7 +351,6 @@
     </div>
   </div>
 
-
   <!-- Top Toolbar -->
   <header class="h-14 bg-surface-900 border-b border-surface-700/80 px-3 sm:px-4 flex items-center justify-between z-50 shrink-0 gap-2">
     <!-- Left: Brand & Palette Collapse/Expand Toggle -->
@@ -407,6 +406,13 @@
         <i data-lucide="upload" class="w-3.5 h-3.5 text-indigo-400"></i>
         <span class="hidden lg:inline">Open File</span>
       </button>
+      
+      <!-- Add Logout Button in Top Toolbar (e.g., right next to Project Manager or Delete) -->
+      <button id="logout-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-surface-700 hover:border-rose-500/40 text-xs font-medium transition shrink-0" title="Sign out and forget session">
+        <i data-lucide="log-out" class="w-3.5 h-3.5 text-rose-400"></i>
+        <span class="hidden sm:inline">Logout</span>
+      </button>
+
     </div>
 
     <!-- Right: Delete Selected & Inspector Collapse/Expand Toggle -->
