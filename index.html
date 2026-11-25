@@ -72,6 +72,7 @@
       background-size: 24px 24px;
       background-position: 0px 0px;
       touch-action: none;
+      cursor: default;
     }
 
     #canvas-container.tool-select {
@@ -82,8 +83,16 @@
       cursor: grab;
     }
 
+    #canvas-container.tool-pan:active {
+      cursor: grabbing;
+    }
+
     #canvas-container.tool-pan.is-panning {
       cursor: grabbing;
+    }
+
+    .flow-node {
+      cursor: default;
     }
 
     /* Blur background effect when playtesting */
@@ -1988,6 +1997,41 @@
         const pos = screenToWorld(e.clientX, e.clientY);
         addNode(nodeType, pos.x - 140, pos.y - 30);
       }
+    });
+
+    canvasContainer.addEventListener('mousedown', (e) => {
+      // Only handle panning if clicking directly on the canvas container background
+      const isBackground = (e.target === canvasContainer || e.target === canvasSvg || e.target.id === 'canvas-layer' || e.target.id === 'wires-layer');
+      
+      if (isBackground && e.button === 0) {
+          if (state.currentTool === 'pan' || e.shiftKey) {
+              if (e.shiftKey) {
+                  // Marquee box selection
+                  state.isMarqueeSelecting = true;
+                  const rect = canvasContainer.getBoundingClientRect();
+                  state.marqueeStartX = e.clientX - rect.left;
+                  state.marqueeStartY = e.clientY - rect.top;
+                  if (marquee) {
+                      marquee.style.left = `${state.marqueeStartX}px`;
+                      marquee.style.top = `${state.marqueeStartY}px`;
+                      marquee.style.width = '0px';
+                      marquee.style.height = '0px';
+                      marquee.style.display = 'block';
+                  }
+              } else {
+                  // Pan Tool active
+                  state.isPanning = true;
+                  state.panStartX = e.clientX - state.panX;
+                  state.panStartY = e.clientY - state.panY;
+              }
+          } else {
+              // Select Tool active: clicking empty background clears selection
+              state.selectedNodeIds.clear();
+              if (typeof renderCanvas === 'function') renderCanvas();
+              if (typeof renderInspector === 'function') renderInspector();
+              if (typeof updateSelectionVisuals === 'function') updateSelectionVisuals();
+          }
+        }
     });
 
     // =========================================================================
