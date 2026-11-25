@@ -3806,11 +3806,15 @@
     
     function handleGoogleCredentialResponse(response) {
       if (response.credential) {
-        // Optional: Decode JWT payload if you need user email/name
         const tokenPayload = parseJwt(response.credential);
-        console.log('Logged in as:', tokenPayload?.email);
+        
+        // Save session state to localStorage so it remembers the login
+        localStorage.setItem('questforge_user_session', JSON.stringify({
+          email: tokenPayload?.email,
+          name: tokenPayload?.name,
+          time: Date.now()
+        }));
     
-        // Hide the login gate overlay to unlock the app
         const loginGate = document.getElementById('login-gate-overlay');
         if (loginGate) {
           loginGate.classList.add('hidden');
@@ -3819,6 +3823,31 @@
         showToast(`Successfully signed in as ${tokenPayload?.name || 'User'}`, 'emerald');
       }
     }
+
+// On window load, check if active session exists
+window.addEventListener('load', () => {
+  const savedSession = localStorage.getItem('questforge_user_session');
+  if (savedSession) {
+    // Session exists, hide login gate automatically
+    const loginGate = document.getElementById('login-gate-overlay');
+    if (loginGate) {
+      loginGate.classList.add('hidden');
+    }
+  }
+
+  if (window.google && window.google.accounts) {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredentialResponse
+    });
+
+    google.accounts.id.renderButton(
+      document.getElementById('google-signin-btn'),
+      { theme: 'filled_black', size: 'large', width: '300', shape: 'pill' }
+    );
+  }
+});
+
     
     // Helper to decode Google JWT credential token
     function parseJwt(token) {
