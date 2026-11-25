@@ -500,6 +500,14 @@
         <button id="fit-view-btn" class="p-2 rounded-lg hover:bg-surface-800 text-slate-300 transition flex items-center justify-center" title="Fit Quest Graph in View">
           <i data-lucide="maximize-2" class="w-4 h-4"></i>
         </button>
+        <!-- NEW TOUCH COPY & PASTE BUTTONS -->
+        <div class="w-px h-5 bg-surface-700 mx-0.5"></div>
+        <button class="btn btn-icon" id="btn-toolbar-copy" title="Copy Selected Nodes">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <button class="btn btn-icon" id="btn-toolbar-paste" title="Paste Copied Nodes">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+        </button>
       </div>
 
       <!-- Floating Status Toast -->
@@ -3633,6 +3641,125 @@
       }
     });
 
+    // =========================================================================
+    // COPY & PASTE CORE FUNCTIONS & EVENT BINDINGS
+    // =========================================================================
+    function executeCopy() {
+      if (state.selectedNodeIds.size === 0) {
+        showToast('No nodes selected to copy', 'amber');
+        return;
+      }
+
+      state.clipboard.nodes = [];
+      state.clipboard.edges = [];
+
+      const selectedIdsArray = Array.from(state.selectedNodeIds);
+      let minX = Infinity, minY = Infinity;
+      
+      selectedIdsArray.forEach(id => {
+        const node = state.nodes.find(n => n.id === id);
+        if (node) {
+          minX = Math.min(minX, node.x);
+          minY = Math.min(minY, node.y);
+        }
+      });
+
+      const idMapping = new Map();
+      selectedIdsArray.forEach(id => {
+        const node = state.nodes.find(n => n.id === id);
+        if (node) {
+          const newTempId = generateId('qnode');
+          idMapping.set(node.id, newTempId);
+          
+          state.clipboard.nodes.push({
+            ...JSON.parse(JSON.stringify(node)),
+            id: newTempId,
+            x: node.x - minX,
+            y: node.y - minY
+          });
+        }
+      });
+
+      state.edges.forEach(edge => {
+        if (selectedIdsArray.includes(edge.sourceNodeId) && selectedIdsArray.includes(edge.targetNodeId)) {
+          state.clipboard.edges.push({
+            id: generateId('qedge'),
+            sourceNodeId: idMapping.get(edge.sourceNodeId),
+            sourcePortId: edge.sourcePortId,
+            targetNodeId: idMapping.get(edge.targetNodeId),
+            targetPortId: edge.targetPortId
+          });
+        }
+      });
+
+      showToast(`Copied ${state.clipboard.nodes.length} nodes to clipboard`, 'sky');
+    }
+
+    function executePaste() {
+      if (!state.clipboard.nodes || state.clipboard.nodes.length === 0) {
+        showToast('Clipboard is empty', 'amber');
+        return;
+      }
+
+      if (typeof clearSelection === 'function') clearSelection();
+
+      const pasteOffset = 48;
+      const newIdMapping = new Map();
+      const newlySelectedIds = new Set();
+
+      state.clipboard.nodes.forEach(clipNode => {
+        const newRealId = generateId('qnode');
+        newIdMapping.set(clipNode.id, newRealId);
+
+        const pastedNode = {
+          ...JSON.parse(JSON.stringify(clipNode)),
+          id: newRealId,
+          x: snapCoord(clipNode.x + 100 + pasteOffset),
+          y: snapCoord(clipNode.y + 100 + pasteOffset)
+        };
+
+        state.nodes.push(pastedNode);
+        newlySelectedIds.add(newRealId);
+      });
+
+      state.clipboard.edges.forEach(clipEdge => {
+        state.edges.push({
+          id: generateId('qedge'),
+          sourceNodeId: newIdMapping.get(clipEdge.sourceNodeId),
+          sourcePortId: clipEdge.sourcePortId,
+          targetNodeId: newIdMapping.get(clipEdge.targetNodeId),
+          targetPortId: clipEdge.targetPortId
+        });
+      });
+
+      state.selectedNodeIds = newlySelectedIds;
+
+      renderNodes();
+      renderEdges();
+      updateStats();
+      saveProjectsToStorage();
+
+      showToast(`Pasted ${newlySelectedIds.size} nodes`, 'emerald');
+    }
+
+    // 1. Bind Touch / Click Event Listeners for Toolbar Buttons
+    document.getElementById('btn-toolbar-copy').addEventListener('click', executeCopy);
+    document.getElementById('btn-toolbar-paste').addEventListener('click', executePaste);
+
+    // 2. Bind Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        executeCopy();
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        executePaste();
+      }
+    });
 
   </script>
 </body>
