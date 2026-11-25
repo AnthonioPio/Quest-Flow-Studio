@@ -2220,7 +2220,7 @@
     }
 
     function renderNodes() {
-      // Ensure selectedNodeIds is always a valid Set to prevent .has() crashes
+      // Ensure selectedNodeIds is always a valid Set
       if (!state.selectedNodeIds) {
         state.selectedNodeIds = new Set();
       }
@@ -2236,11 +2236,12 @@
         
         el.id = `node-${node.id}`;
 
+        // Use selectedNodeIds consistently
         const isSelected = state.selectedNodeIds.has(node.id);
         const isPlaytestActive = state.playtest && state.playtest.active && state.playtest.currentNodeId === node.id;
 
-        // Use a solid, opaque background (bg-dark-900) so grid lines don't show through
-        el.className = `absolute flex flex-col bg-dark-900 border ${isSelected ? 'border-amber-500 shadow-lg shadow-amber-500/20 z-20' : 'border-dark-700 hover:border-dark-600'} rounded-[10px] w-64 shadow-xl select-none transition-shadow ${isPlaytestActive ? 'ring-2 ring-emerald-500 playtest-active' : ''}`;
+        // Fully opaque solid background (#0f172a / bg-dark-900) to prevent transparency
+        el.className = `absolute flex flex-col bg-[#0f172a] border ${isSelected ? 'border-amber-500 shadow-lg shadow-amber-500/20 z-20' : 'border-dark-700 hover:border-dark-600'} rounded-[10px] w-64 shadow-xl select-none transition-shadow ${isPlaytestActive ? 'ring-2 ring-emerald-500 playtest-active' : ''}`;
         el.dataset.nodeId = node.id;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
@@ -2314,7 +2315,7 @@
           </div>
         `;
 
-        // Unified Selection & Drag Mousedown Listener
+        // Safe Mousedown Selection Handler using state.selectedNodeIds
         el.addEventListener('mousedown', (e) => {
           e.stopPropagation(); // Prevent canvas background from clearing selection
 
@@ -2322,15 +2323,15 @@
           const isAdditive = e.shiftKey || e.ctrlKey || e.metaKey;
 
           if (isAdditive) {
-            if (state.selectedIds.has(nodeId)) {
-              state.selectedIds.delete(nodeId);
+            if (state.selectedNodeIds.has(nodeId)) {
+              state.selectedNodeIds.delete(nodeId);
             } else {
-              state.selectedIds.add(nodeId);
+              state.selectedNodeIds.add(nodeId);
             }
           } else {
-            if (!state.selectedIds.has(nodeId)) {
-              state.selectedIds.clear();
-              state.selectedIds.add(nodeId);
+            if (!state.selectedNodeIds.has(nodeId)) {
+              state.selectedNodeIds.clear();
+              state.selectedNodeIds.add(nodeId);
             }
           }
 
