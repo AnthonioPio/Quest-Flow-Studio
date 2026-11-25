@@ -1257,6 +1257,8 @@
       setRightSidebarOpen(true);
     }
 
+    let project = null; // or let PROJECTS = [];
+    
     function updateHeaderProjectInfo() {
       document.getElementById('lock-screen-project-title').textContent = project ? project.title : 'Quest Flow Studio';
       const project = PROJECTS.find((p) => p.id === state.activeProjectId);
