@@ -101,6 +101,21 @@
       transition: filter 0.3s ease;
       pointer-events: none;
     }
+    
+    /* Force the playtest overlay to be completely immune to blur and capture clicks */
+    #centeredPlaytestOverlay {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 9999 !important; /* Higher than anything else */
+      pointer-events: auto !important; /* Re-enable pointer events for the modal */
+      filter: none !important; /* Ensure the modal content is crisp */
+    }
+    
+    /* Ensure the inner card of the modal is also fully interactive */
+    #centeredPlaytestOverlay > div {
+      pointer-events: auto !important;
+      filter: none !important;
+    }
 
     /* World transform container */
     #canvas-world {
