@@ -2230,22 +2230,17 @@
         emptyHint.classList.toggle('hidden', state.nodes.length > 0);
       }
 
-      nodesLayer.innerHTML = '';
-      if (typeof emptyHint !== 'undefined' && emptyHint) {
-        emptyHint.classList.toggle('hidden', state.nodes.length > 0);
-      }
-
       state.nodes.forEach((node) => {
         const tpl = NODE_TYPES[node.type] || { inputs: [], outputs: [], accent: '#6366f1', badgeBg: 'bg-indigo-500/20', badgeText: 'text-indigo-400', icon: 'box' };
         const el = document.createElement('div');
         
-        // Assign the ID directly to the element so it can be found by getElementById
         el.id = `node-${node.id}`;
 
         const isSelected = state.selectedNodeIds.has(node.id);
-        const isPlaytestActive = state.playtest.active && state.playtest.currentNodeId === node.id;
+        const isPlaytestActive = state.playtest && state.playtest.active && state.playtest.currentNodeId === node.id;
 
-        el.className = `absolute flex flex-col bg-dark-800 border ${isSelected ? 'border-amber-500 shadow-lg shadow-amber-500/20 z-20' : 'border-dark-700 hover:border-dark-600'} rounded-[10px] w-64 shadow-xl select-none transition-shadow ${isPlaytestActive ? 'ring-2 ring-emerald-500 playtest-active' : ''}`;
+        // Use a solid, opaque background (bg-dark-900) so grid lines don't show through
+        el.className = `absolute flex flex-col bg-dark-900 border ${isSelected ? 'border-amber-500 shadow-lg shadow-amber-500/20 z-20' : 'border-dark-700 hover:border-dark-600'} rounded-[10px] w-64 shadow-xl select-none transition-shadow ${isPlaytestActive ? 'ring-2 ring-emerald-500 playtest-active' : ''}`;
         el.dataset.nodeId = node.id;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
