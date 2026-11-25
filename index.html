@@ -3196,9 +3196,9 @@
       recordPlaytestVisit(startNode);
       
       // Apply blur to canvas and sidebars
-      canvasWorld.classList.add('playtest-blur');
-      paletteSidebar.classList.add('playtest-blur');
-      inspectorSidebar.classList.add('playtest-blur');
+      canvasWorld.classList.add('playtest-blurred');
+      paletteSidebar.classList.add('playtest-blurred');
+      inspectorSidebar.classList.add('playtest-blurred');
 
       // Show centered playtest modal overlay
       centeredPlaytestOverlay.classList.remove('hidden');
@@ -3220,9 +3220,9 @@
       state.playtest.lastEdgeId = null;
 
       // Remove blur from canvas and sidebars
-      canvasWorld.classList.remove('playtest-blur');
-      paletteSidebar.classList.remove('playtest-blur');
-      inspectorSidebar.classList.remove('playtest-blur');
+      canvasWorld.classList.remove('playtest-blurred');
+      paletteSidebar.classList.remove('playtest-blurred');
+      inspectorSidebar.classList.remove('playtest-blurred');
 
       // Hide centered modal overlay
       centeredPlaytestOverlay.classList.add('hidden');
