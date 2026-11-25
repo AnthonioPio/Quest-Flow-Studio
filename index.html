@@ -3158,13 +3158,13 @@
         showToast('Add quest nodes before playtesting', 'amber');
         return;
       }
-
+    
       const targetIds = new Set(state.edges.map((e) => e.targetNodeId));
       const startNode =
         state.nodes.find((n) => n.type === 'questStart') ||
         state.nodes.find((n) => !targetIds.has(n.id)) ||
         state.nodes[0];
-
+    
       state.playtest = {
         active: true,
         currentNodeId: startNode.id,
@@ -3173,25 +3173,33 @@
         rewards: { xp: 0, gold: 0, items: [] },
         finished: false
       };
-
+    
       recordPlaytestVisit(startNode);
       
-      // Apply blur to canvas and sidebars
-      canvasWorld.classList.add('playtest-blur');
-      paletteSidebar.classList.add('playtest-blur');
-      inspectorSidebar.classList.add('playtest-blur');
-      expandInspectorTab.classList.add('playtest-blur');
-      expandPaletteTab.classList.add('playtest-blur');
-
+      // --- APPLY BLUR TO APP VIA BODY CLASS OR INDIVIDUAL ELEMENTS ---
+      // Option A: If using the body class approach we discussed earlier:
+      document.body.classList.add('playtest-active');
+    
+      // Option B: If keeping your explicit element-by-element blur references:
+      if (typeof canvasWorld !== 'undefined' && canvasWorld) canvasWorld.classList.add('playtest-blur');
+      if (typeof paletteSidebar !== 'undefined' && paletteSidebar) paletteSidebar.classList.add('playtest-blur');
+      if (typeof inspectorSidebar !== 'undefined' && inspectorSidebar) inspectorSidebar.classList.add('playtest-blur');
+      if (typeof expandInspectorTab !== 'undefined' && expandInspectorTab) expandInspectorTab.classList.add('playtest-blur');
+      if (typeof expandPaletteTab !== 'undefined' && expandPaletteTab) expandPaletteTab.classList.add('playtest-blur');
+    
       // Show centered playtest modal overlay
-      centeredPlaytestOverlay.classList.remove('hidden');
-      renderPlaytestPanel();
-
-      updateSelectionVisuals();
-      renderEdges();
-      centerOnNode(startNode);
+      if (typeof centeredPlaytestOverlay !== 'undefined' && centeredPlaytestOverlay) {
+        centeredPlaytestOverlay.classList.remove('hidden');
+      }
+      
+      if (typeof renderPlaytestPanel === 'function') renderPlaytestPanel();
+      if (typeof updateSelectionVisuals === 'function') updateSelectionVisuals();
+      if (typeof renderEdges === 'function') renderEdges();
+      if (typeof centerOnNode === 'function') centerOnNode(startNode);
+      
       showToast('Quest Playtest Started (Canvas Blurred)', 'amber');
     }
+
 
     function stopPlaytest() {
       state.playtest.active = false;
