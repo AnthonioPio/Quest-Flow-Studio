@@ -3892,88 +3892,81 @@
       }
     }
 
-    // Clipboard for copy/paste operations
-    let clipboard = {
-        nodes: [],
-        connections: []
-    };
-
+    // Clipboard state
+    window.questClipboard = window.questClipboard || { nodes: [], connections: [] };
+    
     // Copy selected nodes and internal wires
     function copySelectedGroup() {
-        if (!state.selectedIds || state.selectedIds.size === 0) return;
+        if (typeof state === 'undefined' || !state.selectedIds || state.selectedIds.size === 0) {
+            return;
+        }
     
-        clipboard.nodes = [];
-        clipboard.connections = [];
-    
-        // Filter selected nodes
-        const selectedNodeIds = Array.from(state.selectedIds).filter(id => {
-            return state.nodes.some(n => n.id === id);
-        });
-    
+        const selectedNodeIds = Array.from(state.selectedIds);
         if (selectedNodeIds.length === 0) return;
     
-        // Deep clone nodes and offset slightly for visual feedback
-        clipboard.nodes = state.nodes
+        // Deep clone nodes and offset slightly
+        window.questClipboard.nodes = state.nodes
             .filter(n => selectedNodeIds.includes(n.id))
             .map(n => JSON.parse(JSON.stringify(n)));
     
-        // Copy connections where both source and target nodes are in the selection
-        clipboard.connections = state.connections
+        // Copy connections where both source and target are selected
+        window.questClipboard.connections = (state.connections || [])
             .filter(c => selectedNodeIds.includes(c.fromNode) && selectedNodeIds.includes(c.toNode))
             .map(c => JSON.parse(JSON.stringify(c)));
     
-        showToast(`Copied ${clipboard.nodes.length} node(s) to clipboard`, 'indigo');
+        if (typeof showToast === 'function') {
+            showToast(`Copied ${window.questClipboard.nodes.length} node(s)`, 'indigo');
+        }
     }
     
-    // Paste copied nodes and connections with new IDs and coordinate offset
+    // Paste copied nodes and connections
     function pasteGroup() {
-        if (!clipboard.nodes || clipboard.nodes.length === 0) return;
+        if (!window.questClipboard.nodes || window.questClipboard.nodes.length === 0) return;
     
-        // Create a mapping from old node IDs to new unique IDs
         const idMap = {};
         const newSelectedIds = new Set();
     
-        const pastedNodes = clipboard.nodes.map(node => {
+        const pastedNodes = window.questClipboard.nodes.map(node => {
             const newId = 'node_' + Math.random().toString(36).substr(2, 9);
             idMap[node.id] = newId;
             newSelectedIds.add(newId);
     
             const cloned = JSON.parse(JSON.stringify(node));
             cloned.id = newId;
-            // Offset position so pasted nodes don't stack directly over originals
-            cloned.x += 40;
-            cloned.y += 40;
+            cloned.x = (cloned.x || 0) + 40;
+            cloned.y = (cloned.y || 0) + 40;
             return cloned;
         });
     
-        // Remap and clone internal connections with new node IDs
-        const pastedConnections = clipboard.connections.map(conn => {
-            const newConnId = 'conn_' + Math.random().toString(36).substr(2, 9);
+        const pastedConnections = window.questClipboard.connections.map(conn => {
             return {
                 ...JSON.parse(JSON.stringify(conn)),
-                id: newConnId,
+                id: 'conn_' + Math.random().toString(36).substr(2, 9),
                 fromNode: idMap[conn.fromNode],
                 toNode: idMap[conn.toNode]
             };
         });
     
-        // Push to active state
+        // Push to state safely
+        state.nodes = state.nodes || [];
+        state.connections = state.connections || [];
         state.nodes.push(...pastedNodes);
         state.connections.push(...pastedConnections);
-    
-        // Select the newly pasted group
         state.selectedIds = newSelectedIds;
     
-        // Re-render canvas elements
-        renderCanvas();
-        renderInspector();
-        updateFooterStats();
+        // Trigger re-renders if available
+        if (typeof renderCanvas === 'function') renderCanvas();
+        if (typeof renderInspector === 'function') renderInspector();
+        if (typeof updateFooterStats === 'function') updateFooterStats();
     
-        showToast(`Pasted ${pastedNodes.length} node(s)`, 'emerald');
+        if (typeof showToast === 'function') {
+            showToast(`Pasted ${pastedNodes.length} node(s)`, 'emerald');
+        }
     }
-
+    
+    // Global Keyboard Shortcut Listener
     window.addEventListener('keydown', (e) => {
-        // Ignore shortcuts if user is typing inside an input field or textarea
+        // Ignore if typing inside an input/textarea
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
     
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
