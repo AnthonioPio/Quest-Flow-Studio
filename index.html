@@ -528,7 +528,7 @@
         <p class="text-xs text-slate-400 max-w-xs mt-1">Drag a quest node from the left palette or switch to another quest in the Project Manager.</p>
       </div>
 
-      <!-- Floating Center-Top Toolbar -->
+      <!-- Floating Center-Bottom Toolbar -->
       <div class="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
         <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition flex items-center justify-center" title="Select / Move Tool (V)">
           <i data-lucide="mouse-pointer" class="w-4 h-4"></i>
@@ -649,6 +649,19 @@
             <span>Import</span>
           </button>
         </div>
+      </div>
+      
+      <!-- GOOGLE DRIVE SYNC CONTROLS -->
+      <div class="flex items-center gap-1.5">
+        <button id="btn-drive-push" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-sky-500/20 text-slate-300 hover:text-sky-300 border border-surface-700 hover:border-sky-500/40 text-xs font-medium transition shrink-0" title="Sync / Backup projects to Google Drive">
+          <i data-lucide="cloud-upload" class="w-3.5 h-3.5 text-sky-400"></i>
+          <span class="hidden md:inline">Sync to Drive</span>
+        </button>
+        
+        <button id="btn-drive-pull" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 border border-surface-700 hover:border-emerald-500/40 text-xs font-medium transition shrink-0" title="Restore projects from Google Drive">
+          <i data-lucide="cloud-download" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span class="hidden md:inline">Load from Drive</span>
+        </button>
       </div>
 
       <!-- Projects & Quests List Container -->
@@ -3917,12 +3930,195 @@
           { theme: 'filled_black', size: 'large', width: '300', shape: 'pill' }
         );
       }
+      
+      // Inside your existing logoutUser() function:
+      if (driveAccessToken && window.google && window.google.accounts && window.google.accounts.oauth2) {
+        google.accounts.oauth2.revoke(driveAccessToken, () => {
+          console.log('Drive access token revoked');
+        });
+        driveAccessToken = null;
+      }
     
       showToast('Successfully logged out and session forgotten', 'rose');
     }
     
     // Wire up the logout button event listener
     document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+    // =========================================================================
+    // GOOGLE DRIVE TWO-WAY SYNC (PUSH & PULL)
+    // =========================================================================
+    const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+    const BACKUP_FILENAME = 'quest_flow_studio_backup.json';
+    
+    let driveTokenClient = null;
+    let driveAccessToken = null;
+    let pendingDriveAction = null; // 'push' or 'pull'
+    
+    // Initialize the GIS Token Client on page load alongside your existing Sign-In setup
+    window.addEventListener('load', () => {
+      if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+        driveTokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: DRIVE_SCOPE,
+          callback: (tokenResponse) => {
+            if (tokenResponse.error) {
+              showToast('Google Drive authorization failed', 'rose');
+              return;
+            }
+            driveAccessToken = tokenResponse.access_token;
+            
+            // Execute whichever action triggered the token request
+            if (pendingDriveAction === 'push') {
+              executeDrivePush();
+            } else if (pendingDriveAction === 'pull') {
+              executeDrivePull();
+            }
+            pendingDriveAction = null;
+          },
+        });
+      }
+    });
+    
+    // Helper: Ensure we have a valid access token before calling Drive API
+    function requestDriveSync(actionType) {
+      pendingDriveAction = actionType;
+      if (!driveAccessToken) {
+        // Prompts user for Drive consent if not yet granted in this session
+        driveTokenClient.requestAccessToken({ prompt: '' });
+      } else {
+        if (actionType === 'push') executeDrivePush();
+        if (actionType === 'pull') executeDrivePull();
+      }
+    }
+    
+    // Helper: Search Google Drive for an existing backup file created by this app
+    async function findDriveBackupFile() {
+      const query = encodeURIComponent(`name='${BACKUP_FILENAME}' and trashed=false`);
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,modifiedTime)`, {
+        headers: { Authorization: `Bearer ${driveAccessToken}` }
+      });
+    
+      if (res.status === 401) {
+        // Token expired; clear and re-request
+        driveAccessToken = null;
+        throw new Error('TOKEN_EXPIRED');
+      }
+    
+      const data = await res.json();
+      return data.files && data.files.length > 0 ? data.files[0] : null;
+    }
+    
+    // -------------------------------------------------------------------------
+    // 1. SYNC TO DRIVE (PUSH / UPLOAD)
+    // -------------------------------------------------------------------------
+    async function executeDrivePush() {
+      try {
+        showToast('Syncing projects to Google Drive...', 'sky');
+    
+        // Gather your app data (adjust variable name if your projects array is named differently)
+        const payloadData = JSON.stringify({
+          version: 1,
+          syncedAt: new Date().toISOString(),
+          projects: typeof PROJECTS !== 'undefined' ? PROJECTS : JSON.parse(localStorage.getItem('questforge_projects') || '[]')
+        }, null, 2);
+    
+        const existingFile = await findDriveBackupFile();
+    
+        const metadata = {
+          name: BACKUP_FILENAME,
+          mimeType: 'application/json'
+        };
+    
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', new Blob([payloadData], { type: 'application/json' }));
+    
+        // If file already exists on Drive, PATCH it to overwrite; otherwise POST to create new
+        const url = existingFile
+          ? `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart`
+          : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+        
+        const method = existingFile ? 'PATCH' : 'POST';
+    
+        const uploadRes = await fetch(url, {
+          method: method,
+          headers: { Authorization: `Bearer ${driveAccessToken}` },
+          body: form
+        });
+    
+        if (!uploadRes.ok) throw new Error('Upload failed');
+    
+        showToast('Successfully synced to Google Drive!', 'emerald');
+      } catch (err) {
+        if (err.message === 'TOKEN_EXPIRED') {
+          driveTokenClient.requestAccessToken({ prompt: '' });
+        } else {
+          console.error('Drive Push Error:', err);
+          showToast('Failed to sync to Google Drive', 'rose');
+        }
+      }
+    }
+    
+    // -------------------------------------------------------------------------
+    // 2. LOAD FROM DRIVE (PULL / RESTORE)
+    // -------------------------------------------------------------------------
+    async function executeDrivePull() {
+      try {
+        showToast('Checking Google Drive for backup...', 'sky');
+    
+        const existingFile = await findDriveBackupFile();
+        if (!existingFile) {
+          showToast('No Quest Flow backup found on Google Drive', 'amber');
+          return;
+        }
+    
+        // Download the JSON file content using alt=media
+        const downloadRes = await fetch(`https://www.googleapis.com/drive/v3/files/${existingFile.id}?alt=media`, {
+          headers: { Authorization: `Bearer ${driveAccessToken}` }
+        });
+    
+        if (!downloadRes.ok) throw new Error('Download failed');
+    
+        const cloudData = await downloadRes.json();
+        if (!cloudData || !Array.isArray(cloudData.projects)) {
+          showToast('Invalid backup file format on Drive', 'rose');
+          return;
+        }
+    
+        // Confirm before overwriting local workspace
+        if (!confirm(`Found cloud backup from ${new Date(cloudData.syncedAt).toLocaleString()}.\nReplace local projects with Google Drive version?`)) {
+          return;
+        }
+    
+        // Overwrite local storage and reload workspace state
+        localStorage.setItem('questforge_projects', JSON.stringify(cloudData.projects));
+        
+        if (typeof PROJECTS !== 'undefined') {
+          PROJECTS.length = 0;
+          PROJECTS.push(...cloudData.projects);
+        }
+    
+        // Re-render your active project/canvas (adjust function calls to match your app's render pipeline)
+        if (typeof loadProjectsFromStorage === 'function') loadProjectsFromStorage();
+        if (typeof renderNodes === 'function') renderNodes();
+        if (typeof renderEdges === 'function') renderEdges();
+        if (typeof updateStats === 'function') updateStats();
+    
+        showToast('Projects restored from Google Drive!', 'emerald');
+      } catch (err) {
+        if (err.message === 'TOKEN_EXPIRED') {
+          driveTokenClient.requestAccessToken({ prompt: '' });
+        } else {
+          console.error('Drive Pull Error:', err);
+          showToast('Failed to load from Google Drive', 'rose');
+        }
+      }
+    }
+    
+    // Bind Toolbar Button Listeners
+    document.getElementById('btn-drive-push').addEventListener('click', () => requestDriveSync('push'));
+    document.getElementById('btn-drive-pull').addEventListener('click', () => requestDriveSync('pull'));
 
 
   </script>
