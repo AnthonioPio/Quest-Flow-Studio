@@ -3903,91 +3903,105 @@
       }
     }
 
-    // --- DEBUGGABLE GROUP COPY & PASTE ---
+    // --- CORRECTED GROUP COPY & PASTE ---
     window.questClipboard = window.questClipboard || { nodes: [], connections: [] };
-    
+
     function copySelectedGroup() {
         console.log('--- COPY TRIGGERED ---');
-        console.log('Current state.selectedIds:', state.selectedIds);
-    
-        if (typeof state === 'undefined' || !state.selectedIds || state.selectedIds.size === 0) {
+        
+        // Check if state and selectedNodeIds exist
+        if (typeof state === 'undefined' || !state.selectedNodeIds || state.selectedNodeIds.size === 0) {
             console.warn('Copy aborted: No nodes selected!');
             if (typeof showToast === 'function') showToast('Select nodes to copy first!', 'amber');
             return;
         }
-    
-        const selectedNodeIds = Array.from(state.selectedIds);
+
+        const selectedNodeIds = Array.from(state.selectedNodeIds);
         window.questClipboard.nodes = state.nodes
             .filter(n => selectedNodeIds.includes(n.id))
             .map(n => JSON.parse(JSON.stringify(n)));
-    
-        window.questClipboard.connections = (state.connections || [])
-            .filter(c => selectedNodeIds.includes(c.fromNode) && selectedNodeIds.includes(c.toNode))
+
+        // Copy connections/edges where both source and target are selected
+        const edgesSource = state.edges || state.connections || [];
+        window.questClipboard.connections = edgesSource
+            .filter(c => {
+                const from = c.sourceNodeId || c.fromNode;
+                const to = c.targetNodeId || c.toNode;
+                return selectedNodeIds.includes(from) && selectedNodeIds.includes(to);
+            })
             .map(c => JSON.parse(JSON.stringify(c)));
-    
-        console.log('Successfully copied:', window.questClipboard.nodes.length, 'nodes and', window.questClipboard.connections.length, 'connections.');
+
+        console.log('Successfully copied:', window.questClipboard.nodes.length, 'nodes');
         if (typeof showToast === 'function') {
             showToast(`Copied ${window.questClipboard.nodes.length} node(s)`, 'indigo');
         }
     }
-    
+
     function pasteGroup() {
         console.log('--- PASTE TRIGGERED ---');
-        console.log('Clipboard contents:', window.questClipboard);
-    
+
         if (!window.questClipboard.nodes || window.questClipboard.nodes.length === 0) {
             console.warn('Paste aborted: Clipboard is empty!');
             if (typeof showToast === 'function') showToast('Clipboard is empty!', 'amber');
             return;
         }
-    
+
         const idMap = {};
         const newSelectedIds = new Set();
-    
+
         const pastedNodes = window.questClipboard.nodes.map(node => {
             const newId = 'node_' + Math.random().toString(36).substr(2, 9);
             idMap[node.id] = newId;
             newSelectedIds.add(newId);
-    
+
             const cloned = JSON.parse(JSON.stringify(node));
             cloned.id = newId;
             cloned.x = (cloned.x || 0) + 40;
             cloned.y = (cloned.y || 0) + 40;
             return cloned;
         });
-    
+
         const pastedConnections = window.questClipboard.connections.map(conn => {
-            return {
-                ...JSON.parse(JSON.stringify(conn)),
-                id: 'conn_' + Math.random().toString(36).substr(2, 9),
-                fromNode: idMap[conn.fromNode],
-                toNode: idMap[conn.toNode]
-            };
+            const newConn = JSON.parse(JSON.stringify(conn));
+            if (newConn.sourceNodeId) {
+                newConn.sourceNodeId = idMap[newConn.sourceNodeId] || newConn.sourceNodeId;
+                newConn.targetNodeId = idMap[newConn.targetNodeId] || newConn.targetNodeId;
+            } else {
+                newConn.fromNode = idMap[newConn.fromNode] || newConn.fromNode;
+                newConn.toNode = idMap[newConn.toNode] || newConn.toNode;
+            }
+            return newConn;
         });
-    
+
         state.nodes = state.nodes || [];
-        state.connections = state.connections || [];
         state.nodes.push(...pastedNodes);
-        state.connections.push(...pastedConnections);
-        state.selectedIds = newSelectedIds;
-    
+        
+        if (state.edges) {
+            state.edges.push(...pastedConnections);
+        } else if (state.connections) {
+            state.connections.push(...pastedConnections);
+        }
+        
+        state.selectedNodeIds = newSelectedIds;
+
         if (typeof renderCanvas === 'function') renderCanvas();
+        else if (typeof renderNodes === 'function') { renderNodes(); renderEdges(); }
         if (typeof renderInspector === 'function') renderInspector();
-        if (typeof updateFooterStats === 'function') updateFooterStats();
-    
+        if (typeof updateSelectionVisuals === 'function') updateSelectionVisuals();
+
         console.log('Successfully pasted:', pastedNodes.length, 'nodes.');
         if (typeof showToast === 'function') {
             showToast(`Pasted ${pastedNodes.length} node(s)`, 'emerald');
         }
     }
-    
-    // Keyboard Shortcut Listener
+
+    // Keyboard Shortcut Listener for Ctrl+C / Ctrl+V
     window.addEventListener('keydown', (e) => {
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-    
+
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const cmdCtrl = isMac ? e.metaKey : e.ctrlKey;
-    
+
         if (cmdCtrl && e.key.toLowerCase() === 'c') {
             e.preventDefault();
             copySelectedGroup();
