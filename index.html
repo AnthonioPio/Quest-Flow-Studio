@@ -14,10 +14,6 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- JSZip for ZIP Archive Export & Import -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <!-- Google Identity Services & API Client -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://apis.google.com/js/api.js" async defer></script>
-
 
   <script>
     tailwind.config = {
@@ -72,7 +68,6 @@
       background-size: 24px 24px;
       background-position: 0px 0px;
       touch-action: none;
-      cursor: default;
     }
 
     #canvas-container.tool-select {
@@ -83,25 +78,8 @@
       cursor: grab;
     }
 
-    #canvas-container.tool-pan:active {
-      cursor: grabbing;
-    }
-
     #canvas-container.tool-pan.is-panning {
       cursor: grabbing;
-    }
-
-    .flow-node {
-      cursor: default;
-    }
-
-    /* Blur background effect when playtesting */
-    #canvas-world.playtest-blur,
-    #palette-sidebar.playtest-blur,
-    #inspector-sidebar.playtest-blur {
-      filter: blur(6px) brightness(0.7);
-      transition: filter 0.3s ease;
-      pointer-events: none;
     }
 
     /* World transform container */
@@ -111,7 +89,6 @@
       left: 0;
       transform-origin: 0 0;
       will-change: transform;
-      transition: filter 0.3s ease;
     }
 
     /* Selection Marquee Box */
@@ -303,7 +280,7 @@
       transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1),
                   transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
                   opacity 0.2s ease;
-      will-change: width, transform, filter;
+      will-change: width, transform;
     }
 
     #palette-sidebar.collapsed {
@@ -347,7 +324,7 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition" title="Click to Rename Quest">Quest Flow Studio</h1>
+            <h1 id="top-quest-title" class="text-sm font-bold tracking-tight text-white cursor-pointer hover:text-amber-400 transition" title="Click to Rename Quest">QuestForge</h1>
             <span id="top-project-badge" class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-800 text-amber-400 border border-surface-700">No Project</span>
           </div>
           <p id="top-project-subtitle" class="text-[11px] text-slate-400 hidden xl:block">Media & Project Manager Active</p>
@@ -355,23 +332,13 @@
       </div>
     </div>
 
-    <!-- Copy and Paste buttons -->
-    <div class="flex items-center gap-1.5 ml-2">
-      <button onclick="copySelectedGroup()" class="px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 text-xs font-semibold border border-surface-700 transition" title="Copy Selected Nodes">
-        Copy
-      </button>
-      <button onclick="pasteGroup()" class="px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 text-xs font-semibold border border-surface-700 transition" title="Paste Copied Nodes">
-        Paste
-      </button>
-    </div>
-    
     <!-- Center: Playtest, Save ZIP, Project Manager, Snap & JSON Actions -->
     <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-1">
       <button id="playtest-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition shadow-sm shrink-0">
         <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
         <span>Playtest</span>
       </button>
-      
+
       <button id="save-quest-btn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition shrink-0" title="Save Quest & Media as ZIP Archive">
         <i data-lucide="file-archive" class="w-3.5 h-3.5"></i>
         <span class="hidden sm:inline">Save ZIP</span>
@@ -398,12 +365,6 @@
         <i data-lucide="upload" class="w-3.5 h-3.5 text-indigo-400"></i>
         <span class="hidden lg:inline">Open File</span>
       </button>
-       
-      <!-- Google Logout Button in Toolbar -->
-      <button id="toolbar-logout-btn" onclick="handleGoogleLogout()" class="hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800 hover:bg-rose-500/20 text-rose-400 border border-surface-700 text-xs font-semibold transition shrink-0" title="Sign Out of Google">
-        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">Logout</span>
-      </button>
     </div>
 
     <!-- Right: Delete Selected & Inspector Collapse/Expand Toggle -->
@@ -418,47 +379,6 @@
       </button>
     </div>
   </header>
-      
-    <!-- App Google Login Lock Screen Overlay (Project Manager Theme & Project Title) -->
-    <div id="auth-lock-screen" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-      <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col font-sans">
-        
-        <!-- Modal Header (Matching Project Manager Style with Project Title) -->
-        <div class="flex items-center justify-between mb-4 pb-3 border-b border-surface-800">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center shadow-lg shadow-amber-500/30 text-white shrink-0">
-              <i data-lucide="compass" class="w-5 h-5"></i>
-            </div>
-            <div class="min-w-0">
-              <!-- Project Title Displayed Here -->
-              <h2 id="lock-screen-project-title" class="text-base font-bold text-white tracking-tight truncate">Quest Flow Studio</h2>
-              <p class="text-xs text-slate-400 font-mono">Authentication Required • Cloud Workspace</p>
-            </div>
-          </div>
-        </div>
-    
-        <!-- Modal Body Content -->
-        <div class="py-2 space-y-3">
-          <div class="p-4 rounded-xl bg-surface-850/80 border border-surface-700/80 space-y-2 shadow-md">
-            <div class="flex items-center gap-2 text-amber-400 text-xs font-bold font-sans">
-              <i data-lucide="shield-check" class="w-4 h-4"></i>
-              <span>Google Account & Drive Sync</span>
-            </div>
-            <p class="text-xs text-slate-300 leading-relaxed font-sans">
-              Sign in with your Google account to unlock your campaigns, edit quest graphs, and sync backups directly to Google Drive.
-            </p>
-          </div>
-        </div>
-    
-        <!-- Modal Footer Actions (Project Manager Amber Action Style) -->
-        <div class="pt-3 mt-4 border-t border-surface-800 flex items-center justify-end">
-          <button id="lock-screen-login-btn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition shadow-sm font-sans">
-            <i data-lucide="log-in" class="w-4 h-4"></i>
-            <span>Sign in with Google</span>
-          </button>
-        </div>
-      </div>
-    </div>
 
   <!-- Main Workspace -->
   <div class="flex-1 flex relative overflow-hidden">
@@ -489,18 +409,15 @@
       </div>
 
       <!-- Quick Tips Footer -->
-      <!--<div class="p-3 border-t border-surface-800 bg-surface-950/70 text-[11px] text-slate-400 space-y-1">-->
-      <!--  <div class="flex items-center justify-between">-->
-      <!--    <span>Multiple Choices</span>-->
-      <!--    <span class="text-amber-400">Min 2, Unlimited</span>-->
-      <!--  </div>-->
-      <!--  <div class="flex items-center justify-between">-->
-      <!--    <span>Custom Types</span>-->
-      <!--    <span class="text-emerald-400">Fully Supported</span>-->
-      <!--  </div>-->
-      <!--</div>-->
-      <div class="p-3 border-t border-dark-700 bg-dark-900/50">
-        <div class="text-xs text-gray-400 font-medium">Created By: Anthonio Pio</div>
+      <div class="p-3 border-t border-surface-800 bg-surface-950/70 text-[11px] text-slate-400 space-y-1">
+        <div class="flex items-center justify-between">
+          <span>Multiple Choices</span>
+          <span class="text-amber-400">Min 2, Unlimited</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>Custom Types</span>
+          <span class="text-emerald-400">Fully Supported</span>
+        </div>
       </div>
     </aside>
 
@@ -554,7 +471,7 @@
       </div>
 
       <!-- Floating Center-Top Toolbar -->
-      <div class="absolute top-3.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
+      <div class="absolute top-3.5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
         <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition flex items-center justify-center" title="Select / Move Tool (V)">
           <i data-lucide="mouse-pointer" class="w-4 h-4"></i>
         </button>
@@ -579,13 +496,6 @@
       <div id="status-toast" class="pointer-events-none opacity-0 transition-opacity duration-200 absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-surface-900/95 border border-surface-700 px-3.5 py-1.5 rounded-full shadow-2xl flex items-center gap-2 text-xs text-slate-200">
         <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
         <span id="status-text">Ready</span>
-      </div>
-
-      <!-- Centered Floating Playtest Modal Overlay -->
-      <div id="centered-playtest-overlay" class="hidden absolute inset-0 z-40 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div id="centered-playtest-card" class="bg-surface-900/95 backdrop-blur-xl border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl shadow-amber-500/10 flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
-          <!-- Populated dynamically via renderPlaytestPanel() -->
-        </div>
       </div>
     </main>
 
@@ -613,7 +523,7 @@
         <!-- Populated dynamically -->
       </div>
 
-      <!-- Tab 2: Interactive RPG Quest Playtest Simulator (Sidebar view fallback) -->
+      <!-- Tab 2: Interactive RPG Quest Playtest Simulator -->
       <div id="playtest-panel" class="hidden flex-1 overflow-y-auto p-4 flex-col">
         <!-- Populated dynamically -->
       </div>
@@ -628,7 +538,7 @@
   </div>
 
   <!-- Project Manager & Quest Selector Modal -->
-  <div id="startup-modal" class="fixed inset-0 z-49 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+  <div id="startup-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-surface-900 border border-surface-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl flex flex-col max-h-[88vh]">
       <!-- Modal Header -->
       <div class="flex items-center justify-between mb-4 pb-3 border-b border-surface-800">
@@ -645,39 +555,25 @@
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
-      
+
       <!-- Project & Quest Actions Bar -->
-      <div class="flex flex-col gap-2 mb-4">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="relative flex-1 min-w-[200px]">
-            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
-            <input id="explorer-search" type="text" placeholder="Search projects and quests..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition" />
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0" title="Load Blank Project">
-              <i data-lucide="file-plus" class="w-4 h-4"></i>
-              <span>Blank Project</span>
-            </button>
-            <button id="new-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
-              <i data-lucide="folder-plus" class="w-4 h-4 text-amber-400"></i>
-              <span>New Project</span>
-            </button>
-            <button id="explorer-import-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
-              <i data-lucide="folder-open" class="w-4 h-4 text-indigo-400"></i>
-              <span>Import</span>
-            </button>
-          </div>
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div class="relative flex-1 min-w-[200px]">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input id="explorer-search" type="text" placeholder="Search projects and quests..." class="w-full bg-surface-950 border border-surface-700 focus:border-amber-500 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition" />
         </div>
-      
-        <!-- Drive Sync Action Row (Just below) -->
-        <div class="flex items-center justify-end gap-2 pt-1 border-t border-surface-800/60">
-          <button id="manager-sync-to-btn" onclick="syncToGoogleDrive()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition shrink-0">
-            <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
-            <span>Sync to Drive</span>
+        <div class="flex items-center gap-2">
+          <button id="new-blank-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition shrink-0" title="Load Blank Project">
+            <i data-lucide="file-plus" class="w-4 h-4"></i>
+            <span>Blank Project</span>
           </button>
-          <button id="manager-sync-from-btn" onclick="syncFromGoogleDrive()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold transition shrink-0">
-            <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
-            <span>Sync from Drive</span>
+          <button id="new-project-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
+            <i data-lucide="folder-plus" class="w-4 h-4 text-amber-400"></i>
+            <span>New Project</span>
+          </button>
+          <button id="explorer-import-btn" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-850 hover:bg-surface-800 border border-surface-700 text-xs font-semibold text-slate-200 transition shrink-0">
+            <i data-lucide="folder-open" class="w-4 h-4 text-indigo-400"></i>
+            <span>Import</span>
           </button>
         </div>
       </div>
@@ -798,7 +694,7 @@
 
   <script>
     /**
-     * Quest Flow Studio — Game Quest Flow & Narrative Node Editor with Blurred Playtest & Centered Modal
+     * QuestForge — Game Quest Flow & Narrative Node Editor with Custom Types & Header Cleanups
      */
 
     // =========================================================================
@@ -864,7 +760,8 @@
         badgeText: 'text-amber-400',
         borderAccent: 'border-amber-500/40',
         inputs: [{ id: 'in_prev', label: 'In' }],
-        fieldSchema: [],
+        // Dynamic outputs handled by choices array in config
+        fieldSchema: [], // Skill check removed per request
         defaultConfig: {
           choices: [
             { id: 'choice_0', label: 'Accept the quest' },
@@ -985,7 +882,7 @@
     // 3. PERSISTENT STORAGE ENGINE (LOCALSTORAGE)
     // =========================================================================
     let PROJECTS = [];
-    const LOCAL_STORAGE_KEY = 'questflowstudio_projects_v4';
+    const LOCAL_STORAGE_KEY = 'questforge_projects_v4';
 
     function loadProjectsFromStorage() {
       try {
@@ -1091,8 +988,6 @@
     const paletteSearch = document.getElementById('palette-search');
     const inspectorPanel = document.getElementById('inspector-panel');
     const playtestPanel = document.getElementById('playtest-panel');
-    const centeredPlaytestOverlay = document.getElementById('centered-playtest-overlay');
-    const centeredPlaytestCard = document.getElementById('centered-playtest-card');
     const tabInspectorBtn = document.getElementById('tab-inspector-btn');
     const tabPlaytestBtn = document.getElementById('tab-playtest-btn');
     const zoomLevelLabel = document.getElementById('zoom-level-label');
@@ -1276,19 +1171,24 @@
       setRightSidebarOpen(true);
     }
 
-    let project = null; // or let PROJECTS = [];
-    
     function updateHeaderProjectInfo() {
-      const titleEl = document.getElementById('header-project-title');
-      const lockTitleEl = document.getElementById('lock-screen-project-title');
-      
-      // Safely check if project exists before accessing its properties
-      const activeTitle = (typeof project !== 'undefined' && project && project.title) 
-        ? project.title 
-        : 'Quest Flow Studio';
-    
-      if (titleEl) titleEl.textContent = activeTitle;
-      if (lockTitleEl) lockTitleEl.textContent = activeTitle;
+      const project = PROJECTS.find((p) => p.id === state.activeProjectId);
+      if (!project) {
+        topProjectBadge.textContent = 'No Project';
+        topProjectSubtitle.textContent = 'Select a project in Project Manager';
+        topQuestTitle.textContent = 'QuestForge';
+        return;
+      }
+
+      topProjectBadge.textContent = project.isSample ? 'Sample Project' : project.title;
+      topProjectSubtitle.textContent = project.description;
+
+      const quest = project.quests.find((q) => q.id === state.activeQuestId);
+      if (quest) {
+        topQuestTitle.textContent = quest.title;
+      } else {
+        topQuestTitle.textContent = project.title;
+      }
     }
 
     topQuestTitle.addEventListener('click', () => {
@@ -1762,7 +1662,7 @@
 
       const questPayload = {
         schemaVersion: '2.1.0',
-        engine: 'Quest Flow Studio',
+        engine: 'QuestForge',
         projectId: project.id,
         projectTitle: project.title,
         questMetadata: {
@@ -1999,41 +1899,6 @@
       }
     });
 
-    canvasContainer.addEventListener('mousedown', (e) => {
-      // Only handle panning if clicking directly on the canvas container background
-      const isBackground = (e.target === canvasContainer || e.target.id === 'canvas-layer' || e.target.id === 'wires-layer');
-      
-      if (isBackground && e.button === 0) {
-          if (state.currentTool === 'pan' || e.shiftKey) {
-              if (e.shiftKey) {
-                  // Marquee box selection
-                  state.isMarqueeSelecting = true;
-                  const rect = canvasContainer.getBoundingClientRect();
-                  state.marqueeStartX = e.clientX - rect.left;
-                  state.marqueeStartY = e.clientY - rect.top;
-                  if (marquee) {
-                      marquee.style.left = `${state.marqueeStartX}px`;
-                      marquee.style.top = `${state.marqueeStartY}px`;
-                      marquee.style.width = '0px';
-                      marquee.style.height = '0px';
-                      marquee.style.display = 'block';
-                  }
-              } else {
-                  // Pan Tool active
-                  state.isPanning = true;
-                  state.panStartX = e.clientX - state.panX;
-                  state.panStartY = e.clientY - state.panY;
-              }
-          } else {
-              // Select Tool active: clicking empty background clears selection
-              state.selectedNodeIds.clear();
-              if (typeof renderCanvas === 'function') renderCanvas();
-              if (typeof renderInspector === 'function') renderInspector();
-              if (typeof updateSelectionVisuals === 'function') updateSelectionVisuals();
-          }
-        }
-    });
-
     // =========================================================================
     // 12. NODE MANAGEMENT & CARD RENDERING (HEADER CLOSE BUTTON REMOVED)
     // =========================================================================
@@ -2264,63 +2129,51 @@
     }
 
     function renderNodes() {
-      // Ensure selectedNodeIds is always a valid Set
-      if (!state.selectedNodeIds) {
-        state.selectedNodeIds = new Set();
-      }
-
       nodesLayer.innerHTML = '';
-      if (typeof emptyHint !== 'undefined' && emptyHint) {
-        emptyHint.classList.toggle('hidden', state.nodes.length > 0);
-      }
+      emptyHint.classList.toggle('hidden', state.nodes.length > 0);
 
       state.nodes.forEach((node) => {
-        const tpl = NODE_TYPES[node.type] || { inputs: [], outputs: [], accent: '#6366f1', badgeBg: 'bg-indigo-500/20', badgeText: 'text-indigo-400', icon: 'box' };
+        const tpl = NODE_TYPES[node.type];
         const el = document.createElement('div');
-        
-        el.id = `node-${node.id}`;
-
-        // Use selectedNodeIds consistently
         const isSelected = state.selectedNodeIds.has(node.id);
-        const isPlaytestActive = state.playtest && state.playtest.active && state.playtest.currentNodeId === node.id;
+        const isPlaytestActive = state.playtest.active && state.playtest.currentNodeId === node.id;
 
-        // Fully opaque solid background (#0f172a / bg-dark-900) to prevent transparency
-        el.className = `absolute flex flex-col bg-[#0f172a] border ${isSelected ? 'border-amber-500 shadow-lg shadow-amber-500/20 z-20' : 'border-dark-700 hover:border-dark-600'} rounded-[10px] w-64 shadow-xl select-none transition-shadow ${isPlaytestActive ? 'ring-2 ring-emerald-500 playtest-active' : ''}`;
+        el.className = `flow-node ${isSelected ? 'selected' : ''} ${isPlaytestActive ? 'playtest-active' : ''}`;
         el.dataset.nodeId = node.id;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
 
-        const inputsHtml = (tpl.inputs || [])
+        const inputsHtml = tpl.inputs
           .map((port) => {
-            const isConnected = (state.edges || []).some(
+            const isConnected = state.edges.some(
               (e) => e.targetNodeId === node.id && e.targetPortId === port.id
             );
             return `
               <div class="flex items-center gap-2 relative h-6">
                 <div
-                  class="port-socket input-port w-3 h-3 rounded-full bg-dark-700 border-2 border-slate-500 hover:border-amber-400 cursor-pointer transition ${isConnected ? 'bg-amber-400 border-amber-400 connected' : ''}"
+                  class="port-socket input-port ${isConnected ? 'connected' : ''}"
                   data-node-id="${node.id}"
                   data-port-id="${port.id}"
                   data-port-type="input"
                   title="Input: ${port.label}"
                 ></div>
-                <span class="text-[11px] font-medium text-slate-300 pl-1">${port.label}</span>
+                <span class="text-[11px] font-medium text-slate-300 pl-3">${port.label}</span>
               </div>
             `;
           })
           .join('');
 
-        const outputs = typeof getNodeOutputs === 'function' ? getNodeOutputs(node) : (tpl.outputs || []);
+        const outputs = getNodeOutputs(node);
         const outputsHtml = outputs
           .map((port) => {
-            const isConnected = (state.edges || []).some(
+            const isConnected = state.edges.some(
               (e) => e.sourceNodeId === node.id && e.sourcePortId === port.id
             );
             return `
               <div class="flex items-center justify-end gap-2 relative h-6">
-                <span class="text-[11px] font-medium text-slate-300 pr-1 truncate max-w-[120px]" title="${escapeHtml(port.label)}">${escapeHtml(port.label)}</span>
+                <span class="text-[11px] font-medium text-slate-300 pr-3 truncate max-w-[150px]" title="${escapeHtml(port.label)}">${escapeHtml(port.label)}</span>
                 <div
-                  class="port-socket output-port w-3 h-3 rounded-full bg-dark-700 border-2 border-slate-500 hover:border-amber-400 cursor-pointer transition ${isConnected ? 'bg-amber-400 border-amber-400 connected' : ''}"
+                  class="port-socket output-port ${isConnected ? 'connected' : ''}"
                   data-node-id="${node.id}"
                   data-port-id="${port.id}"
                   data-port-type="output"
@@ -2335,8 +2188,8 @@
           <!-- Color-Coded Top Accent Bar -->
           <div class="h-1.5 w-full rounded-t-[10px]" style="background-color: ${tpl.accent}"></div>
 
-          <!-- Node Header -->
-          <div class="node-header px-3 py-2.5 border-b border-dark-700 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing">
+          <!-- Node Header (Close X button removed per request) -->
+          <div class="node-header px-3 py-2.5 border-b border-surface-800 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing">
             <div class="flex items-center gap-2 min-w-0">
               <div class="w-6 h-6 rounded-md ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center shrink-0">
                 <i data-lucide="${tpl.icon}" class="w-3.5 h-3.5"></i>
@@ -2349,69 +2202,67 @@
 
           <!-- Node Body -->
           <div class="p-3 space-y-3">
-            <div class="node-summary-box text-xs text-slate-400">${typeof getNodeSummaryHtml === 'function' ? getNodeSummaryHtml(node) : ''}</div>
+            <div class="node-summary-box">${getNodeSummaryHtml(node)}</div>
 
             <!-- Ports Row -->
-            <div class="flex items-start justify-between gap-2 pt-1 border-t border-dark-700/70">
+            <div class="flex items-start justify-between gap-2 pt-1 border-t border-surface-800/70">
               <div class="space-y-1 flex-1">${inputsHtml}</div>
               <div class="space-y-1 flex-1 text-right">${outputsHtml}</div>
             </div>
           </div>
         `;
 
-        // Safe Mousedown Selection Handler using state.selectedNodeIds
-        el.addEventListener('mousedown', (e) => {
-          e.stopPropagation(); // Prevent canvas background from clearing selection
-
-          const nodeId = node.id;
-          const isAdditive = e.shiftKey || e.ctrlKey || e.metaKey;
-
-          if (isAdditive) {
-            if (state.selectedNodeIds.has(nodeId)) {
-              state.selectedNodeIds.delete(nodeId);
-            } else {
-              state.selectedNodeIds.add(nodeId);
-            }
-          } else {
-            if (!state.selectedNodeIds.has(nodeId)) {
-              state.selectedNodeIds.clear();
-              state.selectedNodeIds.add(nodeId);
-            }
+        el.addEventListener('pointerdown', (e) => {
+          if (state.currentTool === 'pan') return;
+          e.stopPropagation();
+          const isAdditive = e.shiftKey || e.metaKey || e.ctrlKey;
+          if (!state.selectedNodeIds.has(node.id)) {
+            selectNode(node.id, isAdditive);
+          } else if (isAdditive) {
+            state.selectedNodeIds.delete(node.id);
+            updateSelectionVisuals();
+            renderInspector();
           }
 
-          if (typeof renderCanvas === 'function') renderCanvas();
-          if (typeof renderInspector === 'function') renderInspector();
+          const worldPos = screenToWorld(e.clientX, e.clientY);
+          state.interaction.draggingNodeId = node.id;
+          state.interaction.dragOffsets.clear();
+
+          state.selectedNodeIds.forEach((selId) => {
+            const selNode = state.nodes.find((n) => n.id === selId);
+            if (selNode) {
+              state.interaction.dragOffsets.set(selId, {
+                x: worldPos.x - selNode.x,
+                y: worldPos.y - selNode.y
+              });
+            }
+          });
+          el.setPointerCapture(e.pointerId);
         });
 
-        // Output Port Connection Dragging
         el.querySelectorAll('.output-port').forEach((portEl) => {
           portEl.addEventListener('pointerdown', (e) => {
-            if (state.playtest && state.playtest.active) return;
             e.stopPropagation();
-            if (typeof getPortWorldPosition === 'function' && typeof computeBezierPath === 'function') {
-              const portCenter = getPortWorldPosition(node.id, portEl.dataset.portId, 'output');
-              state.interaction = state.interaction || {};
-              state.interaction.connecting = {
-                sourceNodeId: node.id,
-                sourcePortId: portEl.dataset.portId,
-                startX: portCenter.x,
-                startY: portCenter.y
-              };
-              if (typeof draftEdge !== 'undefined' && draftEdge) {
-                draftEdge.setAttribute(
-                  'd',
-                  computeBezierPath(portCenter.x, portCenter.y, portCenter.x, portCenter.y)
-                );
-                draftEdge.classList.remove('hidden');
-              }
-            }
+            const portCenter = getPortWorldPosition(node.id, portEl.dataset.portId, 'output');
+            state.interaction.connecting = {
+              sourceNodeId: node.id,
+              sourcePortId: portEl.dataset.portId,
+              startX: portCenter.x,
+              startY: portCenter.y
+            };
+            draftEdge.setAttribute(
+              'd',
+              computeBezierPath(portCenter.x, portCenter.y, portCenter.x, portCenter.y)
+            );
+            draftEdge.classList.remove('hidden');
           });
         });
 
         nodesLayer.appendChild(el);
       });
 
-      if (typeof lucide !== 'undefined') lucide.createIcons();
+      lucide.createIcons();
+      updateSelectionVisuals();
     }
 
     // =========================================================================
@@ -2496,7 +2347,6 @@
         }
 
         hitPath.addEventListener('pointerdown', (e) => {
-          if (state.playtest.active) return;
           e.stopPropagation();
           selectEdge(edge.id);
         });
@@ -2546,7 +2396,6 @@
     // 14. CANVAS PAN, ZOOM & SELECTION
     // =========================================================================
     canvasContainer.addEventListener('pointerdown', (e) => {
-      if (state.playtest.active) return;
       const isBackground = e.target === canvasContainer || e.target === canvasWorld || e.target.id === 'connections-svg';
       const isPanMode = state.currentTool === 'pan' || e.button === 1 || e.altKey;
 
@@ -2580,7 +2429,6 @@
     });
 
     window.addEventListener('pointermove', (e) => {
-      if (state.playtest.active) return;
       if (state.interaction.isPanning) {
         state.viewport.x = e.clientX - state.interaction.panStartX;
         state.viewport.y = e.clientY - state.interaction.panStartY;
@@ -2729,7 +2577,7 @@
     );
 
     // =========================================================================
-    // 15. INSPECTOR PANEL
+    // 15. INSPECTOR PANEL (WITH CUSTOM FIELD LOGIC & CHOICES)
     // =========================================================================
     function openResourceViewer(res) {
       viewerFileTitle.textContent = res.name;
@@ -3207,7 +3055,7 @@
     }
 
     // =========================================================================
-    // 16. PLAYTEST SIMULATOR (BLURRED CANVAS & CENTERED MODAL OVERLAY)
+    // 16. PLAYTEST SIMULATOR (WITH CUSTOM TYPES SUPPORT)
     // =========================================================================
     function startPlaytest() {
       if (state.nodes.length === 0) {
@@ -3231,35 +3079,17 @@
       };
 
       recordPlaytestVisit(startNode);
-      
-      // Apply blur to canvas and sidebars
-      canvasWorld.classList.add('playtest-blur');
-      paletteSidebar.classList.add('playtest-blur');
-      inspectorSidebar.classList.add('playtest-blur');
-
-      // Show centered playtest modal overlay
-      centeredPlaytestOverlay.classList.remove('hidden');
-      renderPlaytestPanel();
-
+      switchRightTab('playtest');
       updateSelectionVisuals();
       renderEdges();
       centerOnNode(startNode);
-      showToast('Quest Playtest Started (Canvas Blurred)', 'amber');
+      showToast('Quest Playtest Started', 'amber');
     }
 
     function stopPlaytest() {
       state.playtest.active = false;
       state.playtest.currentNodeId = null;
       state.playtest.lastEdgeId = null;
-
-      // Remove blur from canvas and sidebars
-      canvasWorld.classList.remove('playtest-blur');
-      paletteSidebar.classList.remove('playtest-blur');
-      inspectorSidebar.classList.remove('playtest-blur');
-
-      // Hide centered modal overlay
-      centeredPlaytestOverlay.classList.add('hidden');
-
       updateSelectionVisuals();
       renderEdges();
       if (state.rightTab === 'playtest') renderPlaytestPanel();
@@ -3319,8 +3149,6 @@
     }
 
     function renderPlaytestPanel() {
-      const targetContainer = state.playtest.active ? centeredPlaytestCard : playtestPanel;
-
       if (!state.playtest.active) {
         playtestPanel.innerHTML = `
           <div class="h-full flex flex-col items-center justify-center text-center py-10 px-3">
@@ -3328,7 +3156,7 @@
               <i data-lucide="gamepad-2" class="w-5 h-5"></i>
             </div>
             <p class="text-xs font-semibold text-slate-200">Quest Playtest Simulator</p>
-            <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">Step through your quest narrative, test dialogue choices, and experience attached media assets with a blurred background canvas.</p>
+            <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">Step through your quest narrative, test dialogue choices, and experience attached media assets.</p>
             <button id="panel-start-playtest-btn" class="mt-5 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition shadow-lg shadow-amber-500/20">
               <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
               <span>Start Playtest</span>
@@ -3353,10 +3181,10 @@
       if (currentNode.resources && currentNode.resources.length > 0) {
         const mediaItems = currentNode.resources.map((res) => {
           if (res.type === 'image') {
-            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><img src="${res.data}" alt="${escapeHtml(res.name)}" class="w-full max-h-48 object-cover" /><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
+            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><img src="${res.data}" alt="${escapeHtml(res.name)}" class="w-full max-h-40 object-cover" /><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
           }
           if (res.type === 'video') {
-            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><video controls src="${res.data}" class="w-full max-h-48 object-cover"></video><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
+            return `<div class="rounded-lg overflow-hidden border border-surface-700 bg-surface-950"><video controls src="${res.data}" class="w-full max-h-40 object-cover"></video><span class="block px-2 py-1 text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
           }
           if (res.type === 'audio') {
             return `<div class="p-2 rounded-lg border border-surface-700 bg-surface-950 space-y-1"><audio controls src="${res.data}" class="w-full h-8"></audio><span class="block text-[10px] font-mono text-slate-400 truncate">${escapeHtml(res.name)}</span></div>`;
@@ -3373,16 +3201,16 @@
         interactiveStepHtml = `
           <div class="space-y-3">
             <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5">
-              <div class="flex items-center justify-between text-xs font-mono">
+              <div class="flex items-center justify-between text-[11px] font-mono">
                 <span class="text-emerald-400 font-semibold">${escapeHtml(qType)}</span>
                 <span class="text-slate-300">Req Level ${escapeHtml(c.minLevel)}</span>
               </div>
               <p class="text-xs font-mono text-white">${escapeHtml(c.questId)}</p>
             </div>
             ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-500/20">
+            <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition">
               <span>Begin Quest</span>
-              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
             </button>
           </div>
         `;
@@ -3390,34 +3218,34 @@
         const reaction = c.reaction === 'Custom...' ? (c.customReaction || 'Custom') : c.reaction;
         interactiveStepHtml = `
           <div class="space-y-3">
-            <div class="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-2">
+            <div class="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 space-y-2">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-indigo-300">${escapeHtml(c.npcName)}</span>
-                <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-200 text-[10px] font-mono">${escapeHtml(reaction)}</span>
+                <span class="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-200 text-[10px] font-mono">${escapeHtml(reaction)}</span>
               </div>
-              <p class="text-sm text-slate-100 leading-relaxed italic">"${escapeHtml(c.dialogueText)}"</p>
+              <p class="text-xs text-slate-100 leading-relaxed">"${escapeHtml(c.dialogueText)}"</p>
             </div>
             ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-lg shadow-indigo-600/20">
+            <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition">
               <span>Continue Dialogue</span>
-              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
             </button>
           </div>
         `;
       } else if (currentNode.type === 'playerChoice') {
         const choices = c.choices || [];
         const choiceButtonsHtml = choices.map((ch, idx) => `
-          <button data-choice-id="${ch.id}" data-choice-label="${escapeHtml(ch.label)}" class="pt-choice-btn w-full text-left p-3 rounded-xl bg-surface-850 hover:bg-amber-500/15 border border-surface-700 hover:border-amber-500/50 transition group shadow-sm">
-            <span class="text-[10px] font-mono uppercase text-amber-400 block mb-0.5">Choice ${idx + 1}</span>
+          <button data-choice-id="${ch.id}" data-choice-label="${escapeHtml(ch.label)}" class="pt-choice-btn w-full text-left p-2.5 rounded-xl bg-surface-850 hover:bg-amber-500/15 border border-surface-700 hover:border-amber-500/50 transition group">
+            <span class="text-[10px] font-mono uppercase text-amber-400 block">Choice ${idx + 1}</span>
             <span class="text-xs font-medium text-white group-hover:text-amber-200">${escapeHtml(ch.label)}</span>
           </button>
         `).join('');
 
         interactiveStepHtml = `
-          <div class="space-y-3">
+          <div class="space-y-2.5">
             ${mediaPreviewHtml}
-            <p class="text-xs text-slate-400 font-medium">Choose player response (${choices.length} options available):</p>
-            <div class="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+            <p class="text-[11px] text-slate-400">Choose player response (${choices.length} options available):</p>
+            <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
               ${choiceButtonsHtml}
             </div>
           </div>
@@ -3426,7 +3254,7 @@
         const objType = c.objectiveType === 'Custom...' ? (c.customObjectiveType || 'Custom') : c.objectiveType;
         interactiveStepHtml = `
           <div class="space-y-3">
-            <div class="p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-2">
+            <div class="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 space-y-1.5">
               <span class="text-[10px] font-mono uppercase tracking-wider text-cyan-400">${escapeHtml(objType)}</span>
               <div class="flex items-center justify-between text-xs">
                 <span class="font-semibold text-white">${escapeHtml(c.targetName)}</span>
@@ -3434,8 +3262,8 @@
               </div>
             </div>
             ${mediaPreviewHtml}
-            <button id="pt-next-btn" class="w-full py-3 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-lg shadow-cyan-500/20">
-              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            <button id="pt-next-btn" class="w-full py-2.5 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
               <span>Simulate Objective Complete</span>
             </button>
           </div>
@@ -3443,15 +3271,15 @@
       } else if (currentNode.type === 'condition') {
         const condType = c.conditionType === 'Custom...' ? (c.customConditionType || 'Custom') : c.conditionType;
         interactiveStepHtml = `
-          <div class="space-y-3">
-            <div class="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1.5">
+          <div class="space-y-2.5">
+            <div class="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-1">
               <span class="text-[10px] font-mono uppercase tracking-wider text-purple-400">Evaluate ${escapeHtml(condType)}</span>
               <p class="text-xs font-mono text-white">${escapeHtml(c.conditionValue)}</p>
             </div>
             ${mediaPreviewHtml}
-            <div class="grid grid-cols-2 gap-2.5 pt-1">
-              <button id="pt-cond-true-btn" class="py-2.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">True ✓</button>
-              <button id="pt-cond-false-btn" class="py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold transition">False ✕</button>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button id="pt-cond-true-btn" class="py-2 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">True ✓</button>
+              <button id="pt-cond-false-btn" class="py-2 px-3 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold transition">False ✕</button>
             </div>
           </div>
         `;
@@ -3459,10 +3287,10 @@
         const outcomeType = c.outcome === 'Custom...' ? (c.customOutcome || 'Custom') : c.outcome;
         interactiveStepHtml = `
           <div class="space-y-3">
-            <div class="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/40 space-y-2.5">
+            <div class="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 space-y-2">
               <div class="flex items-center gap-2">
-                <i data-lucide="trophy" class="w-5 h-5 text-amber-400"></i>
-                <span class="text-sm font-bold text-white">${escapeHtml(outcomeType)}</span>
+                <i data-lucide="trophy" class="w-4 h-4 text-amber-400"></i>
+                <span class="text-xs font-bold text-white">${escapeHtml(outcomeType)}</span>
               </div>
               <div class="grid grid-cols-2 gap-2 pt-1 text-xs font-mono">
                 <div class="bg-surface-950/90 rounded p-2 text-emerald-400">+${escapeHtml(c.xpReward)} XP</div>
@@ -3474,25 +3302,29 @@
         `;
       }
 
-      targetContainer.innerHTML = `
+      playtestPanel.innerHTML = `
         <div class="space-y-4">
-          <div class="flex items-center justify-between pb-3 border-b border-surface-800">
-            <div class="flex items-center gap-2">
-              <div class="w-7 h-7 rounded-lg ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center">
-                <i data-lucide="${tpl.icon}" class="w-4 h-4"></i>
-              </div>
-              <div>
-                <span class="text-xs font-bold text-white block">${escapeHtml(currentNode.title)}</span>
-                <span class="text-[10px] font-mono ${tpl.badgeText}">${tpl.category}</span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button id="pt-restart-btn" class="px-2.5 py-1 rounded-lg bg-surface-800 hover:bg-surface-700 text-xs font-medium text-slate-300 transition">Restart</button>
-              <button id="pt-stop-btn" class="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-xs font-medium text-rose-400 transition">End Playtest</button>
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-amber-400">
+              <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+              Active Step
+            </span>
+            <div class="flex items-center gap-1.5">
+              <button id="pt-restart-btn" class="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[11px] text-slate-300 transition">Restart</button>
+              <button id="pt-stop-btn" class="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-[11px] text-rose-400 transition">Stop</button>
             </div>
           </div>
 
-          <div class="space-y-3">
+          <div class="p-3 rounded-xl bg-surface-950 border border-amber-500/40 space-y-3">
+            <div class="flex items-center gap-2 border-b border-surface-800 pb-2">
+              <div class="w-6 h-6 rounded ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center">
+                <i data-lucide="${tpl.icon}" class="w-3.5 h-3.5"></i>
+              </div>
+              <div class="min-w-0">
+                <span class="text-xs font-bold text-white block truncate">${escapeHtml(currentNode.title)}</span>
+                <span class="text-[10px] font-mono ${tpl.badgeText}">${tpl.category}</span>
+              </div>
+            </div>
             ${interactiveStepHtml}
           </div>
         </div>
@@ -3505,7 +3337,7 @@
         if (outPort) advancePlaytestPort(currentNode.id, outPort, 'Continued');
       });
 
-      targetContainer.querySelectorAll('.pt-choice-btn').forEach((btn) => {
+      playtestPanel.querySelectorAll('.pt-choice-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           const choiceId = btn.dataset.choiceId;
           const choiceLabel = btn.dataset.choiceLabel;
@@ -3573,7 +3405,7 @@
       const startNode = state.nodes.find((n) => n.type === 'questStart');
       const payload = {
         schemaVersion: '2.1.0',
-        engine: 'Quest Flow Studio',
+        engine: 'QuestForge',
         questMetadata: startNode ? { questId: startNode.config.questId, title: startNode.title } : {},
         nodes: state.nodes,
         connections: state.edges
@@ -3642,425 +3474,6 @@
       openProjectManagerModal();
       lucide.createIcons();
     });
-    
-    // Check auth status on app load and lock/unlock accordingly
-    function checkAppLockState() {
-      const lockScreen = document.getElementById('auth-lock-screen');
-      if (accessToken) {
-        // User is logged in -> Unlock app
-        lockScreen.classList.add('hidden');
-      } else {
-        // User is logged out -> Lock app
-        lockScreen.classList.remove('hidden');
-      }
-    }
-    
-    const CLIENT_ID = '516362450222-e4q4g28906gst4qok4qstk260jo4jne1.apps.googleusercontent.com';
-    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-    
-    let tokenClient;
-    let accessToken = null;
-    
-    // Initialize Google Identity Services token client
-    window.addEventListener('load', () => {
-      if (typeof google !== 'undefined') {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPES,
-          callback: (response) => {
-            if (response.error !== undefined) {
-              console.error(response);
-              showToast('Google Authentication Failed', 'rose');
-              return;
-            }
-            
-            accessToken = response.access_token;
-            
-            // Save token and expiry timestamp (Google access tokens last 3600 seconds / 1 hour)
-            const expiresAt = new Date().getTime() + (response.expires_in || 3600) * 1000;
-            localStorage.setItem('google_access_token', accessToken);
-            localStorage.setItem('google_token_expires_at', expiresAt);
-
-            updateAuthUI(true);
-            showToast('Successfully signed in with Google!', 'emerald');
-          },
-        });
-
-        // Check for an existing valid token on page load
-        checkStoredToken();
-      }
-    });
-    
-    function handleGoogleLogin() {
-      if (tokenClient) {
-        // Prompt the user for OAuth consent
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-      } else {
-        showToast('Google services still loading, please try again.', 'amber');
-      }
-    }
-
-    function checkStoredToken() {
-      const savedToken = localStorage.getItem('google_access_token');
-      const expiresAt = localStorage.getItem('google_token_expires_at');
-      
-      if (savedToken && expiresAt) {
-        if (new Date().getTime() < parseInt(expiresAt, 10)) {
-          // Token is still valid — restore session automatically
-          accessToken = savedToken;
-          updateAuthUI(true);
-        } else {
-          // Token has expired — clear storage and require re-login
-          handleGoogleLogout();
-        }
-      } else {
-        updateAuthUI(false);
-      }
-    }
-    
-    function handleGoogleLogout() {
-      if (accessToken) {
-        google.accounts.oauth2.revoke(accessToken, () => {
-          clearTokenStorage();
-          showToast('Signed out successfully', 'sky');
-        });
-      } else {
-        clearTokenStorage();
-      }
-    }
-
-    function clearTokenStorage() {
-      accessToken = null;
-      localStorage.removeItem('google_access_token');
-      localStorage.removeItem('google_token_expires_at');
-      updateAuthUI(false);
-    }
-    
-    function updateAuthUI(isSignedIn) {
-      document.getElementById('google-login-btn').classList.toggle('hidden', isSignedIn);
-      document.getElementById('google-logout-btn').classList.toggle('hidden', !isSignedIn);
-      document.getElementById('drive-sync-btn').classList.toggle('hidden', !isSignedIn);
-    }
-    
-    // ==========================================
-    // Google Drive Sync Functions
-    // ==========================================
-    async function syncToGoogleDrive() {
-      if (!accessToken) {
-        showToast('Please sign in with Google first.', 'rose');
-        return;
-      }
-    
-      showToast('Packaging projects & media into ZIP for Google Drive...', 'amber');
-    
-      try {
-        const zip = new JSZip();
-        const mediaFolder = zip.folder("resources");
-    
-        // Deep clone projects so we can strip or reference media cleanly
-        const exportProjects = JSON.parse(JSON.stringify(PROJECTS));
-    
-        // Process all projects, quests, and nodes to pack media into the ZIP
-        for (let proj of exportProjects) {
-          for (let quest of proj.quests) {
-            for (let node of (quest.nodes || [])) {
-              if (node.resources && Array.isArray(node.resources)) {
-                node.resources = node.resources.map((res) => {
-                  const ext = res.name.substring(res.name.lastIndexOf('.')) || '.bin';
-                  const fileName = `${node.id}_${res.id}${ext}`;
-                  
-                  if (res.data && res.data.startsWith('data:')) {
-                    const base64Data = res.data.split(',')[1];
-                    mediaFolder.file(fileName, base64Data, { base64: true });
-                  }
-    
-                  return {
-                    id: res.id,
-                    name: res.name,
-                    type: res.type,
-                    file: `resources/${fileName}`
-                  };
-                });
-              }
-            }
-          }
-        }
-    
-        // Add master JSON file containing all projects, node positions, arrangements, and metadata
-        const backupManifest = {
-          app: 'Quest Flow Studio',
-          schemaVersion: '2.5.0',
-          savedAt: new Date().toISOString(),
-          projects: exportProjects
-        };
-    
-        zip.file("projects_backup.json", JSON.stringify(backupManifest, null, 2));
-    
-        // Generate the ZIP blob
-        const zipBlob = await zip.generateAsync({ type: "blob" });
-        const fileName = 'quest_flow_studio_backup.zip';
-    
-        // Search Google Drive for an existing backup zip file
-        const searchRes = await fetch(
-          `https://www.googleapis.com/drive/v3/files?q=name%3D'${fileName}'%20and%20trashed%3Dfalse&orderBy=modifiedTime%20desc`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        const searchJson = await searchRes.json();
-        
-        let fileId = null;
-        if (searchJson.files && searchJson.files.length > 0) {
-          fileId = searchJson.files[0].id;
-        }
-    
-        // If file doesn't exist on Drive, create file metadata first
-        if (!fileId) {
-          const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ name: fileName, mimeType: 'application/zip' })
-          });
-          const newFile = await createRes.json();
-          fileId = newFile.id;
-        }
-    
-        // Upload the ZIP blob via media patch
-        const uploadRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/zip',
-          },
-          body: zipBlob
-        });
-    
-        if (uploadRes.ok) {
-          showToast('Successfully synced ZIP backup to Google Drive!', 'emerald');
-        } else {
-          throw new Error('Drive upload failed with status ' + uploadRes.status);
-        }
-      } catch (err) {
-        console.error('Drive ZIP Sync Error:', err);
-        showToast('Drive sync failed. Check console.', 'rose');
-      }
-    }
-    
-    // Bind lock screen login button
-    document.getElementById('lock-screen-login-btn').addEventListener('click', () => {
-      handleGoogleLogin(); // Calls your existing GIS token client request function
-    });
-    
-    // Update your existing updateAuthUI function to also control the lock screen
-    
-    function updateAuthUI(isSignedIn) {
-      const lockScreen = document.getElementById('auth-lock-screen');
-      const toolbarLogoutBtn = document.getElementById('toolbar-logout-btn');
-      
-      if (isSignedIn) {
-        lockScreen.classList.add('hidden');
-        toolbarLogoutBtn?.classList.remove('hidden'); // Show Logout button in toolbar
-      } else {
-        lockScreen.classList.remove('hidden');
-        toolbarLogoutBtn?.classList.add('hidden'); // Hide Logout button in toolbar
-      }
-    }
-    
-    async function syncFromGoogleDrive() {
-      if (!accessToken) {
-        showToast('Please sign in with Google first.', 'rose');
-        return;
-      }
-    
-      showToast('Fetching latest ZIP backup from Google Drive...', 'amber');
-      const fileName = 'quest_flow_studio_backup.zip';
-    
-      try {
-        // 1. Search for the backup ZIP file on Google Drive
-        const searchRes = await fetch(
-          `https://www.googleapis.com/drive/v3/files?q=name%3D'${fileName}'%20and%20trashed%3Dfalse&orderBy=modifiedTime%20desc`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        const searchJson = await searchRes.json();
-    
-        if (!searchJson.files || !searchJson.files.length) {
-          showToast('No cloud ZIP backup found on Google Drive.', 'amber');
-          return;
-        }
-    
-        // 2. Download the ZIP file blob from Google Drive
-        const fileId = searchJson.files[0].id;
-        const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-    
-        const zipBlob = await fileRes.blob();
-        const zip = new JSZip();
-        const zipContent = await zip.loadAsync(zipBlob);
-    
-        if (!zipContent.files['projects_backup.json']) {
-          throw new Error('Invalid backup archive: missing projects_backup.json');
-        }
-    
-        // 3. CLEAR EXISTING LOCAL DATA FIRST
-        PROJECTS = [];
-        localStorage.removeItem('quest_flow_studio_projects'); // Clears local project storage
-        // If you use any other local cache keys, clear them here as well
-    
-        // 4. Read the project manifest JSON from the ZIP
-        const jsonString = await zipContent.files['projects_backup.json'].async('text');
-        const backupData = JSON.parse(jsonString);
-    
-        if (!backupData || !backupData.projects || !Array.isArray(backupData.projects)) {
-          throw new Error('Invalid backup file structure.');
-        }
-    
-        // 5. Unpack media files from the ZIP and restore data URLs for every node
-        for (let proj of backupData.projects) {
-          for (let quest of proj.quests) {
-            for (let node of (quest.nodes || [])) {
-              if (node.resources && Array.isArray(node.resources)) {
-                for (let res of node.resources) {
-                  if (res.file && zipContent.files[res.file]) {
-                    const blob = await zipContent.files[res.file].async('blob');
-                    const reader = new FileReader();
-                    res.data = await new Promise((resolve) => {
-                      reader.onload = (e) => resolve(e.target.result);
-                      reader.readAsDataURL(blob);
-                    });
-                  }
-                }
-              }
-            }
-          }
-        }
-    
-        // 6. Populate application with fresh cloud data and save to local storage
-        PROJECTS = backupData.projects;
-        saveProjectsToStorage();
-        renderProjectManager(explorerSearch.value);
-    
-        if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
-          loadQuestIntoWorkspace(PROJECTS[0].id, PROJECTS[0].quests[0].id);
-        }
-    
-        showToast('Successfully cleared local data and synced from Google Drive!', 'emerald');
-        startupModal.classList.add('hidden');
-      } catch (err) {
-        console.error('Drive ZIP Sync From Error:', err);
-        showToast(`Sync from Drive failed: ${err.message}`, 'rose');
-      }
-    }
-
-    // --- CORRECTED GROUP COPY & PASTE ---
-    window.questClipboard = window.questClipboard || { nodes: [], connections: [] };
-
-    function copySelectedGroup() {
-        console.log('--- COPY TRIGGERED ---');
-        
-        // Check if state and selectedNodeIds exist
-        if (typeof state === 'undefined' || !state.selectedNodeIds || state.selectedNodeIds.size === 0) {
-            console.warn('Copy aborted: No nodes selected!');
-            if (typeof showToast === 'function') showToast('Select nodes to copy first!', 'amber');
-            return;
-        }
-
-        const selectedNodeIds = Array.from(state.selectedNodeIds);
-        window.questClipboard.nodes = state.nodes
-            .filter(n => selectedNodeIds.includes(n.id))
-            .map(n => JSON.parse(JSON.stringify(n)));
-
-        // Copy connections/edges where both source and target are selected
-        const edgesSource = state.edges || state.connections || [];
-        window.questClipboard.connections = edgesSource
-            .filter(c => {
-                const from = c.sourceNodeId || c.fromNode;
-                const to = c.targetNodeId || c.toNode;
-                return selectedNodeIds.includes(from) && selectedNodeIds.includes(to);
-            })
-            .map(c => JSON.parse(JSON.stringify(c)));
-
-        console.log('Successfully copied:', window.questClipboard.nodes.length, 'nodes');
-        if (typeof showToast === 'function') {
-            showToast(`Copied ${window.questClipboard.nodes.length} node(s)`, 'indigo');
-        }
-    }
-
-    function pasteGroup() {
-        console.log('--- PASTE TRIGGERED ---');
-
-        if (!window.questClipboard.nodes || window.questClipboard.nodes.length === 0) {
-            console.warn('Paste aborted: Clipboard is empty!');
-            if (typeof showToast === 'function') showToast('Clipboard is empty!', 'amber');
-            return;
-        }
-
-        const idMap = {};
-        const newSelectedIds = new Set();
-
-        const pastedNodes = window.questClipboard.nodes.map(node => {
-            const newId = 'node_' + Math.random().toString(36).substr(2, 9);
-            idMap[node.id] = newId;
-            newSelectedIds.add(newId);
-
-            const cloned = JSON.parse(JSON.stringify(node));
-            cloned.id = newId;
-            cloned.x = (cloned.x || 0) + 40;
-            cloned.y = (cloned.y || 0) + 40;
-            return cloned;
-        });
-
-        const pastedConnections = window.questClipboard.connections.map(conn => {
-            const newConn = JSON.parse(JSON.stringify(conn));
-            if (newConn.sourceNodeId) {
-                newConn.sourceNodeId = idMap[newConn.sourceNodeId] || newConn.sourceNodeId;
-                newConn.targetNodeId = idMap[newConn.targetNodeId] || newConn.targetNodeId;
-            } else {
-                newConn.fromNode = idMap[newConn.fromNode] || newConn.fromNode;
-                newConn.toNode = idMap[newConn.toNode] || newConn.toNode;
-            }
-            return newConn;
-        });
-
-        state.nodes = state.nodes || [];
-        state.nodes.push(...pastedNodes);
-        
-        if (state.edges) {
-            state.edges.push(...pastedConnections);
-        } else if (state.connections) {
-            state.connections.push(...pastedConnections);
-        }
-        
-        state.selectedNodeIds = newSelectedIds;
-
-        if (typeof renderCanvas === 'function') renderCanvas();
-        else if (typeof renderNodes === 'function') { renderNodes(); renderEdges(); }
-        if (typeof renderInspector === 'function') renderInspector();
-        if (typeof updateSelectionVisuals === 'function') updateSelectionVisuals();
-
-        console.log('Successfully pasted:', pastedNodes.length, 'nodes.');
-        if (typeof showToast === 'function') {
-            showToast(`Pasted ${pastedNodes.length} node(s)`, 'emerald');
-        }
-    }
-
-    // Keyboard Shortcut Listener for Ctrl+C / Ctrl+V
-    window.addEventListener('keydown', (e) => {
-        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        const cmdCtrl = isMac ? e.metaKey : e.ctrlKey;
-
-        if (cmdCtrl && e.key.toLowerCase() === 'c') {
-            e.preventDefault();
-            copySelectedGroup();
-        } else if (cmdCtrl && e.key.toLowerCase() === 'v') {
-            e.preventDefault();
-            pasteGroup();
-        }
-    });
-    
   </script>
 </body>
 </html>
