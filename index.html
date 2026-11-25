@@ -3205,24 +3205,26 @@
       showToast('Quest Playtest Started', 'amber');
     }
 
-
     function stopPlaytest() {
       state.playtest.active = false;
       state.playtest.currentNodeId = null;
       state.playtest.lastEdgeId = null;
 
-      // Remove blur from canvas and sidebars
-      canvasWorld.classList.remove('playtest-blur');
-      paletteSidebar.classList.remove('playtest-blur');
-      inspectorSidebar.classList.remove('playtest-blur');
+      // --- REMOVE LOGIN-GATE STYLE BLUR FROM BODY ---
+      document.body.classList.remove('app-blurred');
 
       // Hide centered modal overlay
-      centeredPlaytestOverlay.classList.add('hidden');
+      if (typeof centeredPlaytestOverlay !== 'undefined' && centeredPlaytestOverlay) {
+        centeredPlaytestOverlay.classList.add('hidden');
+      }
 
       updateSelectionVisuals();
       renderEdges();
       if (state.rightTab === 'playtest') renderPlaytestPanel();
+      
+      showToast('Playtest Ended', 'slate');
     }
+
 
     function recordPlaytestVisit(node, actionTaken = null) {
       if (actionTaken && state.playtest.history.length > 0) {
