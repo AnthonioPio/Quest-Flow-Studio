@@ -92,6 +92,17 @@
       width: 32px;
       height: 32px;
     }
+    
+    /* --- PLAYTEST FOCUS MODE BLUR --- */
+    .playtest-blurred header,
+    .playtest-blurred main,
+    .playtest-blurred .canvas-controls,
+    .playtest-blurred aside {
+      filter: blur(8px) brightness(0.5);
+      pointer-events: none;
+      user-select: none;
+      transition: filter 0.3s ease;
+    }
 
     /* Blur background effect when playtesting */
     #canvas-world.playtest-blur,
@@ -469,12 +480,12 @@
       <!-- Quick Tips Footer -->
       <div class="p-3 border-t border-surface-800 bg-surface-950/70 text-[11px] text-slate-400 space-y-1">
         <div class="flex items-center justify-between">
-          <span>Multiple Choices</span>
-          <span class="text-amber-400">Min 2, Unlimited</span>
+          <span>Created By:</span>
+          <span class="text-amber-400">Anthonio D. Pio</span>
         </div>
         <div class="flex items-center justify-between">
-          <span>Custom Types</span>
-          <span class="text-emerald-400">Fully Supported</span>
+          <span></span>
+          <span class="text-emerald-400"></span>
         </div>
       </div>
     </aside>
@@ -3189,6 +3200,10 @@
       renderEdges();
       centerOnNode(startNode);
       showToast('Quest Playtest Started (Canvas Blurred)', 'amber');
+      
+      const playtestModal = document.getElementById('playtest-modal'); // Adjust ID to match your code
+      if (playtestModal) playtestModal.classList.remove('hidden');
+      document.body.classList.add('playtest-blurred');
     }
 
     function stopPlaytest() {
@@ -3207,6 +3222,10 @@
       updateSelectionVisuals();
       renderEdges();
       if (state.rightTab === 'playtest') renderPlaytestPanel();
+      
+      const playtestModal = document.getElementById('playtest-modal'); // Adjust ID to match your code
+      if (playtestModal) playtestModal.classList.add('hidden');
+      document.body.classList.remove('playtest-blurred');
     }
 
     function recordPlaytestVisit(node, actionTaken = null) {
