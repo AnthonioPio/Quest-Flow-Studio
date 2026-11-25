@@ -2221,51 +2221,56 @@
 
     function renderNodes() {
       nodesLayer.innerHTML = '';
-      emptyHint.classList.toggle('hidden', state.nodes.length > 0);
+      if (typeof emptyHint !== 'undefined' && emptyHint) {
+        emptyHint.classList.toggle('hidden', state.nodes.length > 0);
+      }
 
       state.nodes.forEach((node) => {
-        const tpl = NODE_TYPES[node.type];
+        const tpl = NODE_TYPES[node.type] || { inputs: [], outputs: [], accent: '#6366f1', badgeBg: 'bg-indigo-500/20', badgeText: 'text-indigo-400', icon: 'box' };
         const el = document.createElement('div');
-        const isSelected = state.selectedNodeIds.has(node.id);
-        const isPlaytestActive = state.playtest.active && state.playtest.currentNodeId === node.id;
-        const nodeElement = document.getElementById(`node-${node.id}`) || document.createElement('div');
+        
+        // Assign the ID directly to the element so it can be found by getElementById
+        el.id = `node-${node.id}`;
 
-        el.className = `flow-node ${isSelected ? 'selected' : ''} ${isPlaytestActive ? 'playtest-active' : ''}`;
+        const isSelected = state.selectedIds.has(node.id);
+        const isPlaytestActive = state.playtest.active && state.playtest.currentNodeId === node.id;
+
+        el.className = `absolute flex flex-col bg-dark-800 border ${isSelected ? 'border-amber-500 shadow-lg shadow-amber-500/20 z-20' : 'border-dark-700 hover:border-dark-600'} rounded-[10px] w-64 shadow-xl select-none transition-shadow ${isPlaytestActive ? 'ring-2 ring-emerald-500 playtest-active' : ''}`;
         el.dataset.nodeId = node.id;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
 
-        const inputsHtml = tpl.inputs
+        const inputsHtml = (tpl.inputs || [])
           .map((port) => {
-            const isConnected = state.edges.some(
+            const isConnected = (state.edges || []).some(
               (e) => e.targetNodeId === node.id && e.targetPortId === port.id
             );
             return `
               <div class="flex items-center gap-2 relative h-6">
                 <div
-                  class="port-socket input-port ${isConnected ? 'connected' : ''}"
+                  class="port-socket input-port w-3 h-3 rounded-full bg-dark-700 border-2 border-slate-500 hover:border-amber-400 cursor-pointer transition ${isConnected ? 'bg-amber-400 border-amber-400 connected' : ''}"
                   data-node-id="${node.id}"
                   data-port-id="${port.id}"
                   data-port-type="input"
                   title="Input: ${port.label}"
                 ></div>
-                <span class="text-[11px] font-medium text-slate-300 pl-3">${port.label}</span>
+                <span class="text-[11px] font-medium text-slate-300 pl-1">${port.label}</span>
               </div>
             `;
           })
           .join('');
 
-        const outputs = getNodeOutputs(node);
+        const outputs = typeof getNodeOutputs === 'function' ? getNodeOutputs(node) : (tpl.outputs || []);
         const outputsHtml = outputs
           .map((port) => {
-            const isConnected = state.edges.some(
+            const isConnected = (state.edges || []).some(
               (e) => e.sourceNodeId === node.id && e.sourcePortId === port.id
             );
             return `
               <div class="flex items-center justify-end gap-2 relative h-6">
-                <span class="text-[11px] font-medium text-slate-300 pr-3 truncate max-w-[150px]" title="${escapeHtml(port.label)}">${escapeHtml(port.label)}</span>
+                <span class="text-[11px] font-medium text-slate-300 pr-1 truncate max-w-[120px]" title="${escapeHtml(port.label)}">${escapeHtml(port.label)}</span>
                 <div
-                  class="port-socket output-port ${isConnected ? 'connected' : ''}"
+                  class="port-socket output-port w-3 h-3 rounded-full bg-dark-700 border-2 border-slate-500 hover:border-amber-400 cursor-pointer transition ${isConnected ? 'bg-amber-400 border-amber-400 connected' : ''}"
                   data-node-id="${node.id}"
                   data-port-id="${port.id}"
                   data-port-type="output"
@@ -2280,8 +2285,8 @@
           <!-- Color-Coded Top Accent Bar -->
           <div class="h-1.5 w-full rounded-t-[10px]" style="background-color: ${tpl.accent}"></div>
 
-          <!-- Node Header (Close X button removed) -->
-          <div class="node-header px-3 py-2.5 border-b border-surface-800 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing">
+          <!-- Node Header -->
+          <div class="node-header px-3 py-2.5 border-b border-dark-700 flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing">
             <div class="flex items-center gap-2 min-w-0">
               <div class="w-6 h-6 rounded-md ${tpl.badgeBg} ${tpl.badgeText} flex items-center justify-center shrink-0">
                 <i data-lucide="${tpl.icon}" class="w-3.5 h-3.5"></i>
@@ -2294,92 +2299,69 @@
 
           <!-- Node Body -->
           <div class="p-3 space-y-3">
-            <div class="node-summary-box">${getNodeSummaryHtml(node)}</div>
+            <div class="node-summary-box text-xs text-slate-400">${typeof getNodeSummaryHtml === 'function' ? getNodeSummaryHtml(node) : ''}</div>
 
             <!-- Ports Row -->
-            <div class="flex items-start justify-between gap-2 pt-1 border-t border-surface-800/70">
+            <div class="flex items-start justify-between gap-2 pt-1 border-t border-dark-700/70">
               <div class="space-y-1 flex-1">${inputsHtml}</div>
               <div class="space-y-1 flex-1 text-right">${outputsHtml}</div>
             </div>
           </div>
         `;
 
-        el.addEventListener('pointerdown', (e) => {
-          if (state.currentTool === 'pan' || state.playtest.active) return;
-          e.stopPropagation();
-          const isAdditive = e.shiftKey || e.metaKey || e.ctrlKey;
-          if (!state.selectedNodeIds.has(node.id)) {
-            selectNode(node.id, isAdditive);
-          } else if (isAdditive) {
-            state.selectedNodeIds.delete(node.id);
-            updateSelectionVisuals();
-            renderInspector();
+        // Unified Selection & Drag Mousedown Listener
+        el.addEventListener('mousedown', (e) => {
+          e.stopPropagation(); // Prevent canvas background from clearing selection
+
+          const nodeId = node.id;
+          const isAdditive = e.shiftKey || e.ctrlKey || e.metaKey;
+
+          if (isAdditive) {
+            if (state.selectedIds.has(nodeId)) {
+              state.selectedIds.delete(nodeId);
+            } else {
+              state.selectedIds.add(nodeId);
+            }
+          } else {
+            if (!state.selectedIds.has(nodeId)) {
+              state.selectedIds.clear();
+              state.selectedIds.add(nodeId);
+            }
           }
 
-          const worldPos = screenToWorld(e.clientX, e.clientY);
-          state.interaction.draggingNodeId = node.id;
-          state.interaction.dragOffsets.clear();
-
-          state.selectedNodeIds.forEach((selId) => {
-            const selNode = state.nodes.find((n) => n.id === selId);
-            if (selNode) {
-              state.interaction.dragOffsets.set(selId, {
-                x: worldPos.x - selNode.x,
-                y: worldPos.y - selNode.y
-              });
-            }
-          });
-          el.setPointerCapture(e.pointerId);
+          if (typeof renderCanvas === 'function') renderCanvas();
+          if (typeof renderInspector === 'function') renderInspector();
         });
 
+        // Output Port Connection Dragging
         el.querySelectorAll('.output-port').forEach((portEl) => {
           portEl.addEventListener('pointerdown', (e) => {
-            if (state.playtest.active) return;
+            if (state.playtest && state.playtest.active) return;
             e.stopPropagation();
-            const portCenter = getPortWorldPosition(node.id, portEl.dataset.portId, 'output');
-            state.interaction.connecting = {
-              sourceNodeId: node.id,
-              sourcePortId: portEl.dataset.portId,
-              startX: portCenter.x,
-              startY: portCenter.y
-            };
-            draftEdge.setAttribute(
-              'd',
-              computeBezierPath(portCenter.x, portCenter.y, portCenter.x, portCenter.y)
-            );
-            draftEdge.classList.remove('hidden');
+            if (typeof getPortWorldPosition === 'function' && typeof computeBezierPath === 'function') {
+              const portCenter = getPortWorldPosition(node.id, portEl.dataset.portId, 'output');
+              state.interaction = state.interaction || {};
+              state.interaction.connecting = {
+                sourceNodeId: node.id,
+                sourcePortId: portEl.dataset.portId,
+                startX: portCenter.x,
+                startY: portCenter.y
+              };
+              if (typeof draftEdge !== 'undefined' && draftEdge) {
+                draftEdge.setAttribute(
+                  'd',
+                  computeBezierPath(portCenter.x, portCenter.y, portCenter.x, portCenter.y)
+                );
+                draftEdge.classList.remove('hidden');
+              }
+            }
           });
         });
 
         nodesLayer.appendChild(el);
-
-        nodeElement.addEventListener('mousedown', (e) => {
-            e.stopPropagation(); // Stop event from bubbling up to canvas container
-
-            const nodeId = node.id;
-            
-            if (e.shiftKey || e.ctrlKey || e.metaKey) {
-                // Multi-select toggle with Shift/Ctrl
-                if (state.selectedIds.has(nodeId)) {
-                    state.selectedIds.delete(nodeId);
-                } else {
-                    state.selectedIds.add(nodeId);
-                }
-            } else {
-                // Single select
-                if (!state.selectedIds.has(nodeId)) {
-                    state.selectedIds.clear();
-                    state.selectedIds.add(nodeId);
-                }
-            }
-
-            renderCanvas();
-            renderInspector();
-        });
       });
 
-      lucide.createIcons();
-      updateSelectionVisuals();
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     // =========================================================================
