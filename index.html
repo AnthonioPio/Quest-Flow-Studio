@@ -103,6 +103,14 @@
       user-select: none;
       transition: filter 0.3s ease;
     }
+    
+    /* Ensure the playtest modal itself stays completely sharp and interactive */
+    .playtest-blurred #playtest-modal {
+      filter: none !important;
+      pointer-events: auto !important;
+      z-index: 60;
+      /* Make sure it sits cleanly above the blur */
+    }
 
     /* Blur background effect when playtesting */
     #canvas-world.playtest-blur,
