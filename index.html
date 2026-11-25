@@ -2001,7 +2001,7 @@
 
     canvasContainer.addEventListener('mousedown', (e) => {
       // Only handle panning if clicking directly on the canvas container background
-      const isBackground = (e.target === canvasContainer || e.target === edgesSvg || e.target.id === 'canvas-layer' || e.target.id === 'wires-layer');
+      const isBackground = (e.target === canvasContainer || e.target.id === 'canvas-layer' || e.target.id === 'wires-layer');
       
       if (isBackground && e.button === 0) {
           if (state.currentTool === 'pan' || e.shiftKey) {
