@@ -4117,7 +4117,7 @@
           PROJECTS.push(...cloudData.projects);
         }
         
-        // 2. CRITICAL: Automatically select the first project and quest into active state
+        // 2. Select the first project and quest into active state
         if (cloudData.projects.length > 0) {
           const firstProject = cloudData.projects[0];
           state.activeProjectId = firstProject.id;
@@ -4134,15 +4134,21 @@
           }
         }
         
-        // 3. Refresh workspace view & UI renderers
+        // 3. RE-RENDER ALL LISTS, SIDEBARS, AND CANVAS ELEMENTS
         if (typeof loadProjectsFromStorage === 'function') loadProjectsFromStorage();
+        
+        // Re-render project list and quest list UI components
         if (typeof renderProjectList === 'function') renderProjectList();
         if (typeof renderProjects === 'function') renderProjects();
+        if (typeof renderQuestList === 'function') renderQuestList(); // <-- Re-renders the quest list
+        if (typeof renderSidebar === 'function') renderSidebar();       // <-- Refreshes sidebars if applicable
+        
+        // Re-render canvas graph nodes and connections
         if (typeof renderNodes === 'function') renderNodes();
         if (typeof renderEdges === 'function') renderEdges();
         if (typeof updateStats === 'function') updateStats();
         
-        showToast('Projects, canvas, and media successfully restored!', 'emerald');
+        showToast('Projects, quest lists, and canvas fully restored!', 'emerald');
       } catch (err) {
         if (err.message === 'TOKEN_EXPIRED') {
           driveTokenClient.requestAccessToken({ prompt: '', hint: loggedInUserEmail || undefined });
