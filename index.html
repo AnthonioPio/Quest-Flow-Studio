@@ -4170,8 +4170,50 @@
           // 1. Clear locally stored data
           localStorage.removeItem(LOCAL_STORAGE_KEY);
     
-          // 2. Load pulled projects into memory and save to local storage
-          PROJECTS = backupData.projects;
+          // 2. Normalize and map pulled projects so properties match internal state format (x, y, config, sourceNodeId, etc.)
+          PROJECTS = (backupData.projects || []).map(proj => ({
+            id: proj.id || generateId('proj'),
+            title: proj.title || 'Untitled Project',
+            description: proj.description || '',
+            isSample: !!proj.isSample,
+            quests: (proj.quests || []).map(q => {
+              const rawNodes = q.nodes || [];
+              const rawEdges = q.edges || q.connections || [];
+    
+              const mappedNodes = rawNodes.map(n => {
+                let config = { ...(NODE_TYPES[n.type]?.defaultConfig || {}), ...(n.properties || n.config || {}) };
+                return {
+                  id: n.id || generateId('qnode'),
+                  type: n.type || 'dialogue',
+                  title: n.title || NODE_TYPES[n.type]?.title || 'Node',
+                  x: Number(n.position?.x ?? n.x ?? 100),
+                  y: Number(n.position?.y ?? n.y ?? 100),
+                  notes: n.notes || '',
+                  resources: n.resources || [],
+                  config
+                };
+              });
+    
+              const mappedEdges = rawEdges.map(e => ({
+                id: e.id || generateId('qedge'),
+                sourceNodeId: e.fromNode || e.sourceNodeId,
+                sourcePortId: e.fromPort || e.sourcePortId,
+                targetNodeId: e.toNode || e.targetNodeId,
+                targetPortId: e.toPort || e.targetPortId
+              }));
+    
+              return {
+                id: q.id || generateId('qst'),
+                title: q.title || 'Untitled Quest',
+                type: q.type || 'Main Story',
+                minLevel: q.minLevel || 1,
+                description: q.description || '',
+                nodes: mappedNodes,
+                edges: mappedEdges
+              };
+            })
+          }));
+    
           saveProjectsToStorage();
     
           // 3. Refresh project manager list
