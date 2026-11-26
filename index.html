@@ -4220,14 +4220,14 @@
     
           // 3. Refresh project manager list
           renderProjectManager(explorerSearch.value);
-    
+          /*
           // 4. Automatically load the first project and the first quest in the list
           if (PROJECTS.length > 0 && PROJECTS[0].quests.length > 0) {
             const firstProj = PROJECTS[0];
             const firstQuest = firstProj.quests[0];
             loadQuestIntoWorkspace(firstProj.id, firstQuest.id);
           }
-    
+          */
           startupModal.classList.add('hidden');
           showToast('Successfully restored projects from Google Drive!', 'emerald');
         } catch (err) {
