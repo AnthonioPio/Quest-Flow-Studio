@@ -17,7 +17,6 @@
   <!-- Google Identity Services Library -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -4110,7 +4109,7 @@
           return;
         }
         
-        // Save projects including media assets to localStorage
+        // 1. Save projects including media assets to localStorage
         localStorage.setItem('questforge_projects', JSON.stringify(cloudData.projects));
         
         if (typeof PROJECTS !== 'undefined') {
@@ -4118,8 +4117,22 @@
           PROJECTS.push(...cloudData.projects);
         }
         
-        // Refresh workspace view
+        // 2. CRITICAL: Load the first project and quest into active app state so the canvas updates immediately
+        if (cloudData.projects.length > 0) {
+          const firstProject = cloudData.projects[0];
+          state.activeProjectId = firstProject.id;
+          
+          if (firstProject.quests && firstProject.quests.length > 0) {
+            const firstQuest = firstProject.quests[0];
+            state.activeQuestId = firstQuest.id;
+            state.nodes = JSON.parse(JSON.stringify(firstQuest.nodes || []));
+            state.edges = JSON.parse(JSON.stringify(firstQuest.edges || []));
+          }
+        }
+        
+        // 3. Refresh workspace view & UI renderers
         if (typeof loadProjectsFromStorage === 'function') loadProjectsFromStorage();
+        if (typeof renderProjectList === 'function') renderProjectList();
         if (typeof renderNodes === 'function') renderNodes();
         if (typeof renderEdges === 'function') renderEdges();
         if (typeof updateStats === 'function') updateStats();
