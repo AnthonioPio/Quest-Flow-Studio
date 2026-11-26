@@ -898,11 +898,15 @@
         ],
         fieldSchema: [
           { key: 'conditionType', label: 'Condition Type', type: 'select', options: ['Has Item', 'Flag Set', 'Reputation >=', 'Time of Day', 'Custom...'] },
+          { key: 'variableKey', label: 'Variable Name', type: 'text' },
+          { key: 'operator', label: 'Operator', type: 'select', options: ['==', '!=', '>', '>=', '<', '<='] },
           { key: 'conditionValue', label: 'Condition Value', type: 'text' }
         ],
         defaultConfig: {
           conditionType: 'Has Item',
           customConditionType: '',
+          variableKey: 'hasKey',
+          operator: '==',
           conditionValue: 'item_rusty_key'
         }
       },
@@ -1033,6 +1037,14 @@
       },
       // -----------------------------------
       snapToGrid: true,
+      // --- NEW: RUNTIME CHOICE & VARIABLE STORE ---
+      gameVariables: {
+        playerGold: 100,
+        hasKey: false,
+        reputation: 0,
+        faction: 'neutral'
+      },
+      // --------------------------------------------
       currentTool: 'select',
       rightTab: 'inspector',
       inspectorMode: 'edit',
