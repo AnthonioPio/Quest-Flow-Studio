@@ -4214,6 +4214,21 @@
       });
     }
 
+    // Render variables inside the playtest HUD on step update
+    function updatePlaytestVariablesHUD() {
+      const hudContainer = document.getElementById('playtest-variables-hud');
+      if (!hudContainer) return;
+
+      hudContainer.innerHTML = Object.entries(state.gameVariables)
+        .map(([key, val]) => `
+          <div class="flex items-center justify-between bg-surface-800 px-2 py-1 rounded border border-surface-700/50">
+            <span class="text-slate-400">${key}:</span>
+            <span class="text-sky-400 font-bold">${val}</span>
+          </div>
+        `)
+        .join('');
+    }
+
   </script>
 </body>
 </html>
