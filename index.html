@@ -4105,7 +4105,7 @@
           return;
         }
         
-        if (!confirm(`Found cloud backup from ${new Date(cloudData.syncedAt).toLocaleString()} (including media assets).\nReplace local projects with Google Drive version?`)) {
+        if (!confirm(`Found cloud backup from ${new Date(cloudData.syncedAt).toLocaleString()} (including media assets).\nReplace local workspace with Google Drive version?`)) {
           return;
         }
         
@@ -4117,7 +4117,7 @@
           PROJECTS.push(...cloudData.projects);
         }
         
-        // 2. Load the first project and quest into the active canvas state
+        // 2. CRITICAL: Automatically select the first project and quest into active state
         if (cloudData.projects.length > 0) {
           const firstProject = cloudData.projects[0];
           state.activeProjectId = firstProject.id;
@@ -4127,28 +4127,22 @@
             state.activeQuestId = firstQuest.id;
             state.nodes = JSON.parse(JSON.stringify(firstQuest.nodes || []));
             state.edges = JSON.parse(JSON.stringify(firstQuest.edges || []));
+          } else {
+            state.activeQuestId = null;
+            state.nodes = [];
+            state.edges = [];
           }
         }
         
-        // 3. RE-RENDER ALL LISTS AND CANVAS ELEMENTS
-        // Re-load projects from storage helper if defined
-        if (typeof loadProjectsFromStorage === 'function') {
-          loadProjectsFromStorage();
-        }
-        
-        // Re-render project list in the Project Manager modal / dropdowns
-        if (typeof renderProjectList === 'function') {
-          renderProjectList();
-        } else if (typeof renderProjects === 'function') {
-          renderProjects();
-        }
-        
-        // Re-render nodes, wires, stats, and footer counts on the canvas
+        // 3. Refresh workspace view & UI renderers
+        if (typeof loadProjectsFromStorage === 'function') loadProjectsFromStorage();
+        if (typeof renderProjectList === 'function') renderProjectList();
+        if (typeof renderProjects === 'function') renderProjects();
         if (typeof renderNodes === 'function') renderNodes();
         if (typeof renderEdges === 'function') renderEdges();
         if (typeof updateStats === 'function') updateStats();
         
-        showToast('Projects, lists, and canvas fully restored from Drive!', 'emerald');
+        showToast('Projects, canvas, and media successfully restored!', 'emerald');
       } catch (err) {
         if (err.message === 'TOKEN_EXPIRED') {
           driveTokenClient.requestAccessToken({ prompt: '', hint: loggedInUserEmail || undefined });
