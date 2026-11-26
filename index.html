@@ -94,16 +94,18 @@
     }
     
     /* Blur background effect when playtesting */
-    /*#canvas-world.playtest-blur,
+    #canvas-world.playtest-blur,
     #palette-sidebar.playtest-blur,
-    #inspector-sidebar.playtest-blur,*/
-    .playtest-blur {
+    #inspector-sidebar.playtest-blur,
+    #top-toolbar.playtest-blur,
+    #expand-palette-tab.playtest-blur,
+    #expand-inspector-tab.playtest-blur,
+    #floating-toolbar.playtest-blur {
       filter: blur(6px) brightness(0.7);
       transition: filter 0.3s ease;
       pointer-events: none;
-      z-index: 49;
     }
-
+    
     /* World transform container */
     #canvas-world {
       position: absolute;
@@ -364,7 +366,7 @@
   </div>
 
   <!-- Top Toolbar -->
-  <header class="h-14 bg-surface-900 border-b border-surface-700/80 px-3 sm:px-4 flex items-center justify-between z-50 shrink-0 gap-2">
+  <header id="top-toolbar" class="h-14 bg-surface-900 border-b border-surface-700/80 px-3 sm:px-4 flex items-center justify-between z-50 shrink-0 gap-2">
     <!-- Left: Brand & Palette Collapse/Expand Toggle -->
     <div class="flex items-center gap-2.5 shrink-0">
       <button id="toggle-palette-btn" class="p-2 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 border border-surface-700 transition" title="Toggle Quest Nodes Sidebar ([)">
@@ -531,7 +533,7 @@
       </div>
 
       <!-- Floating Center-Bottom Toolbar -->
-      <div class="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
+      <div id="floating-toolbar" class="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-surface-900/95 backdrop-blur-md border border-surface-700 rounded-xl p-1.5 shadow-xl">
         <button id="tool-select-btn" class="p-2 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/40 transition flex items-center justify-center" title="Select / Move Tool (V)">
           <i data-lucide="mouse-pointer" class="w-4 h-4"></i>
         </button>
@@ -1092,7 +1094,9 @@
     const topQuestTitle = document.getElementById('top-quest-title');
     const topProjectBadge = document.getElementById('top-project-badge');
     const topProjectSubtitle = document.getElementById('top-project-subtitle');
-
+    const topToolBar = document.getElementById('top-toolbar');
+    const floatingToolbar = document.getElementById('floating-toolbar');
+    
     const toolSelectBtn = document.getElementById('tool-select-btn');
     const toolPanBtn = document.getElementById('tool-pan-btn');
 
@@ -3179,10 +3183,13 @@
       recordPlaytestVisit(startNode);
       
       // Apply blur to canvas and sidebars
-      //canvasWorld.classList.add('playtest-blur');
-      //paletteSidebar.classList.add('playtest-blur');
-      //inspectorSidebar.classList.add('playtest-blur');
-      document.body.classList.add('app-blurred');
+      canvasWorld.classList.add('playtest-blur');
+      paletteSidebar.classList.add('playtest-blur');
+      inspectorSidebar.classList.add('playtest-blur');
+      topToolBar.classList.add('playtest-blur');
+      expandInspectorTab.classList.add('playtest-blur');
+      expandPaletteTab.classList.add('playtest-blur');
+      floatingToolbar.classList.add('playtest-blur');
       
       // Show centered playtest modal overlay
       centeredPlaytestOverlay.classList.remove('hidden');
@@ -3200,10 +3207,13 @@
       state.playtest.lastEdgeId = null;
       
       // Remove blur from canvas and sidebars
-      //canvasWorld.classList.remove('playtest-blur');
-      //paletteSidebar.classList.remove('playtest-blur');
-      //inspectorSidebar.classList.remove('playtest-blur');
-      document.body.classList.remove('app-blurred');
+      canvasWorld.classList.remove('playtest-blur');
+      paletteSidebar.classList.remove('playtest-blur');
+      inspectorSidebar.classList.remove('playtest-blur');
+      topToolBar.classList.remove('playtest-blur');
+      expandInspectorTab.classList.remove('playtest-blur');
+      expandPaletteTab.classList.remove('playtest-blur');
+      floatingToolbar.classList.remove('playtest-blur');
       
       // Hide centered modal overlay
       centeredPlaytestOverlay.classList.add('hidden');
