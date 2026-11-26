@@ -4109,7 +4109,7 @@
           return;
         }
         
-        // 1. Save projects including media assets to localStorage
+        // 1. Save projects and media assets to localStorage
         localStorage.setItem('questforge_projects', JSON.stringify(cloudData.projects));
         
         if (typeof PROJECTS !== 'undefined') {
@@ -4117,7 +4117,7 @@
           PROJECTS.push(...cloudData.projects);
         }
         
-        // 2. CRITICAL: Load the first project and quest into active app state so the canvas updates immediately
+        // 2. Load the first project and quest into the active canvas state
         if (cloudData.projects.length > 0) {
           const firstProject = cloudData.projects[0];
           state.activeProjectId = firstProject.id;
@@ -4130,14 +4130,25 @@
           }
         }
         
-        // 3. Refresh workspace view & UI renderers
-        if (typeof loadProjectsFromStorage === 'function') loadProjectsFromStorage();
-        if (typeof renderProjectList === 'function') renderProjectList();
+        // 3. RE-RENDER ALL LISTS AND CANVAS ELEMENTS
+        // Re-load projects from storage helper if defined
+        if (typeof loadProjectsFromStorage === 'function') {
+          loadProjectsFromStorage();
+        }
+        
+        // Re-render project list in the Project Manager modal / dropdowns
+        if (typeof renderProjectList === 'function') {
+          renderProjectList();
+        } else if (typeof renderProjects === 'function') {
+          renderProjects();
+        }
+        
+        // Re-render nodes, wires, stats, and footer counts on the canvas
         if (typeof renderNodes === 'function') renderNodes();
         if (typeof renderEdges === 'function') renderEdges();
         if (typeof updateStats === 'function') updateStats();
         
-        showToast('Projects and media assets restored from Google Drive!', 'emerald');
+        showToast('Projects, lists, and canvas fully restored from Drive!', 'emerald');
       } catch (err) {
         if (err.message === 'TOKEN_EXPIRED') {
           driveTokenClient.requestAccessToken({ prompt: '', hint: loggedInUserEmail || undefined });
