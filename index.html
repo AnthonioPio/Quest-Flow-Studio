@@ -1100,7 +1100,6 @@
     const topProjectSubtitle = document.getElementById('top-project-subtitle');
     const topToolBar = document.getElementById('top-toolbar');
     const floatingToolbar = document.getElementById('floating-toolbar');
-    const worldStatesHUD = document.getElementById('world-states-hud');
     
     const toolSelectBtn = document.getElementById('tool-select-btn');
     const toolPanBtn = document.getElementById('tool-pan-btn');
@@ -3195,7 +3194,6 @@
       expandInspectorTab.classList.add('playtest-blur');
       expandPaletteTab.classList.add('playtest-blur');
       floatingToolbar.classList.add('playtest-blur');
-      worldStatesHUD.classList.remove('hidden');
       
       // Show centered playtest modal overlay
       centeredPlaytestOverlay.classList.remove('hidden');
@@ -3220,7 +3218,6 @@
       expandInspectorTab.classList.remove('playtest-blur');
       expandPaletteTab.classList.remove('playtest-blur');
       floatingToolbar.classList.remove('playtest-blur');
-      worldStatesHUD.classList.add('hidden');
       
       // Hide centered modal overlay
       centeredPlaytestOverlay.classList.add('hidden');
